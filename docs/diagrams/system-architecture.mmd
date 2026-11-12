@@ -1,0 +1,24 @@
+flowchart LR
+  U["Household user"] --> B["Browser"]
+  B --> FE["Vue 3 SPA<br/>Vite build"]
+  FE --> N["Nginx"]
+  N -->|"/api proxy"| API["Spring Boot 3<br/>Java 21 REST API"]
+  API --> AC["AssumptionController"]
+  API --> FC["ForecastController"]
+  AC --> AS["AssumptionService"]
+  FC --> VS["ValidationService"]
+  FC --> FS["ForecastService"]
+  AS --> REPO["AssumptionRepository<br/>Spring Data JPA"]
+  REPO --> DB[("PostgreSQL 16<br/>assumptions")]
+  FS --> OUT["Forecast response<br/>monthly + annual"]
+  OUT --> FE
+  FC --> CSV["CSV export"]
+  CSV --> B
+  FE --> FORM["Assumptions form<br/>validation + autosave"]
+  FORM -->|"PUT assumptions"| AC
+  FORM -->|"GET forecast with inputs"| FC
+  subgraph Runtime["Docker Compose · local deployment"]
+    N
+    API
+    DB
+  end
