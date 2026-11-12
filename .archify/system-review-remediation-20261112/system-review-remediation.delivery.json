@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "1123a6e7-5939-4bb7-9cbe-63146870dc29",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "C:\\Users\\ADMIN\\Documents\\working\\personal-finance-planner\\.archify\\system-review-remediation-20261112\\candidate.json",
+  "output": "C:\\Users\\ADMIN\\Documents\\working\\personal-finance-planner\\.archify\\system-review-remediation-20261112\\system-review-remediation.html",
+  "specification": {
+    "sha256": "0f64ee0e62abcfe07504ed69b6b24902ca7fd019ba07969a1576d44111832f7f",
+    "bytes": 4580
+  },
+  "artifact": {
+    "sha256": "2b9438428c58af18103441a903100b41239ff734c878864c9fce94d68f106bc1",
+    "bytes": 840542
+  }
+}
