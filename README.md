@@ -22,10 +22,24 @@ backend/          # Spring Boot + PostgreSQL
 frontend/         # Vue.js 3 + Vite + Nginx
 test/fixtures/    # Legacy forecast oracle, chỉ dùng trong tests
 specs/            # Spec Kit (spec.md, plan.md, tasks.md)
+docs/             # Tài liệu sản phẩm, kiến trúc, API, nghiệp vụ và vận hành
 .specify/         # Spec Kit scripts & templates
 .github/          # Copilot integration
 docker-compose.yml
 ```
+
+## Tài liệu kỹ thuật
+
+Điểm bắt đầu: [`docs/README.md`](docs/README.md). Bộ tài liệu phân biệt rõ kiến trúc đang chạy (as-is), các finding/cải tiến đang chờ triển khai (to-be) và các quyết định đã được ghi nhận.
+
+- [Product & system overview](docs/01-system-overview.md)
+- [Architecture](docs/02-architecture.md)
+- [Business rules](docs/03-business-rules.md)
+- [API contract](docs/04-api-contract.md)
+- [Data model](docs/05-data-model.md)
+- [Development & verification](docs/06-development-guide.md)
+- [Architecture decisions](docs/decisions/README.md)
+- [System architecture diagram source](docs/diagrams/system-architecture.mmd)
 
 ## Yêu cầu hệ thống
 
@@ -92,3 +106,4 @@ mvn test
 - Dữ liệu lưu trong PostgreSQL (qua Docker volume `finance_planner_db_data`).
 - Frontend production được build bởi Vite và serve bằng Nginx, proxy `/api` sang backend.
 - Cấu hình kết nối DB dùng environment variables (xem `docker-compose.yml` và `backend/src/main/resources/application.properties`).
+- Đây là ứng dụng local-first cho một hộ gia đình; không có đăng nhập, multi-tenant hay đồng bộ ngân hàng.
