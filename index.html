@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f7fb">
+    <link rel="icon" href="data:,">
+    <title>Kế hoạch tài chính cá nhân | 2026–2030</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Kế hoạch tài chính cá nhân">
+        <span class="brand-mark" aria-hidden="true">₫</span>
+        <span>Plan<span class="brand-light">wise</span></span>
+      </a>
+      <div class="topbar-actions">
+        <span class="local-badge"><span aria-hidden="true"></span> Dữ liệu lưu trên thiết bị</span>
+        <button id="export-button" class="button button-secondary" type="button">Xuất CSV</button>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="page-heading">
+        <div>
+          <p class="eyebrow">KẾ HOẠCH CÁ NHÂN · 5 NĂM</p>
+          <h1>Dòng tiền của bạn,<br class="mobile-break"> rõ ràng từng tháng.</h1>
+          <p class="subtitle">Điều chỉnh giả định để xem thu nhập, chi phí và khoản tiết kiệm thay đổi ra sao.</p>
+        </div>
+        <div class="heading-period"><span class="period-dot"></span> THÁNG 11/2026 — THÁNG 12/2030</div>
+      </section>
+
+      <section id="alert-area" aria-live="polite"></section>
+
+      <section class="metrics" aria-label="Tổng quan kế hoạch">
+        <article class="metric-card">
+          <div class="metric-label">DÒNG TIỀN DƯ · 2030</div>
+          <div class="metric-value" id="metric-net">—</div>
+          <div class="metric-foot">Tổng thu nhập trừ tổng chi trong năm</div>
+        </article>
+        <article class="metric-card metric-card-accent">
+          <div class="metric-label">TIẾT KIỆM CUỐI KỲ</div>
+          <div class="metric-value" id="metric-savings">—</div>
+          <div class="metric-foot" id="metric-savings-foot">Dự kiến đến tháng 12/2030</div>
+        </article>
+        <article class="metric-card">
+          <div class="metric-label">LƯƠNG CƠ BẢN · 2030</div>
+          <div class="metric-value" id="metric-salary">—</div>
+          <div class="metric-foot">Trước hệ số lương riêng tháng 1</div>
+        </article>
+      </section>
+
+      <section class="panel assumptions-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">ĐẦU VÀO</p>
+            <h2>Giả định của bạn</h2>
+          </div>
+          <button id="reset-button" class="text-button" type="button">Khôi phục mặc định</button>
+        </div>
+        <form id="assumptions-form">
+          <div class="input-groups">
+            <fieldset class="input-group">
+              <legend><span class="legend-icon income-icon" aria-hidden="true">↗</span> Thu nhập</legend>
+              <label class="field">
+                <span>Lương tháng cơ sở năm 2026</span>
+                <span class="input-wrap"><input name="baseSalary" type="number" min="0" step="1" required><span>₫ / tháng</span></span>
+              </label>
+              <label class="field">
+                <span>Hệ số lương tháng 1</span>
+                <span class="input-wrap input-wrap-short"><input name="januaryMultiplier" type="number" min="0" max="20" step="0.1" required><span>×</span></span>
+              </label>
+              <p class="field-hint">Các đợt tăng lương tháng 4 được áp dụng cộng dồn.</p>
+              <div class="raise-grid">
+                <label class="field"><span>Tăng từ 04/2027</span><span class="input-wrap"><input name="raise2027" type="number" min="0" max="100" step="0.1" required><span>%</span></span></label>
+                <label class="field"><span>Tăng từ 04/2028</span><span class="input-wrap"><input name="raise2028" type="number" min="0" max="100" step="0.1" required><span>%</span></span></label>
+                <label class="field"><span>Tăng từ 04/2029</span><span class="input-wrap"><input name="raise2029" type="number" min="0" max="100" step="0.1" required><span>%</span></span></label>
+                <label class="field"><span>Tăng từ 04/2030</span><span class="input-wrap"><input name="raise2030" type="number" min="0" max="100" step="0.1" required><span>%</span></span></label>
+              </div>
+            </fieldset>
+
+            <fieldset class="input-group">
+              <legend><span class="legend-icon expense-icon" aria-hidden="true">↘</span> Chi phí hằng tháng</legend>
+              <label class="field"><span>Sinh hoạt phí</span><span class="input-wrap"><input name="living" type="number" min="0" step="1" required><span>₫</span></span></label>
+              <label class="field"><span>Quỹ nuôi con · đến hết 12/2026</span><span class="input-wrap"><input name="childThrough2026" type="number" min="0" step="1" required><span>₫</span></span></label>
+              <label class="field"><span>Quỹ nuôi con · 01–03/2027</span><span class="input-wrap"><input name="childQ12027" type="number" min="0" step="1" required><span>₫</span></span></label>
+              <label class="field"><span>Quỹ nuôi con · từ 04/2027</span><span class="input-wrap"><input name="childFromApr2027" type="number" min="0" step="1" required><span>₫</span></span></label>
+              <label class="field"><span>Tiền nhà · đến hết 01/2027</span><span class="input-wrap"><input name="rentThroughJan2027" type="number" min="0" step="1" required><span>₫</span></span></label>
+              <label class="field"><span>Tiền nhà · từ 02/2027</span><span class="input-wrap"><input name="rentFromFeb2027" type="number" min="0" step="1" required><span>₫</span></span></label>
+            </fieldset>
+
+            <fieldset class="input-group">
+              <legend><span class="legend-icon loan-icon" aria-hidden="true">⌁</span> Khoản vay & tiết kiệm</legend>
+              <label class="field"><span>Dư nợ gốc tại 28/10/2026</span><span class="input-wrap"><input name="loanPrincipal" type="number" min="0" step="1" required><span>₫</span></span></label>
+              <label class="field"><span>Khoản trả cố định tháng 11–12/2026</span><span class="input-wrap"><input name="fixedPayment" type="number" min="0" step="1" required><span>₫ / tháng</span></span></label>
+              <label class="field"><span>Lãi ngân hàng · kỳ 30/11/2026</span><span class="input-wrap"><input name="novInterest" type="number" min="0" step="1" required><span>₫</span></span></label>
+              <label class="field"><span>Lãi ngân hàng · kỳ 28/12/2026</span><span class="input-wrap"><input name="decInterest" type="number" min="0" step="1" required><span>₫</span></span></label>
+              <label class="field"><span>Lãi tất toán · 25/01/2027</span><span class="input-wrap"><input name="payoffInterest" type="number" min="0" step="1" placeholder="Chưa xác nhận"><span>₫</span></span></label>
+              <label class="confirm-field"><input name="payoffInterestConfirmed" type="checkbox"><span>Đã đối chiếu số lãi này với ngân hàng</span></label>
+              <p class="field-hint">Lãi tất toán cần đối chiếu báo giá ngân hàng. Lãi suất 13,2%/năm chỉ để tham khảo, không dùng để ước tính các khoản lãi thực tế.</p>
+              <label class="field"><span>Tiền tiết kiệm ban đầu</span><span class="input-wrap"><input name="startingSavings" type="number" min="0" step="1" required><span>₫</span></span></label>
+            </fieldset>
+          </div>
+          <div id="form-error" class="form-error" role="alert"></div>
+          <div class="form-footer"><span id="save-status" class="save-status" role="status">Đã lưu trên thiết bị này</span><span class="form-note">Đơn vị tiền tệ: VND</span></div>
+        </form>
+      </section>
+
+      <section class="panel chart-panel">
+        <div class="panel-heading chart-heading">
+          <div><p class="eyebrow">TỔNG HỢP NĂM</p><h2>Dòng tiền dư mỗi năm</h2></div>
+          <span class="chart-unit">Đơn vị: triệu đồng</span>
+        </div>
+        <div id="annual-chart" class="chart-container"></div>
+        <div class="chart-footnote">Dòng tiền ròng = tổng thu nhập − tổng chi phí. Năm 2026 chỉ gồm tháng 11 và 12.</div>
+      </section>
+
+      <section class="panel annual-panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">ĐỐI CHIẾU</p><h2>Tổng hợp theo năm</h2></div>
+        </div>
+        <div class="table-scroll">
+          <table id="annual-table">
+            <caption class="sr-only">Tổng thu nhập, tổng chi, dòng tiền ròng và tiết kiệm cuối năm theo từng năm</caption>
+            <thead><tr><th scope="col">Năm</th><th scope="col">Tổng thu nhập</th><th scope="col">Tổng chi</th><th scope="col">Dòng tiền ròng</th><th scope="col">Tiết kiệm cuối năm</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel monthly-panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">CHI TIẾT</p><h2>Dự báo theo tháng</h2></div>
+          <span class="row-count">50 tháng</span>
+        </div>
+        <div class="table-scroll">
+          <table id="monthly-table">
+            <caption class="sr-only">Dự báo thu nhập, chi phí, khoản vay, dòng tiền ròng và tiết kiệm từng tháng</caption>
+            <thead>
+              <tr><th scope="col">Tháng</th><th scope="col">Lương</th><th scope="col">Sinh hoạt</th><th scope="col">Nuôi con</th><th scope="col">Tiền nhà</th><th scope="col">Gốc đầu kỳ</th><th scope="col">Gốc trả</th><th scope="col">Lãi trả</th><th scope="col">Tổng trả nợ</th><th scope="col">Tổng chi</th><th scope="col">Dòng tiền ròng</th><th scope="col">Tiết kiệm lũy kế</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer class="page-footer">
+        <span>Đây là dự báo theo các giả định bạn nhập, không phải tư vấn tài chính.</span>
+        <span>Chạy cục bộ · Không gửi dữ liệu ra ngoài</span>
+      </footer>
+    </main>
+    <script type="module" src="./app.mjs"></script>
+  </body>
+</html>
