@@ -52,13 +52,13 @@ import MonthlyTable from './components/MonthlyTable.vue'
 
 const YEARS = [2027, 2028, 2029, 2030]
 const dto = reactive({
-  baseSalary: [REDACTED], januaryMultiplier: 2.5, living: [REDACTED],
-  childThrough2026: [REDACTED], childQ12027: [REDACTED], childFromApr2027: [REDACTED],
-  rentThroughJan2027: [REDACTED], rentFromFeb2027: [REDACTED],
-  loanPrincipal: [REDACTED], fixedPayment: [REDACTED],
-  novInterest: [REDACTED], decInterest: [REDACTED], payoffInterest: [REDACTED],
-  payoffInterestConfirmed: false, startingSavings: [REDACTED],
-  raises: { 2027: 0.1, 2028: 0.1, 2029: 0.1, 2030: 0.1 }
+  baseSalary: 42000000, januaryMultiplier: 2, living: 4250000,
+  childThrough2026: 2500000, childQ12027: 2750000, childFromApr2027: 3250000,
+  rentThroughJan2027: 3750000, rentFromFeb2027: 5750000,
+  loanPrincipal: 120000000, fixedPayment: 10000000,
+  novInterest: 1200000, decInterest: 1100000, payoffInterest: 1000000,
+  payoffInterestConfirmed: false, startingSavings: 30000000,
+  raises: { 2027: 0.08, 2028: 0.08, 2029: 0.08, 2030: 0.08 }
 })
 
 const forecast = ref(null)
