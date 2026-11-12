@@ -10,11 +10,11 @@
 - [ ] Create AssumptionRepository (Spring Data JPA)
 - [ ] Create AssumptionDTO + ForecastResponse DTOs
 - [ ] Create AssumptionController (GET/PUT /api/assumptions, POST /api/seed)
-- [ ] Create ForecastService (port calculation logic from forecast.mjs to Java)
+- [ ] Create ForecastService implementing the documented forecast business rules in Java
 - [ ] Create ForecastController (GET /api/forecast, GET /api/export/csv)
 - [ ] Create WebConfig (CORS for Vue frontend)
 - [ ] Add seeder: insert default assumptions on startup if table empty
-- [ ] Write unit tests for ForecastService (match forecast.test.mjs expected values)
+- [ ] Write unit tests for ForecastService using approved synthetic fixtures and business-rule examples
 - [ ] Build & run backend, verify http://localhost:8080/api/assumptions
 
 ## Phase 2 — Frontend: Vue.js + Vite
@@ -38,5 +38,5 @@
 - [ ] Run backend, verify API endpoints
 - [ ] Run frontend dev server, verify UI loads from http://localhost:5173
 - [ ] End-to-end test: edit salary → save → reload → values persist
-- [ ] Run backend unit tests (8 test cases matching forecast.test.mjs)
+- [ ] Run backend unit tests covering forecast calculation and validation rules
 - [ ] Update README with build/run instructions

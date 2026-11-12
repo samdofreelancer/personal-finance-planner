@@ -80,7 +80,7 @@ Các điểm dưới đây là trạng thái quan sát được từ source/conf
 | Money arithmetic | ForecastService uses `double` for salary/raise intermediate calculations | Use decimal-safe arithmetic end-to-end and explicit rounding |
 | Schema lifecycle | Hibernate `ddl-auto` defaults to `update` | Adopt versioned migrations; disable automatic schema mutation |
 | Forecast source | `/api/forecast` and CSV currently calculate from query-bound request assumptions | Clearly distinguish saved forecast from non-persisting simulation; see remediation spec |
-| Automated tests | Legacy JavaScript forecast oracle is isolated under `test/fixtures/`; Node tests use it only as a historical baseline. It is not part of production runtime. | Keep meaningful backend unit/integration tests as the authoritative verification of Java forecast behavior |
+| Automated tests | Backend Java is the only forecast calculation implementation. Meaningful backend unit/integration tests are required to verify its behavior. | Add and maintain backend tests for forecast, validation, persistence and API contracts |
 
 Review finding source of truth: [`specs/001-review-findings-remediation/spec.md`](../specs/001-review-findings-remediation/spec.md).
 

@@ -8,7 +8,7 @@ Web app duyệt qua các giả định, xem dự báo dòng tiền từng tháng
 
 ## Kiến trúc
 
-Vue 3 + Spring Boot là ứng dụng duy nhất được hỗ trợ. Bộ tính toán JavaScript cũ chỉ còn trong `test/fixtures/` để đối chiếu baseline trong automated tests; không có Python server hoặc static app ở thư mục gốc.
+Vue 3 + Spring Boot là ứng dụng duy nhất được hỗ trợ. Backend Java là nguồn tính toán forecast duy nhất.
 
 - **Backend:** Spring Boot 3 (Java 21), REST API, PostgreSQL
 - **Database:** PostgreSQL (bảng `assumptions`, 1 dòng)
@@ -20,7 +20,6 @@ Vue 3 + Spring Boot là ứng dụng duy nhất được hỗ trợ. Bộ tính 
 ```
 backend/          # Spring Boot + PostgreSQL
 frontend/         # Vue.js 3 + Vite + Nginx
-test/fixtures/    # Legacy forecast oracle, chỉ dùng trong tests
 specs/            # Spec Kit (spec.md, plan.md, tasks.md)
 docs/             # Tài liệu sản phẩm, kiến trúc, API, nghiệp vụ và vận hành
 .specify/         # Spec Kit scripts & templates
@@ -52,6 +51,24 @@ Copy-Item .env.example .env
 # Chỉnh POSTGRES_PASSWORD trong .env
 docker compose up --build
 ```
+
+## Development bằng Docker với hot reload
+
+Chạy cấu hình development riêng (không thay đổi production Compose):
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+```
+
+- Frontend: http://localhost:5173 — Vite HMR tự cập nhật khi sửa Vue/CSS/JS.
+- Backend: http://localhost:8080 — Maven watcher biên dịch Java khi source thay đổi; Spring Boot DevTools tự restart ứng dụng.
+- Thay đổi `backend/pom.xml` hoặc `frontend/package.json` cần recreate service tương ứng để cài dependency mới: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build backend frontend`.
+- PostgreSQL tiếp tục dùng volume `finance_planner_db_data` hiện tại.
+- `node_modules` và Maven dependencies được giữ trong named volumes để tránh cài lại mỗi lần khởi động.
+
+Theo dõi log: `docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f frontend backend`.
+
+Tắt development stack: `docker compose -f docker-compose.yml -f docker-compose.dev.yml down` (không thêm `-v`, để giữ dữ liệu database). Trở về production: `docker compose up -d --build`.
 
 Các service sẽ khởi động:
 

@@ -45,7 +45,6 @@
 - `backend/src/main/java/com/finance/planner/service/ValidationService.java`: documented amount/rate bounds and safe null validation.
 - `backend/src/test/java/com/finance/planner/service/`: focused backend unit tests for validation and forecast behavior.
 - `frontend/src/utils/validation.js`: keep client bounds aligned with backend.
-- `test/fixtures/legacy-forecast.mjs`, `test/forecast.test.mjs`: retain the legacy JavaScript calculator as a test-only oracle.
 - `backend/src/main/resources/db/migration/V1__create_assumptions.sql`: initial schema for fresh databases.
 - `backend/src/main/java/com/finance/planner/service/ForecastService.java` and focused policy classes: cohesive calculation responsibilities.
 - `backend/src/main/java/com/finance/planner/controller/ForecastController.java`, `frontend/src/services/api.js`, `frontend/src/App.vue`: saved forecast vs simulation contract.
@@ -123,7 +122,7 @@
   - Keep `latestRequest` checks for stale UI responses; they do not replace write serialization.
   - Only show saved status after the queued write succeeds.
 - [ ] **Step 5: Verify**
-  - Run: `node --test test/serialized-queue.test.mjs test/forecast.test.mjs`
+  - Run focused frontend persistence tests when available.
   - Run: `cd frontend && npm run build`
   - Manually inspect the sequence: older slow save followed by newer save; reload must show newer values.
 - [ ] **Step 6: Commit**
@@ -164,44 +163,11 @@
   - Mirror the same maximum in frontend validation.
 - [ ] **Step 5: Verify**
   - Run: `cd backend && mvn test`
-  - Run: `node --test test/forecast.test.mjs test/serialized-queue.test.mjs`
+  - Run backend forecast and validation unit tests, plus frontend production build.
   - Run: `cd frontend && npm run build`
   - Search backend production sources for `double` or `float` in monetary calculation paths; expected: no matches.
 - [ ] **Step 6: Commit**
   - Commit message: `fix(forecast): use deterministic monetary arithmetic`
-
-## Task 4: Make Java the only production forecast path (F-04)
-
-**Files:**
-- Move: `forecast.mjs` → `test/fixtures/legacy-forecast.mjs`
-- Modify: `test/forecast.test.mjs`
-- Delete: `app.mjs`
-- Delete: `index.html`
-- Delete: `styles.css`
-- Delete: `serve.py`
-- Modify: `README.md`
-- Backend tests: `backend/src/test/java/com/finance/planner/service/ForecastServiceTest.java`
-
-**Interfaces:**
-- The legacy JavaScript implementation remains available only to test the historical baseline/oracle.
-- The supported production app is the Vue 3 frontend plus Spring Boot API documented by README and Docker Compose.
-
-- [x] **Step 1: Confirm all legacy entry points and references**
-  - Search repository references to `app.mjs`, root `index.html`, `styles.css`, `serve.py`, and `forecast.mjs`.
-  - Confirm README and Docker Compose use only `frontend/` and `backend/`.
-- [x] **Step 2: Move the legacy calculator under test fixtures**
-  - Move `forecast.mjs` to `test/fixtures/legacy-forecast.mjs`.
-  - Update the existing Node test import without changing its expected assertions.
-- [x] **Step 3: Retire the standalone legacy app entry point**
-  - Delete the old root static UI and its Python serving entry point.
-  - Update README to identify the Vue/Spring Boot application as the only supported runtime.
-- [x] **Step 4: Verify**
-  - Run: `node --test test/forecast.test.mjs test/serialized-queue.test.mjs`
-  - Run: `cd backend && mvn test`
-  - Run: `cd frontend && npm run build`
-  - Search production paths to confirm no runtime imports the test fixture.
-- [ ] **Step 5: Commit**
-  - Commit message: `refactor(app): retire legacy standalone forecast runtime`
 
 ## Task 5: Give the forecast engine focused policy boundaries (F-05)
 
@@ -289,7 +255,6 @@
 
 Before the remediation is considered complete:
 
-- [ ] `node --test test/forecast.test.mjs test/serialized-queue.test.mjs` passes.
 - [ ] `cd backend && mvn test` executes meaningful backend tests and passes.
 - [ ] `cd frontend && npm run build` passes.
 - [ ] `docker compose config` resolves with a local `.env`; ports and credential settings satisfy F-01.

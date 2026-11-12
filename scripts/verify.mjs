@@ -5,8 +5,7 @@
  * Runs:
  *   1. backend Maven tests
  *   2. frontend production build
- *   3. legacy forecast oracle tests
- *   4. optionally the runtime smoke test (--smoke)
+ *   3. optionally the runtime smoke test (--smoke)
  *
  * Usage:
  *   node scripts/verify.mjs
@@ -28,7 +27,6 @@ if (flags.has("--help") || flags.has("-h")) {
 Options:
   --skip-backend    Skip the Maven test run
   --skip-frontend   Skip the frontend production build
-  --skip-legacy     Skip the legacy forecast oracle tests
   --smoke           Also run scripts/smoke.mjs against a running stack
   -h, --help        Show this help
 
@@ -67,16 +65,6 @@ if (!flags.has("--skip-frontend")) {
     args: ["run", "build"],
     cwd: join(root, "frontend"),
     shell: isWindows,
-  });
-}
-
-if (!flags.has("--skip-legacy")) {
-  steps.push({
-    name: "Legacy forecast oracle tests (node --test)",
-    cmd: process.execPath,
-    args: ["--test", "test/forecast.test.mjs"],
-    cwd: root,
-    shell: false,
   });
 }
 

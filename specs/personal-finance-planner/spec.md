@@ -57,7 +57,7 @@ Personal financial forecast for a configurable planning period. User edits incom
 | GET | `/api/export/csv` | — | `text/csv` download |
 | POST | `/api/seed` | — | seed defaults if empty |
 
-## 6. Calculation rules (ported from forecast.mjs)
+## 6. Calculation rules
 
 - `Total loan payment = principal + interest`
 - `Total expenses = living + child + rent + loan payment`

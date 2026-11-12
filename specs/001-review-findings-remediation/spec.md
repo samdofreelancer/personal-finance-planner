@@ -96,7 +96,7 @@ As a maintainer, I want the backend forecast engine to be the authoritative prod
 1. **Given** the backend forecast implementation, **When** its test suite runs, **Then** it executes meaningful tests rather than reporting no tests found.
 2. **Given** baseline fixtures, **When** the backend calculates them, **Then** results match approved expected values and rounding rules.
 3. **Given** a defect is introduced into a backend calculation rule, **When** the relevant test runs, **Then** the test fails.
-4. **Given** migration from the legacy JavaScript calculation is complete, **When** production forecast requests are served, **Then** Java is the only production source of truth; any retained JavaScript oracle is test-only and documented.
+4. **Given** the forecast engine is implemented, **When** production forecast requests are served, **Then** Java is the only forecast calculation implementation used by the application.
 
 ### User Story 5 — Evolve the forecast engine safely (Priority: P2)
 
@@ -185,7 +185,7 @@ As a product owner and maintainer, I want each review finding mapped to requirem
 - **FR-013**: Backend MUST have automated unit tests for forecast calculation rules.
 - **FR-014**: Backend tests MUST cover baseline values, debt payoff, provisional interest, partial-year aggregation, negative savings/shortfall, percentage raises, bonus multiplier, and rounding/boundary behavior applicable to current rules.
 - **FR-015**: Java backend MUST be the authoritative production forecast calculation path.
-- **FR-016**: Retained legacy JavaScript calculation MUST be test-only, clearly identified, and MUST NOT independently serve production forecast behavior.
+- **FR-016**: The application MUST NOT retain a second forecast calculation implementation; Java is the single source of forecast behavior.
 
 ### F-05 — Forecast engine boundaries
 
@@ -256,7 +256,7 @@ As a product owner and maintainer, I want each review finding mapped to requirem
 | F-01 | Permissive CORS and host port exposure can expose sensitive local financial data | In scope — P1 | FR-001–FR-005 |
 | F-02 | Overlapping autosave PUT requests can persist stale assumptions | In scope — P1 | FR-006–FR-008 |
 | F-03 | Binary floating-point arithmetic risks monetary precision/rounding errors | In scope — P1 | FR-009–FR-012 |
-| F-04 | Legacy JavaScript and Java duplicate forecast logic; existing tests do not verify backend | In scope — P1 | FR-013–FR-016 |
+| F-04 | Duplicate forecast calculation paths make behavior difficult to verify; existing tests do not verify backend | In scope — P1 | FR-013–FR-016 |
 | F-05 | ForecastService combines multiple responsibilities | In scope — P2 | FR-017–FR-019 |
 | F-06 | No Scenario domain/model exists | Deferred — future product feature | Revisit when scenario management is approved |
 | F-07 | Hibernate ddl-auto update is used instead of explicit migrations | In scope — P2 | FR-020–FR-022 |

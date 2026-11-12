@@ -42,6 +42,14 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Development-only classpath restart; enabled by the dev Compose profile. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <scope>runtime</scope>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Validation -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

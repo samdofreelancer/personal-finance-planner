@@ -49,6 +49,17 @@ Vite development server defaults to port 5173. Backend datasource and CORS setti
 
 ## Verification commands
 
+The repository verification entrypoint is `scripts/verify.ps1` (tested with Windows PowerShell 5.1; PowerShell 7 is also suitable). From the repository root:
+
+```powershell
+./scripts/verify.ps1                     # backend tests, frontend build, Compose config
+./scripts/verify.ps1 -DockerBuild        # above + production image build
+./scripts/verify.ps1 -SmokeTest          # above + HTTP checks against an already-running production-like stack
+./scripts/verify.ps1 -SmokeTest -DevStack # use frontend port 5173 for an already-running dev stack
+```
+
+The script is intentionally non-destructive: it does not start/stop containers, seed/reset assumptions or remove database volumes. Start the stack separately before a smoke test. A smoke test checks that the frontend responds and `GET /api/assumptions` returns a response; it is not a full end-to-end financial calculation test.
+
 Backend build/tests:
 
 ```powershell
@@ -63,14 +74,6 @@ cd frontend
 npm ci
 npm run build
 ```
-
-Legacy JavaScript forecast oracle tests (test-only; production calculations run in Java):
-
-```powershell
-node --test test/forecast.test.mjs
-```
-
-The legacy JavaScript oracle is retained only to compare historical baseline behavior. It is not imported by the frontend or backend runtime and is not a substitute for backend Java tests.
 
 ## Engineering workflow
 

@@ -10,6 +10,8 @@ Tài liệu chuẩn của Personal Finance Planner. Đọc theo thứ tự dư�
 | [04 — API contract](04-api-contract.md) | Endpoint, input source, side effects và response |
 | [05 — Data model](05-data-model.md) | Persistence model và dữ liệu nhạy cảm |
 | [06 — Development guide](06-development-guide.md) | Setup, test, workflow và checklist thay đổi |
+| [07 — AI agent context](07-ai-agent-context.md) | Context bắt buộc để AI agent hiểu repo trước khi làm việc |
+| [08 — Engineering constitution](08-engineering-constitution.md) | Nguyên tắc bất biến về thiết kế, chất lượng, bảo mật và quy trình |
 | [Architecture decisions](decisions/README.md) | Quyết định đã chốt, đang đề xuất hoặc cần xem xét |
 | [Diagrams](diagrams/) | Diagram source; dùng draw.io để render/chỉnh sửa trực quan |
 
