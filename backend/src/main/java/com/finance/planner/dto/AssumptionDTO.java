@@ -1,6 +1,7 @@
 package com.finance.planner.dto;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.Map;
 
 public class AssumptionDTO {
@@ -20,10 +21,7 @@ public class AssumptionDTO {
     private Long payoffInterest;
     private Boolean payoffInterestConfirmed;
     private Long startingSavings;
-
-    public Boolean getPayoffInterestConfirmed() { return payoffInterestConfirmed; }
-    public void setPayoffInterestConfirmed(Boolean payoffInterestConfirmed) { this.payoffInterestConfirmed = payoffInterestConfirmed; }
-    private Map<Integer, BigDecimal> raises;
+    private Map<Integer, BigDecimal> raises = new HashMap<>();
 
     // Getters & setters
     public Long getBaseSalary() { return baseSalary; }

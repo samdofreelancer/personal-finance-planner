@@ -47,7 +47,7 @@ public class ForecastService {
                 loanPayment = principalPaid + interestPaid;
             } else if (year == 2027 && month == 1) {
                 principalPaid = openingPrincipal;
-                if (a.getPayoffInterest() == null || !a.getPayoffInterestConfirmed) {
+                if (a.getPayoffInterest() == null || !Boolean.TRUE.equals(a.getPayoffInterestConfirmed())) {
                     provisional = true;
                 }
                 interestPaid = a.getPayoffInterest() == null ? 0 : a.getPayoffInterest();
@@ -62,14 +62,14 @@ public class ForecastService {
             cumulativeSavings += netCashFlow;
 
             months.add(new ForecastMonthDTO(
-                    year, month, date.getMonth().toString().substring(0, 3).toLowerCase() + " " + year,
+                    year, month, "thg " + month + " " + year,
                     salary, a.getLiving(), child, rent,
                     openingPrincipal + principalPaid, principalPaid, interestPaid,
-                    loanPayment, totalExpenses, netCashFlow, cumulativeSavings, provisional));
+                    loanPayment, totalExpenses, netCashFlow, cumulativeSavings, provisional, savingsProvisional));
         }
 
         List<ForecastAnnualDTO> annual = new ArrayList<>();
-        for (int y = 2026; y <= 2030; y++) {
+        for (int y : new int[]{2026, 2027, 2028, 2029, 2030}) {
             List<ForecastMonthDTO> ym = months.stream().filter(m -> m.getYear() == y).toList();
             boolean partial = y == 2026;
             long totalSalary = ym.stream().mapToLong(ForecastMonthDTO::getSalary).sum();
@@ -77,7 +77,8 @@ public class ForecastService {
             long totalNet = ym.stream().mapToLong(ForecastMonthDTO::getNetCashFlow).sum();
             long endSavings = ym.get(ym.size() - 1).getCumulativeSavings();
             boolean prov = ym.stream().anyMatch(ForecastMonthDTO::isProvisional);
-            annual.add(new ForecastAnnualDTO(y, partial, totalSalary, totalExpenses, totalNet, endSavings, prov));
+            boolean endingSavingsProvisional = ym.get(ym.size() - 1).isSavingsProvisional();
+            annual.add(new ForecastAnnualDTO(y, partial, totalSalary, totalExpenses, totalNet, endSavings, prov, endingSavingsProvisional));
         }
 
         return new ForecastResponse(months, annual);

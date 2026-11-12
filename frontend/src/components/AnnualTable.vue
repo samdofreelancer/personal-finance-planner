@@ -4,18 +4,18 @@
       <div><p class="eyebrow">ĐỐI CHIẾU</p><h2>Tổng hợp theo năm</h2></div>
     </div>
     <div class="table-scroll">
-      <table>
+      <table id="annual-table">
+        <caption class="sr-only">Tổng thu nhập, tổng chi, dòng tiền ròng và tiết kiệm cuối năm theo từng năm</caption>
         <thead>
-          <tr><th>Năm</th><th>Tổng thu nhập</th><th>Tổng chi</th><th>Dòng tiền ròng</th><th>Tiết kiệm cuối năm</th><th>Trạng thái</th></tr>
+          <tr><th scope="col">Năm</th><th scope="col">Tổng thu nhập</th><th scope="col">Tổng chi</th><th scope="col">Dòng tiền ròng</th><th scope="col">Tiết kiệm cuối năm</th></tr>
         </thead>
         <tbody>
-          <tr v-for="y in forecast?.annual || []" :key="y.year" :class="{provisional: y.provisional}">
-            <td>{{ y.year }}{{ y.partial ? ' (partial)' : '' }}</td>
-            <td>{{ formatMoney(y.salary) }}</td>
-            <td>{{ formatMoney(y.expenses) }}</td>
-            <td :class="{positive: y.netCashFlow >= 0, negative: y.netCashFlow < 0}">{{ formatMoney(y.netCashFlow) }}</td>
-            <td>{{ formatMoney(y.endingSavings) }}</td>
-            <td>{{ y.provisional ? 'Có mục tạm tính' : 'Đầy đủ' }}</td>
+          <tr v-for="y in forecast?.annual || []" :key="y.year">
+            <td><strong>{{ y.year }}</strong><span v-if="y.partial" class="partial-tag">2 tháng</span></td>
+            <td>{{ money(y.salary) }}</td>
+            <td>{{ money(y.expenses) }}</td>
+            <td><span :class="signedClass(y.netCashFlow)">{{ money(y.netCashFlow) }}{{ y.provisional ? ' · tạm tính' : '' }}</span></td>
+            <td><span class="savings-cell" :class="y.endingSavingsProvisional ? 'provisional' : signedClass(y.endingSavings)">{{ money(y.endingSavings) }}{{ y.endingSavingsProvisional ? ' · tạm tính' : '' }}</span></td>
           </tr>
         </tbody>
       </table>
@@ -25,5 +25,7 @@
 
 <script setup>
 defineProps(['forecast'])
-function formatMoney(v) { return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(v ?? 0) + ' ₫' }
+const formatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 })
+function money(value) { return `${formatter.format(Math.round(value ?? 0))} ₫` }
+function signedClass(value) { return value < 0 ? 'negative' : 'positive' }
 </script>
