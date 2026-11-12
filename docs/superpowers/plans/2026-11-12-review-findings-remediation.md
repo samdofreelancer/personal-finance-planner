@@ -140,13 +140,13 @@
 
 **Interfaces:**
 - Define one documented maximum supported monetary input in VND and apply it consistently to every monetary field, including optional payoff interest.
-- Use `[REDACTED],000 VND` (100 billion VND) as the inclusive maximum for each monetary input; this keeps the worst supported 50-month projection within JavaScript's safe-integer range under the current maximum rate and January multiplier.
+- Use `100,000,000,000 VND` as the inclusive maximum for each monetary input; this keeps the worst supported 50-month projection within JavaScript's safe-integer range under the current maximum rate and January multiplier.
 - Keep whole-VND API values as `Long`; use `BigDecimal` for all salary/rate multiplications and `RoundingMode.HALF_UP` at the whole-VND boundary.
 - Use checked arithmetic for sums/subtractions so overflow is never silently wrapped.
 
 - [ ] **Step 1: Write failing backend tests**
   - Baseline fixture: 50 months, annual years 2026–2030, 2026 partial.
-  - Baseline expected values: 2027 salary = [REDACTED]; 2027 net cash flow = [REDACTED]; 2030 net cash flow = [REDACTED]; 2030 ending savings = [REDACTED].
+  - Baseline expected values are calculated from the synthetic sample fixture; keep personal household values out of committed tests and planning documents.
   - Test an exact .5 VND salary result rounds HALF_UP.
   - Test all current debt/provisional-interest and shortfall behavior.
   - Test a monetary input above the supported maximum is rejected.

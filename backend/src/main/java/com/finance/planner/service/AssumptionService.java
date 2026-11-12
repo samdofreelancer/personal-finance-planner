@@ -58,26 +58,26 @@ public class AssumptionService {
 
     private AssumptionDTO defaultAssumptions() {
         AssumptionDTO dto = new AssumptionDTO();
-        dto.setBaseSalary([REDACTED]L);
-        dto.setJanuaryMultiplier(new BigDecimal("2.5"));
-        dto.setLiving([REDACTED]L);
-        dto.setChildThrough2026([REDACTED]L);
-        dto.setChildQ12027([REDACTED]L);
-        dto.setChildFromApr2027([REDACTED]L);
-        dto.setRentThroughJan2027([REDACTED]L);
-        dto.setRentFromFeb2027([REDACTED]L);
-        dto.setLoanPrincipal([REDACTED]L);
-        dto.setFixedPayment([REDACTED]L);
-        dto.setNovInterest([REDACTED]L);
-        dto.setDecInterest([REDACTED]L);
-        dto.setPayoffInterest([REDACTED]L);
+        dto.setBaseSalary(42_000_000L);
+        dto.setJanuaryMultiplier(new BigDecimal("2.0"));
+        dto.setLiving(4_250_000L);
+        dto.setChildThrough2026(2_500_000L);
+        dto.setChildQ12027(2_750_000L);
+        dto.setChildFromApr2027(3_250_000L);
+        dto.setRentThroughJan2027(3_750_000L);
+        dto.setRentFromFeb2027(5_750_000L);
+        dto.setLoanPrincipal(120_000_000L);
+        dto.setFixedPayment(10_000_000L);
+        dto.setNovInterest(1_200_000L);
+        dto.setDecInterest(1_100_000L);
+        dto.setPayoffInterest(1_000_000L);
         dto.setPayoffInterestConfirmed(false);
-        dto.setStartingSavings([REDACTED]L);
+        dto.setStartingSavings(30_000_000L);
         Map<Integer, BigDecimal> raises = new HashMap<>();
-        raises.put(2027, new BigDecimal("0.10"));
-        raises.put(2028, new BigDecimal("0.10"));
-        raises.put(2029, new BigDecimal("0.10"));
-        raises.put(2030, new BigDecimal("0.10"));
+        raises.put(2027, new BigDecimal("0.08"));
+        raises.put(2028, new BigDecimal("0.08"));
+        raises.put(2029, new BigDecimal("0.08"));
+        raises.put(2030, new BigDecimal("0.08"));
         dto.setRaises(raises);
         return dto;
     }

@@ -6,7 +6,7 @@
 
 ## 1. Purpose
 
-Private financial forecast for Nov 2026 – Dec 2030. User edits income, raises, expenses, loan details, starting savings; sees monthly & annual cash-flow outcomes and savings progress.
+Personal financial forecast for a configurable planning period. User edits income, raises, expenses, loan details, and starting savings; sees monthly and annual cash-flow outcomes and savings progress. Repository defaults are synthetic demonstration values.
 
 ## 2. Users and scope
 
@@ -26,27 +26,26 @@ Private financial forecast for Nov 2026 – Dec 2030. User edits income, raises,
 7. Distinguish partial year (2026) and unconfirmed payoff interest.
 8. Reset to defaults; export CSV.
 
-## 4. Initial assumptions (VND)
+## 4. Sample assumptions (VND)
 
 | Assumption | Value |
 |---|---:|
 | Forecast period | Nov 2026–Dec 2030 |
-| 2026 base monthly salary | [REDACTED] |
-| April raises 2027–2030 | 10% each, editable |
-| January salary multiplier | 2.5×, editable |
-| Living expenses | [REDACTED]/month |
-| Child fund through Dec 2026 | [REDACTED]/month |
-| Child fund Jan–Mar 2027 | [REDACTED]/month |
-| Child fund from Apr 2027 | [REDACTED]/month |
-| Rent through Jan 2027 | [REDACTED]/month |
-| Rent from Feb 2027 | [REDACTED]/month |
-| Starting savings | [REDACTED] |
-| Loan principal ([REDACTED]) | [REDACTED] |
-| Fixed Nov/Dec 2026 payment | [REDACTED]/month |
-| Bank interest Nov 2026 | [REDACTED] |
-| Bank interest Dec 2026 | [REDACTED] |
-| Payoff date | [REDACTED] |
-| Payoff interest (workbook) | [REDACTED] (unconfirmed) |
+| Base monthly salary | 42,000,000 |
+| Annual raises | 8% each, editable |
+| January salary multiplier | 2.0×, editable |
+| Living expenses | 4,250,000/month |
+| Child fund, first period | 2,500,000/month |
+| Child fund, second period | 2,750,000/month |
+| Child fund, later period | 3,250,000/month |
+| Rent, first period | 3,750,000/month |
+| Rent, later period | 5,750,000/month |
+| Starting savings | 30,000,000 |
+| Sample loan principal | 120,000,000 |
+| Fixed payment | 10,000,000/month |
+| First period interest | 1,200,000 |
+| Second period interest | 1,100,000 |
+| Estimated payoff interest | 1,000,000 (unconfirmed) |
 
 ## 5. API Contract
 

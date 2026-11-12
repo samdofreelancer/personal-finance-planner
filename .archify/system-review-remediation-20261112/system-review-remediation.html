@@ -7054,7 +7054,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
                 if (!ctx) throw exportError('viewer.export.error.contextUnavailable', { label: 'WebM' });
                 stream = canvas.captureStream(fps);
                 var mime = motionMimeType();
-                recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: [REDACTED] });
+                recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 4500000 });
                 var chunks = [];
                 var startedAt = performance.now();
                 function draw(now) {

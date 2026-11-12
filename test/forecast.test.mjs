@@ -16,20 +16,20 @@ test("generates 50 months and annual rows for 2026 through 2030", () => {
   assert.equal(forecast.annual[0].partial, true);
 });
 
-test("matches the current workbook's bank-interest loan and annual cash flow", () => {
+test("calculates the sample loan schedule and annual cash flow", () => {
   const { months, annual } = buildForecast(defaults());
-  assert.equal(months[0].principalPaid, [REDACTED]);
-  assert.equal(months[1].principalPaid, [REDACTED]);
-  assert.equal(months[2].openingPrincipal, [REDACTED]);
-  assert.equal(months[2].principalPaid, [REDACTED]);
-  assert.equal(months[2].interestPaid, [REDACTED]);
+  assert.equal(months[0].principalPaid, 8_800_000);
+  assert.equal(months[1].principalPaid, 8_900_000);
+  assert.equal(months[2].openingPrincipal, 102_300_000);
+  assert.equal(months[2].principalPaid, 102_300_000);
+  assert.equal(months[2].interestPaid, 1_000_000);
   assert.equal(months[2].provisional, true);
   assert.equal(months[2].savingsProvisional, true);
-  assert.equal(annual[0].netCashFlow, [REDACTED]);
-  assert.equal(annual[1].salary, [REDACTED]);
-  assert.equal(annual[1].netCashFlow, [REDACTED]);
-  assert.equal(annual[4].netCashFlow, [REDACTED]);
-  assert.equal(annual[4].endingSavings, [REDACTED]);
+  assert.equal(annual[0].netCashFlow, 43_000_000);
+  assert.equal(annual[1].salary, 576_240_000);
+  assert.equal(annual[1].netCashFlow, 317_440_000);
+  assert.equal(annual[4].netCashFlow, 566_896_440);
+  assert.equal(annual[4].endingSavings, 1_933_801_976);
 });
 
 test("removes provisional markers only after payoff interest is confirmed", () => {
@@ -46,9 +46,9 @@ test("applies raises from April and the editable January multiplier", () => {
   const input = defaults();
   input.januaryMultiplier = 2;
   const { months } = buildForecast(input);
-  assert.equal(months.find((row) => row.year === 2027 && row.month === 1).salary, [REDACTED]);
-  assert.equal(months.find((row) => row.year === 2027 && row.month === 3).salary, [REDACTED]);
-  assert.equal(months.find((row) => row.year === 2027 && row.month === 4).salary, [REDACTED]);
+  assert.equal(months.find((row) => row.year === 2027 && row.month === 1).salary, 84_000_000);
+  assert.equal(months.find((row) => row.year === 2027 && row.month === 3).salary, 42_000_000);
+  assert.equal(months.find((row) => row.year === 2027 && row.month === 4).salary, 45_360_000);
 });
 
 test("keeps missing payoff interest explicitly provisional", () => {

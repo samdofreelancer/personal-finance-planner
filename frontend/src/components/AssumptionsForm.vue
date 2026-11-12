@@ -40,13 +40,13 @@
 
         <fieldset class="input-group">
           <legend><span class="legend-icon loan-icon" aria-hidden="true">⌁</span> Khoản vay &amp; tiết kiệm</legend>
-          <label class="field"><span>Dư nợ gốc tại [REDACTED]</span><span class="input-wrap"><input v-model.number="dto.loanPrincipal" name="loanPrincipal" type="number" min="0" step="1" required><span>₫</span></span></label>
+          <label class="field"><span>Dư nợ gốc ban đầu</span><span class="input-wrap"><input v-model.number="dto.loanPrincipal" name="loanPrincipal" type="number" min="0" step="1" required><span>₫</span></span></label>
           <label class="field"><span>Khoản trả cố định tháng 11–12/2026</span><span class="input-wrap"><input v-model.number="dto.fixedPayment" name="fixedPayment" type="number" min="0" step="1" required><span>₫ / tháng</span></span></label>
-          <label class="field"><span>Lãi ngân hàng · kỳ [REDACTED]</span><span class="input-wrap"><input v-model.number="dto.novInterest" name="novInterest" type="number" min="0" step="1" required><span>₫</span></span></label>
-          <label class="field"><span>Lãi ngân hàng · kỳ [REDACTED]</span><span class="input-wrap"><input v-model.number="dto.decInterest" name="decInterest" type="number" min="0" step="1" required><span>₫</span></span></label>
-          <label class="field"><span>Lãi tất toán · [REDACTED]</span><span class="input-wrap"><input :value="dto.payoffInterest ?? ''" name="payoffInterest" type="number" min="0" step="1" placeholder="Chưa xác nhận" :aria-invalid="dto.payoffInterest == null ? 'true' : undefined" @input="onPayoffInput"><span>₫</span></span></label>
+          <label class="field"><span>Lãi ngân hàng · kỳ 1</span><span class="input-wrap"><input v-model.number="dto.novInterest" name="novInterest" type="number" min="0" step="1" required><span>₫</span></span></label>
+          <label class="field"><span>Lãi ngân hàng · kỳ 2</span><span class="input-wrap"><input v-model.number="dto.decInterest" name="decInterest" type="number" min="0" step="1" required><span>₫</span></span></label>
+          <label class="field"><span>Lãi tất toán dự kiến</span><span class="input-wrap"><input :value="dto.payoffInterest ?? ''" name="payoffInterest" type="number" min="0" step="1" placeholder="Chưa xác nhận" :aria-invalid="dto.payoffInterest == null ? 'true' : undefined" @input="onPayoffInput"><span>₫</span></span></label>
           <label class="confirm-field"><input v-model="dto.payoffInterestConfirmed" name="payoffInterestConfirmed" type="checkbox" @change="onConfirmedChange"><span>Đã đối chiếu số lãi này với ngân hàng</span></label>
-          <p class="field-hint">Lãi tất toán cần đối chiếu báo giá ngân hàng. Lãi suất [REDACTED]/năm chỉ để tham khảo, không dùng để ước tính các khoản lãi thực tế.</p>
+          <p class="field-hint">Lãi tất toán cần đối chiếu báo giá ngân hàng trước khi xác nhận.</p>
           <label class="field"><span>Tiền tiết kiệm ban đầu</span><span class="input-wrap"><input v-model.number="dto.startingSavings" name="startingSavings" type="number" min="0" step="1" required><span>₫</span></span></label>
         </fieldset>
       </div>

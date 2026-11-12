@@ -1,5 +1,9 @@
 # Kế hoạch tài chính cá nhân 2026–2030
 
+## Cấu hình local
+
+Sao chép `.env.example` thành `.env` và đặt mật khẩu PostgreSQL riêng trước khi chạy Docker Compose. File `.env` được Git bỏ qua.
+
 Web app duyệt qua các giả định, xem dự báo dòng tiền từng tháng, so sánh dòng tiền ròng theo năm và xuất kết quả CSV.
 
 ## Kiến trúc (mới)
@@ -27,6 +31,8 @@ docker-compose.yml
 ## Chạy toàn bộ bằng Docker (khuyên dùng)
 
 ```powershell
+Copy-Item .env.example .env
+# Chỉnh POSTGRES_PASSWORD trong .env
 docker compose up --build
 ```
 
