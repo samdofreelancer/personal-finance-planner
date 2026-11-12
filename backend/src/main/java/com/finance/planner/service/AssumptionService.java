@@ -39,8 +39,14 @@ public class AssumptionService {
     }
 
     public AssumptionDTO seedDefaults() {
-        Assumption saved = repository.save(seedDefaultsEntity());
-        return toDTO(saved);
+        Assumption entity = repository.findTopByOrderByIdAsc();
+        if (entity == null) {
+            entity = new Assumption();
+            entity.setCreatedAt(LocalDateTime.now());
+        }
+        updateEntityFromDTO(entity, defaultAssumptions());
+        entity.setUpdatedAt(LocalDateTime.now());
+        return toDTO(repository.save(entity));
     }
 
     private Assumption seedDefaultsEntity() {
@@ -48,6 +54,32 @@ public class AssumptionService {
         entity.setCreatedAt(LocalDateTime.now());
         entity.setUpdatedAt(LocalDateTime.now());
         return entity;
+    }
+
+    private AssumptionDTO defaultAssumptions() {
+        AssumptionDTO dto = new AssumptionDTO();
+        dto.setBaseSalary([REDACTED]L);
+        dto.setJanuaryMultiplier(new BigDecimal("2.5"));
+        dto.setLiving([REDACTED]L);
+        dto.setChildThrough2026([REDACTED]L);
+        dto.setChildQ12027([REDACTED]L);
+        dto.setChildFromApr2027([REDACTED]L);
+        dto.setRentThroughJan2027([REDACTED]L);
+        dto.setRentFromFeb2027([REDACTED]L);
+        dto.setLoanPrincipal([REDACTED]L);
+        dto.setFixedPayment([REDACTED]L);
+        dto.setNovInterest([REDACTED]L);
+        dto.setDecInterest([REDACTED]L);
+        dto.setPayoffInterest([REDACTED]L);
+        dto.setPayoffInterestConfirmed(false);
+        dto.setStartingSavings([REDACTED]L);
+        Map<Integer, BigDecimal> raises = new HashMap<>();
+        raises.put(2027, new BigDecimal("0.10"));
+        raises.put(2028, new BigDecimal("0.10"));
+        raises.put(2029, new BigDecimal("0.10"));
+        raises.put(2030, new BigDecimal("0.10"));
+        dto.setRaises(raises);
+        return dto;
     }
 
     private AssumptionDTO toDTO(Assumption e) {

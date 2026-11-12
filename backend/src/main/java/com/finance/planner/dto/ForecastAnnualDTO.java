@@ -9,11 +9,13 @@ public class ForecastAnnualDTO {
     private long netCashFlow;
     private long endingSavings;
     private boolean provisional;
+    private boolean endingSavingsProvisional;
 
     public ForecastAnnualDTO() {}
 
     public ForecastAnnualDTO(int year, boolean partial, long salary, long expenses,
-                             long netCashFlow, long endingSavings, boolean provisional) {
+                             long netCashFlow, long endingSavings, boolean provisional,
+                             boolean endingSavingsProvisional) {
         this.year = year;
         this.partial = partial;
         this.salary = salary;
@@ -21,6 +23,7 @@ public class ForecastAnnualDTO {
         this.netCashFlow = netCashFlow;
         this.endingSavings = endingSavings;
         this.provisional = provisional;
+        this.endingSavingsProvisional = endingSavingsProvisional;
     }
 
     public int getYear() { return year; }
@@ -37,4 +40,6 @@ public class ForecastAnnualDTO {
     public void setEndingSavings(long endingSavings) { this.endingSavings = endingSavings; }
     public boolean isProvisional() { return provisional; }
     public void setProvisional(boolean provisional) { this.provisional = provisional; }
+    public boolean isEndingSavingsProvisional() { return endingSavingsProvisional; }
+    public void setEndingSavingsProvisional(boolean endingSavingsProvisional) { this.endingSavingsProvisional = endingSavingsProvisional; }
 }

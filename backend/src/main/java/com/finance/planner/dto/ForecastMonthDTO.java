@@ -19,13 +19,14 @@ public class ForecastMonthDTO {
     private long netCashFlow;
     private long cumulativeSavings;
     private boolean provisional;
+    private boolean savingsProvisional;
 
     public ForecastMonthDTO() {}
 
     public ForecastMonthDTO(int year, int month, String label, long salary, long living, long child,
                             long rent, long openingPrincipal, long principalPaid, long interestPaid,
                             long loanPayment, long totalExpenses, long netCashFlow,
-                            long cumulativeSavings, boolean provisional) {
+                            long cumulativeSavings, boolean provisional, boolean savingsProvisional) {
         this.year = year;
         this.month = month;
         this.label = label;
@@ -41,6 +42,7 @@ public class ForecastMonthDTO {
         this.netCashFlow = netCashFlow;
         this.cumulativeSavings = cumulativeSavings;
         this.provisional = provisional;
+        this.savingsProvisional = savingsProvisional;
     }
 
     public int getYear() { return year; }
@@ -73,4 +75,6 @@ public class ForecastMonthDTO {
     public void setCumulativeSavings(long cumulativeSavings) { this.cumulativeSavings = cumulativeSavings; }
     public boolean isProvisional() { return provisional; }
     public void setProvisional(boolean provisional) { this.provisional = provisional; }
+    public boolean isSavingsProvisional() { return savingsProvisional; }
+    public void setSavingsProvisional(boolean savingsProvisional) { this.savingsProvisional = savingsProvisional; }
 }
