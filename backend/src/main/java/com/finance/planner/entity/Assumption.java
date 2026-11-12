@@ -14,7 +14,7 @@ public class Assumption {
     private Long id;
 
     @Column(name = "base_salary", nullable = false) private Long baseSalary = 42_000_000L;
-    @Column(name = "january_multiplier", nullable = false, precision = 5, scale = 2) private BigDecimal januaryMultiplier = new BigDecimal("2.5");
+    @Column(name = "january_multiplier", nullable = false, precision = 5, scale = 2) private BigDecimal januaryMultiplier = new BigDecimal("2.0");
     @Column(name = "living", nullable = false) private Long living = 4_250_000L;
     @Column(name = "child_through_2026", nullable = false) private Long childThrough2026 = 2_500_000L;
     @Column(name = "child_q1_2027", nullable = false) private Long childQ12027 = 2_750_000L;
