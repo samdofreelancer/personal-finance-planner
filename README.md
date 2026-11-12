@@ -1,27 +1,86 @@
 # Kế hoạch tài chính cá nhân 2026–2030
 
-Web app chạy cục bộ để thay đổi giả định, xem dự báo dòng tiền từng tháng, so sánh dòng tiền ròng theo năm và xuất kết quả CSV.
+Web app duyệt qua các giả định, xem dự báo dòng tiền từng tháng, so sánh dòng tiền ròng theo năm và xuất kết quả CSV.
 
-## Chạy ứng dụng
+## Kiến trúc (mới)
 
-Yêu cầu Python 3. Chạy trong thư mục này:
+- **Backend:** Spring Boot 3 (Java 21), REST API, PostgreSQL
+- **Database:** PostgreSQL (bảng `assumptions`, 1 dòng)
+- **Frontend:** Vue.js 3 + Vite, gọi backend qua REST API
 
-```powershell
-python serve.py
+## Cấu trúc thư mục
+
+```
+backend/          # Spring Boot + PostgreSQL
+frontend/         # Vue.js 3 + Vite
+specs/            # Spec Kit (spec.md, plan.md, tasks.md)
+.specify/         # Spec Kit scripts & templates
+.github/          # Copilot integration
 ```
 
-Mở `http://127.0.0.1:8765` trong trình duyệt. Dừng server bằng `Ctrl+C`.
+## Yêu cầu hệ thống
 
-Ứng dụng không dùng backend lưu dữ liệu, không tải thư viện từ mạng và chỉ bind vào loopback `127.0.0.1`. Các giả định được lưu trong local storage của trình duyệt hiện tại. Nút **Xuất CSV** tải bảng tổng hợp và dự báo tháng; **Khôi phục mặc định** xóa các thay đổi sau khi xác nhận.
+- Java 21+
+- Apache Maven 3.9+
+- PostgreSQL (cài đặt riêng, tạo database `personal_finance_planner`)
+- Node.js 18+, npm
 
-## Kiểm thử công thức
+## Cài đặt & chạy
 
-Yêu cầu Node.js 18 trở lên:
+### 1. Cài PostgreSQL
 
-```powershell
-node --test test/forecast.test.mjs
+Tạo database và user:
+
+```sql
+CREATE DATABASE personal_finance_planner;
+CREATE USER planner WITH PASSWORD 'planner';
+GRANT ALL PRIVILEGES ON DATABASE personal_finance_planner TO planner;
 ```
 
-## Giả định ban đầu
+Cập nhật `backend/src/main/resources/application.properties` với thông tin kết nối thực tế.
 
-Giá trị khởi tạo khớp workbook hiện tại: lương cơ bản 10 triệu, hệ số tháng 1 là 1,5×, tăng lương 10% vào mỗi tháng 4, tiết kiệm ban đầu 0 triệu, lãi kỳ tháng 11/12 theo số ngân hàng và lãi tất toán 3.683.193đ. Đây là giá trị đang lưu trong workbook, không khẳng định rằng lãi tất toán đã được ngân hàng xác nhận. App mặc định để bỏ chọn xác nhận, nên kết quả tháng 01/2027 và các số dư tiết kiệm từ đó là tạm tính; chỉ chọn xác nhận sau khi đối chiếu với ngân hàng. Hệ số và lãi tất toán có thể sửa trực tiếp trong form. Lãi suất danh nghĩa 13,2%/năm không được dùng để ước tính lãi ngân hàng.
+### 2. Chạy Backend (Spring Boot)
+
+```powershell
+cd backend
+mvn spring-boot:run
+```
+
+Backend chạy tại: `http://localhost:8080`
+
+### 3. Chạy Frontend (Vue.js)
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend chạy tại: `http://localhost:5173`
+
+### 4. Sử dụng
+
+Mở trình duyệt tại `http://localhost:5173`, chỉnh sửa giả định, dữ liệu sẽ lưu vào PostgreSQL qua REST API.
+
+## API Endpoints
+
+| Method | Endpoint | Mô tả |
+|--------|----------|-------|
+| GET | `/api/assumptions` | Lấy giả định từ DB |
+| PUT | `/api/assumptions` | Lưu giả định vào DB |
+| POST | `/api/assumptions/seed` | Seed dữ liệu mặc định |
+| GET | `/api/forecast` | Tính toán dự báo |
+| GET | `/api/export/csv` | Xuất CSV |
+
+## Kiểm thử backend
+
+```powershell
+cd backend
+mvn test
+```
+
+## Lưu ý
+
+- Dữ liệu không được lưu trong localStorage nữa, mà lưu trong PostgreSQL.
+- Cần cài PostgreSQL trước khi chạy backend.
+- Frontend proxy `/api` qua Vite tới `http://localhost:8080` (xem `vite.config.js`).
