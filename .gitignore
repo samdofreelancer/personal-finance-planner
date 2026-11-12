@@ -2,3 +2,11 @@ backend/.project
 backend/.classpath
 /backend/.settings
 /backend/target
+.env
+.env.*
+!.env.example
+*.dump
+*.backup
+*.sqlite
+*.sqlite3
+*.db
