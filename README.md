@@ -6,61 +6,60 @@ Web app duyệt qua các giả định, xem dự báo dòng tiền từng tháng
 
 - **Backend:** Spring Boot 3 (Java 21), REST API, PostgreSQL
 - **Database:** PostgreSQL (bảng `assumptions`, 1 dòng)
-- **Frontend:** Vue.js 3 + Vite, gọi backend qua REST API
+- **Frontend:** Vue.js 3 + Vite (build static), Nginx serve
+- **Orchestration:** Docker Compose
 
 ## Cấu trúc thư mục
 
 ```
 backend/          # Spring Boot + PostgreSQL
-frontend/         # Vue.js 3 + Vite
+frontend/         # Vue.js 3 + Vite + Nginx
 specs/            # Spec Kit (spec.md, plan.md, tasks.md)
 .specify/         # Spec Kit scripts & templates
 .github/          # Copilot integration
+docker-compose.yml
 ```
 
 ## Yêu cầu hệ thống
 
-- Java 21+
-- Apache Maven 3.9+
-- PostgreSQL (cài đặt riêng, tạo database `personal_finance_planner`)
-- Node.js 18+, npm
+- Docker & Docker Compose
 
-## Cài đặt & chạy
+## Chạy toàn bộ bằng Docker (khuyên dùng)
 
-### 1. Cài PostgreSQL
-
-Tạo database và user:
-
-```sql
-CREATE DATABASE personal_finance_planner;
-CREATE USER planner WITH PASSWORD 'planner';
-GRANT ALL PRIVILEGES ON DATABASE personal_finance_planner TO planner;
+```powershell
+docker compose up --build
 ```
 
-Cập nhật `backend/src/main/resources/application.properties` với thông tin kết nối thực tế.
+Các service sẽ khởi động:
 
-### 2. Chạy Backend (Spring Boot)
+| Service | URL | Mô tả |
+|---------|-----|-------|
+| Frontend | http://localhost | Vue.js + Nginx |
+| Backend API | http://localhost:8080 | Spring Boot REST API |
+| PostgreSQL | localhost:5432 | Database (internal network) |
+
+Dừng và xóa volume:
+
+```powershell
+docker compose down -v
+```
+
+## Chạy riêng lẻ (không dùng Docker)
+
+### Backend (cần PostgreSQL đã cài)
 
 ```powershell
 cd backend
 mvn spring-boot:run
 ```
 
-Backend chạy tại: `http://localhost:8080`
-
-### 3. Chạy Frontend (Vue.js)
+### Frontend (cần Node.js 18+)
 
 ```powershell
 cd frontend
 npm install
 npm run dev
 ```
-
-Frontend chạy tại: `http://localhost:5173`
-
-### 4. Sử dụng
-
-Mở trình duyệt tại `http://localhost:5173`, chỉnh sửa giả định, dữ liệu sẽ lưu vào PostgreSQL qua REST API.
 
 ## API Endpoints
 
@@ -81,6 +80,6 @@ mvn test
 
 ## Lưu ý
 
-- Dữ liệu không được lưu trong localStorage nữa, mà lưu trong PostgreSQL.
-- Cần cài PostgreSQL trước khi chạy backend.
-- Frontend proxy `/api` qua Vite tới `http://localhost:8080` (xem `vite.config.js`).
+- Dữ liệu lưu trong PostgreSQL (qua Docker volume `finance_planner_db_data`).
+- Frontend production được build bởi Vite và serve bằng Nginx, proxy `/api` sang backend.
+- Cấu hình kết nối DB dùng environment variables (xem `docker-compose.yml` và `backend/src/main/resources/application.properties`).
