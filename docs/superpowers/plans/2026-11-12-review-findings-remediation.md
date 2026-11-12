@@ -186,16 +186,16 @@
 - The legacy JavaScript implementation remains available only to test the historical baseline/oracle.
 - The supported production app is the Vue 3 frontend plus Spring Boot API documented by README and Docker Compose.
 
-- [ ] **Step 1: Confirm all legacy entry points and references**
+- [x] **Step 1: Confirm all legacy entry points and references**
   - Search repository references to `app.mjs`, root `index.html`, `styles.css`, `serve.py`, and `forecast.mjs`.
   - Confirm README and Docker Compose use only `frontend/` and `backend/`.
-- [ ] **Step 2: Move the legacy calculator under test fixtures**
+- [x] **Step 2: Move the legacy calculator under test fixtures**
   - Move `forecast.mjs` to `test/fixtures/legacy-forecast.mjs`.
   - Update the existing Node test import without changing its expected assertions.
-- [ ] **Step 3: Retire the standalone legacy app entry point**
+- [x] **Step 3: Retire the standalone legacy app entry point**
   - Delete the old root static UI and its Python serving entry point.
   - Update README to identify the Vue/Spring Boot application as the only supported runtime.
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
   - Run: `node --test test/forecast.test.mjs test/serialized-queue.test.mjs`
   - Run: `cd backend && mvn test`
   - Run: `cd frontend && npm run build`

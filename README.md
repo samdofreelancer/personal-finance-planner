@@ -6,7 +6,9 @@ Sao chép `.env.example` thành `.env` và đặt mật khẩu PostgreSQL riêng
 
 Web app duyệt qua các giả định, xem dự báo dòng tiền từng tháng, so sánh dòng tiền ròng theo năm và xuất kết quả CSV.
 
-## Kiến trúc (mới)
+## Kiến trúc
+
+Vue 3 + Spring Boot là ứng dụng duy nhất được hỗ trợ. Bộ tính toán JavaScript cũ chỉ còn trong `test/fixtures/` để đối chiếu baseline trong automated tests; không có Python server hoặc static app ở thư mục gốc.
 
 - **Backend:** Spring Boot 3 (Java 21), REST API, PostgreSQL
 - **Database:** PostgreSQL (bảng `assumptions`, 1 dòng)
@@ -18,6 +20,7 @@ Web app duyệt qua các giả định, xem dự báo dòng tiền từng tháng
 ```
 backend/          # Spring Boot + PostgreSQL
 frontend/         # Vue.js 3 + Vite + Nginx
+test/fixtures/    # Legacy forecast oracle, chỉ dùng trong tests
 specs/            # Spec Kit (spec.md, plan.md, tasks.md)
 .specify/         # Spec Kit scripts & templates
 .github/          # Copilot integration

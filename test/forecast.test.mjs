@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULT_ASSUMPTIONS, buildForecast, validateAssumptions } from "../forecast.mjs";
+import { DEFAULT_ASSUMPTIONS, buildForecast, validateAssumptions } from "./fixtures/legacy-forecast.mjs";
 
 function defaults() {
   return {
