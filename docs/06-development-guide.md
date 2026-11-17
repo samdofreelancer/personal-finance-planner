@@ -52,7 +52,7 @@ Vite development server defaults to port 5173. Backend datasource and CORS setti
 The repository verification entrypoint is `scripts/verify.ps1` (tested with Windows PowerShell 5.1; PowerShell 7 is also suitable). From the repository root:
 
 ```powershell
-./scripts/verify.ps1                     # backend tests, frontend build, Compose config
+./scripts/verify.ps1                     # backend tests + JaCoCo + PIT, frontend build, both Compose configs
 ./scripts/verify.ps1 -DockerBuild        # above + production image build
 ./scripts/verify.ps1 -SmokeTest          # above + HTTP checks against an already-running production-like stack
 ./scripts/verify.ps1 -SmokeTest -DevStack # use frontend port 5173 for an already-running dev stack
@@ -64,8 +64,70 @@ Backend build/tests:
 
 ```powershell
 cd backend
-mvn test
+mvn verify
 ```
+
+`mvn verify` runs the test suite, creates the JaCoCo HTML/XML report and enforces the current bundle thresholds: at least 80% line coverage and 70% branch coverage. The repository verification script then runs PIT mutation testing with an 80% score threshold. Reports are written to `backend/target/site/jacoco/` and `backend/target/pit-reports/`; open each `index.html` for the HTML view. Thresholds are deliberately below the measured baseline so new code can improve coverage without blocking unrelated work.
+
+Backend unit tests currently cover:
+
+- `ForecastServiceTest`: 50-month/annual aggregation, debt principal and payoff boundaries, provisional payoff interest, child/rent transitions, salary raises and January multiplier, rounding, cash flow and negative savings.
+- `ValidationServiceTest`: valid assumptions, zero/negative/missing monetary boundaries, multiplier lower/upper bounds, interest/payment boundaries, raise bounds and missing payoff-interest confirmation.
+
+The backend currently has 29 automated tests (5 API integration, 10 forecast unit and 14 validation unit tests). The measured JaCoCo baseline is approximately 86.9% line and 77.9% branch coverage across the backend bundle.
+
+Backend API integration tests:
+
+- `PlannerApiIntegrationTest` boots the real Spring application, MVC controllers, services, Spring Data JPA and an isolated in-memory H2 database in PostgreSQL compatibility mode.
+- It verifies seed/read, update/read persistence, rejection of invalid updates without changing stored data, the 50-month forecast response and CSV download headers/content.
+- The test datasource uses `jdbc:h2:mem:` and `create-drop`; it must never point at the developer's or production PostgreSQL database.
+
+GitHub Actions workflow `.github/workflows/ci.yml` runs `mvn verify` for the backend and `npm ci` plus `npm run build` for the frontend on pushes and pull requests. The CI database is in-memory; no PostgreSQL service or secrets are required.
+
+The backend CI job also runs PIT and uploads the JaCoCo (`backend-jacoco-report`) and PIT (`backend-pit-report`) reports as artifacts for 14 days. SonarQube is intentionally local-only; CI does not depend on a developer machine or a locally hosted server.
+
+## Mutation testing
+
+PIT targets `ForecastService` and `ValidationService` plus their service unit tests. Run it from `backend/`:
+
+```powershell
+mvn org.pitest:pitest-maven:mutationCoverage
+```
+
+Open `backend/target/pit-reports/index.html` to inspect killed, survived and uncovered mutants. Mutation testing is a diagnostic quality signal, not a replacement for requirement-based tests; review surviving mutants before changing assertions or setting a mutation-score gate.
+
+The initial focused run against `ForecastService` and `ValidationService` killed all 108 generated mutants (100%). PIT enforces an 80% mutation-score minimum for those two business-critical services; expand the target set only when corresponding tests exist.
+
+## Local SonarQube Community Build
+
+SonarQube runs in a separate Compose project and uses its own PostgreSQL database and named volumes. It does not reuse or modify the planner's application database. The web port is bound to loopback only (`http://localhost:9000`).
+
+1. Add a private `SONAR_DB_PASSWORD` value to `.env` (the local setup may generate one); never commit `.env`.
+2. Start the local analysis server:
+
+   ```powershell
+   docker compose -f docker-compose.sonar.yml up -d
+   docker compose -f docker-compose.sonar.yml ps
+   ```
+
+3. Open `http://localhost:9000`, sign in initially with `admin` / `admin`, change the password, and create a project with key `personal-finance-planner`. Then open **My Account → Security**, generate a **Project Analysis Token**, and scope it to this project. Do not save the token in `.env`, source control or shell history.
+
+   ```powershell
+   ./scripts/sonar-scan.ps1
+   ```
+
+   The scan script securely prompts for the token if `SONAR_TOKEN` is not already set, runs `mvn clean verify` first, then invokes the official SonarScanner CLI container against the local server. It analyzes backend Java and frontend Vue/JavaScript source and imports the JaCoCo XML report. The scanner waits up to five minutes for the Quality Gate and returns a failure if the gate fails.
+
+4. Re-scan after changes with `./scripts/sonar-scan.ps1`. If tests and JaCoCo have already run, `./scripts/sonar-scan.ps1 -SkipTests` skips the Maven step. The project must exist in SonarQube before the first scan; create it once in the UI using the exact key above.
+5. Stop the server while preserving its database and analysis history:
+
+   ```powershell
+   docker compose -f docker-compose.sonar.yml down
+   ```
+
+Do not use `down -v` for routine shutdown; it deletes SonarQube's separate history/database volumes. Elasticsearch requires host `vm.max_map_count` of at least `524288`, `fs.file-max` of at least `131072`, at least `131072` open files and `8192` threads for the SonarQube process. The Compose service sets the container `nofile`/`nproc` limits; Docker Desktop may need the corresponding WSL2 kernel settings for host-level values.
+
+Keep these tests focused on Java domain behavior. Do not add a parallel JavaScript forecast implementation as a test oracle.
 
 Frontend production build:
 

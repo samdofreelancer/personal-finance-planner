@@ -10,3 +10,4 @@ backend/.classpath
 *.sqlite
 *.sqlite3
 *.db
+.scannerwork/

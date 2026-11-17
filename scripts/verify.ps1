@@ -51,9 +51,14 @@ try {
         }
     }
 
-    Invoke-Check 'Backend Maven tests' {
+    Invoke-Check 'Backend Maven verify and JaCoCo coverage gate' {
         Push-Location (Join-Path $repoRoot 'backend')
-        try { mvn test } finally { Pop-Location }
+        try { mvn verify } finally { Pop-Location }
+    }
+
+    Invoke-Check 'Backend PIT mutation testing' {
+        Push-Location (Join-Path $repoRoot 'backend')
+        try { mvn org.pitest:pitest-maven:mutationCoverage } finally { Pop-Location }
     }
 
     Invoke-Check 'Frontend dependency install and production build' {
@@ -69,6 +74,11 @@ try {
     Invoke-Check 'Docker Compose configuration validation' {
         docker compose config --quiet
         if ($LASTEXITCODE -ne 0) { throw "docker compose config exited with code $LASTEXITCODE" }
+    }
+
+    Invoke-Check 'SonarQube Docker Compose configuration validation' {
+        docker compose -f docker-compose.sonar.yml config --quiet
+        if ($LASTEXITCODE -ne 0) { throw "SonarQube Compose config exited with code $LASTEXITCODE" }
     }
 
     if ($DockerBuild) {

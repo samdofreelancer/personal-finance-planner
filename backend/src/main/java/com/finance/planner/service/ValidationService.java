@@ -39,6 +39,8 @@ public class ValidationService {
             throw new IllegalArgumentException("Lãi từng kỳ không thể lớn hơn khoản trả cố định của kỳ đó.");
         if (a.getDecInterest() > a.getFixedPayment())
             throw new IllegalArgumentException("Lãi từng kỳ không thể lớn hơn khoản trả cố định của kỳ đó.");
+        if (a.getRaises() == null)
+            throw new IllegalArgumentException("Danh sách mức tăng lương không được để trống.");
         for (int y : new int[]{2027, 2028, 2029, 2030}) {
             BigDecimal r = a.getRaises().get(y);
             if (r == null || r.compareTo(BigDecimal.ZERO) < 0 || r.compareTo(BigDecimal.ONE) > 0)
