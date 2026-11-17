@@ -32,9 +32,10 @@
 </template>
 
 <script setup>
+import { formatCurrency } from '../utils/currency.js'
+
 const props = defineProps(['forecast', 'payoffInterest'])
-const formatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 })
-function money(value) { return `${formatter.format(Math.round(value ?? 0))} ₫` }
+const money = formatCurrency
 function signedClass(value) { return value < 0 ? 'negative' : 'positive' }
 function interestText(m) {
   if (!m.provisional) return money(m.interestPaid)

@@ -20,9 +20,9 @@
 
 <script setup>
 import { computed } from 'vue'
+import { formatCurrency } from '../utils/currency.js'
 const props = defineProps(['metrics', 'provisional'])
 const savingsFoot = computed(() => props.provisional ? 'Tạm tính · chưa gồm lãi tất toán chưa xác nhận' : 'Dự kiến đến tháng 12/2030')
-const formatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 })
-function money(value) { return `${formatter.format(Math.round(value ?? 0))} ₫` }
+const money = formatCurrency
 function signedClass(value) { return value < 0 ? 'negative' : 'positive' }
 </script>

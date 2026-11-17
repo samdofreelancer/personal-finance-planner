@@ -24,8 +24,9 @@
 </template>
 
 <script setup>
+import { formatCurrency } from '../utils/currency.js'
+
 defineProps(['forecast'])
-const formatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 })
-function money(value) { return `${formatter.format(Math.round(value ?? 0))} ₫` }
+const money = formatCurrency
 function signedClass(value) { return value < 0 ? 'negative' : 'positive' }
 </script>

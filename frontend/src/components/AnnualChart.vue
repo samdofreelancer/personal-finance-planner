@@ -27,6 +27,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { formatCurrency } from '../utils/currency.js'
 
 const props = defineProps(['forecast'])
 
@@ -85,11 +86,7 @@ const chart = computed(() => {
   return { width, height, left, right, top, bottom, ticks, bars, description }
 })
 
-const formatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 })
-
-function money(value) {
-  return `${formatter.format(Math.round(value))} ₫`
-}
+const money = formatCurrency
 
 function compactMoney(value) {
   const millions = value / 1_000_000

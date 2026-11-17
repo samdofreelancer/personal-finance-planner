@@ -49,6 +49,7 @@ import AssumptionsForm from './components/AssumptionsForm.vue'
 import AnnualChart from './components/AnnualChart.vue'
 import AnnualTable from './components/AnnualTable.vue'
 import MonthlyTable from './components/MonthlyTable.vue'
+import { formatCurrency } from './utils/currency.js'
 
 const YEARS = [2027, 2028, 2029, 2030]
 const dto = reactive({
@@ -224,8 +225,5 @@ async function exportCsv() {
   }
 }
 
-const formatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 })
-function money(value) {
-  return `${formatter.format(Math.round(value ?? 0))} ₫`
-}
+const money = formatCurrency
 </script>

@@ -13,7 +13,7 @@
           <legend><span class="legend-icon income-icon" aria-hidden="true">↗</span> Thu nhập</legend>
           <label class="field">
             <span>Lương tháng cơ sở năm 2026</span>
-            <span class="input-wrap"><input v-model.number="dto.baseSalary" name="baseSalary" type="number" min="0" step="1" required><span>₫ / tháng</span></span>
+            <span class="input-wrap"><currency-input v-model="dto.baseSalary" name="baseSalary" /><span>₫ / tháng</span></span>
           </label>
           <label class="field">
             <span>Hệ số lương tháng 1</span>
@@ -30,24 +30,24 @@
 
         <fieldset class="input-group">
           <legend><span class="legend-icon expense-icon" aria-hidden="true">↘</span> Chi phí hằng tháng</legend>
-          <label class="field"><span>Sinh hoạt phí</span><span class="input-wrap"><input v-model.number="dto.living" name="living" type="number" min="0" step="1" required><span>₫</span></span></label>
-          <label class="field"><span>Quỹ nuôi con · đến hết 12/2026</span><span class="input-wrap"><input v-model.number="dto.childThrough2026" name="childThrough2026" type="number" min="0" step="1" required><span>₫</span></span></label>
-          <label class="field"><span>Quỹ nuôi con · 01–03/2027</span><span class="input-wrap"><input v-model.number="dto.childQ12027" name="childQ12027" type="number" min="0" step="1" required><span>₫</span></span></label>
-          <label class="field"><span>Quỹ nuôi con · từ 04/2027</span><span class="input-wrap"><input v-model.number="dto.childFromApr2027" name="childFromApr2027" type="number" min="0" step="1" required><span>₫</span></span></label>
-          <label class="field"><span>Tiền nhà · đến hết 01/2027</span><span class="input-wrap"><input v-model.number="dto.rentThroughJan2027" name="rentThroughJan2027" type="number" min="0" step="1" required><span>₫</span></span></label>
-          <label class="field"><span>Tiền nhà · từ 02/2027</span><span class="input-wrap"><input v-model.number="dto.rentFromFeb2027" name="rentFromFeb2027" type="number" min="0" step="1" required><span>₫</span></span></label>
+          <label class="field"><span>Sinh hoạt phí</span><span class="input-wrap"><currency-input v-model="dto.living" name="living" /><span>₫</span></span></label>
+          <label class="field"><span>Quỹ nuôi con · đến hết 12/2026</span><span class="input-wrap"><currency-input v-model="dto.childThrough2026" name="childThrough2026" /><span>₫</span></span></label>
+          <label class="field"><span>Quỹ nuôi con · 01–03/2027</span><span class="input-wrap"><currency-input v-model="dto.childQ12027" name="childQ12027" /><span>₫</span></span></label>
+          <label class="field"><span>Quỹ nuôi con · từ 04/2027</span><span class="input-wrap"><currency-input v-model="dto.childFromApr2027" name="childFromApr2027" /><span>₫</span></span></label>
+          <label class="field"><span>Tiền nhà · đến hết 01/2027</span><span class="input-wrap"><currency-input v-model="dto.rentThroughJan2027" name="rentThroughJan2027" /><span>₫</span></span></label>
+          <label class="field"><span>Tiền nhà · từ 02/2027</span><span class="input-wrap"><currency-input v-model="dto.rentFromFeb2027" name="rentFromFeb2027" /><span>₫</span></span></label>
         </fieldset>
 
         <fieldset class="input-group">
           <legend><span class="legend-icon loan-icon" aria-hidden="true">⌁</span> Khoản vay &amp; tiết kiệm</legend>
-          <label class="field"><span>Dư nợ gốc ban đầu</span><span class="input-wrap"><input v-model.number="dto.loanPrincipal" name="loanPrincipal" type="number" min="0" step="1" required><span>₫</span></span></label>
-          <label class="field"><span>Khoản trả cố định tháng 11–12/2026</span><span class="input-wrap"><input v-model.number="dto.fixedPayment" name="fixedPayment" type="number" min="0" step="1" required><span>₫ / tháng</span></span></label>
-          <label class="field"><span>Lãi ngân hàng · kỳ 1</span><span class="input-wrap"><input v-model.number="dto.novInterest" name="novInterest" type="number" min="0" step="1" required><span>₫</span></span></label>
-          <label class="field"><span>Lãi ngân hàng · kỳ 2</span><span class="input-wrap"><input v-model.number="dto.decInterest" name="decInterest" type="number" min="0" step="1" required><span>₫</span></span></label>
-          <label class="field"><span>Lãi tất toán dự kiến</span><span class="input-wrap"><input :value="dto.payoffInterest ?? ''" name="payoffInterest" type="number" min="0" step="1" placeholder="Chưa xác nhận" :aria-invalid="dto.payoffInterest == null ? 'true' : undefined" @input="onPayoffInput"><span>₫</span></span></label>
+          <label class="field"><span>Dư nợ gốc ban đầu</span><span class="input-wrap"><currency-input v-model="dto.loanPrincipal" name="loanPrincipal" /><span>₫</span></span></label>
+          <label class="field"><span>Khoản trả cố định tháng 11–12/2026</span><span class="input-wrap"><currency-input v-model="dto.fixedPayment" name="fixedPayment" /><span>₫ / tháng</span></span></label>
+          <label class="field"><span>Lãi ngân hàng · kỳ 1</span><span class="input-wrap"><currency-input v-model="dto.novInterest" name="novInterest" /><span>₫</span></span></label>
+          <label class="field"><span>Lãi ngân hàng · kỳ 2</span><span class="input-wrap"><currency-input v-model="dto.decInterest" name="decInterest" /><span>₫</span></span></label>
+          <label class="field"><span>Lãi tất toán dự kiến</span><span class="input-wrap"><currency-input v-model="dto.payoffInterest" name="payoffInterest" nullable :required="false" :aria-invalid="dto.payoffInterest == null ? 'true' : undefined" placeholder="Chưa xác nhận" /><span>₫</span></span></label>
           <label class="confirm-field"><input v-model="dto.payoffInterestConfirmed" name="payoffInterestConfirmed" type="checkbox" @change="onConfirmedChange"><span>Đã đối chiếu số lãi này với ngân hàng</span></label>
           <p class="field-hint">Lãi tất toán cần đối chiếu báo giá ngân hàng trước khi xác nhận.</p>
-          <label class="field"><span>Tiền tiết kiệm ban đầu</span><span class="input-wrap"><input v-model.number="dto.startingSavings" name="startingSavings" type="number" min="0" step="1" required><span>₫</span></span></label>
+          <label class="field"><span>Tiền tiết kiệm ban đầu</span><span class="input-wrap"><currency-input v-model="dto.startingSavings" name="startingSavings" /><span>₫</span></span></label>
         </fieldset>
       </div>
       <div id="form-error" class="form-error" role="alert">{{ error }}</div>
@@ -58,6 +58,7 @@
 
 <script setup>
 import { reactive, watch } from 'vue'
+import CurrencyInput from './CurrencyInput.vue'
 
 const props = defineProps(['dto', 'error', 'status'])
 const emit = defineEmits(['input', 'reset', 'save'])
@@ -94,11 +95,6 @@ function buildDto() {
 
 function onRaiseInput(year, event) {
   raiseText[year] = event.target.value
-}
-
-function onPayoffInput(event) {
-  const raw = event.target.value
-  props.dto.payoffInterest = raw === '' ? null : Number(raw)
 }
 
 function onConfirmedChange(event) {
