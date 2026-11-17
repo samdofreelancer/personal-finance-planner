@@ -18,5 +18,21 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+  test: {
+    environment: 'jsdom',
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      reportsDirectory: './coverage',
+      include: ['src/**/*.{js,vue}'],
+      exclude: ['src/main.js'],
+      thresholds: {
+        lines: 80,
+        functions: 70,
+        branches: 75,
+        statements: 80,
+      },
+    },
   }
 })

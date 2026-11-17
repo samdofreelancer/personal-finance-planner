@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Docker Engine/Desktop and Docker Compose for the full local stack.
-- For isolated development: Java 21 and Maven for backend; Node.js 18+ and npm for frontend.
+- For isolated development: Java 21 and Maven for backend; Node.js 20.19+ (or 22.12+) and npm for frontend.
 - PostgreSQL 16 when running backend outside Docker.
 
 ## Run with Docker Compose
@@ -52,7 +52,7 @@ Vite development server defaults to port 5173. Backend datasource and CORS setti
 The repository verification entrypoint is `scripts/verify.ps1` (tested with Windows PowerShell 5.1; PowerShell 7 is also suitable). From the repository root:
 
 ```powershell
-./scripts/verify.ps1                     # backend tests + JaCoCo + PIT, frontend build, both Compose configs
+./scripts/verify.ps1                     # backend tests + JaCoCo + PIT, frontend tests + coverage + build, both Compose configs
 ./scripts/verify.ps1 -DockerBuild        # above + production image build
 ./scripts/verify.ps1 -SmokeTest          # above + HTTP checks against an already-running production-like stack
 ./scripts/verify.ps1 -SmokeTest -DevStack # use frontend port 5173 for an already-running dev stack
@@ -67,14 +67,20 @@ cd backend
 mvn verify
 ```
 
-`mvn verify` runs the test suite, creates the JaCoCo HTML/XML report and enforces the current bundle thresholds: at least 80% line coverage and 70% branch coverage. The repository verification script then runs PIT mutation testing with an 80% score threshold. Reports are written to `backend/target/site/jacoco/` and `backend/target/pit-reports/`; open each `index.html` for the HTML view. Thresholds are deliberately below the measured baseline so new code can improve coverage without blocking unrelated work.
+`mvn verify` runs the backend test suite, creates the JaCoCo HTML/XML report and enforces the current bundle thresholds: at least 80% line coverage and 70% branch coverage. The repository verification script then runs PIT mutation testing with an 80% score threshold. Reports are written to `backend/target/site/jacoco/` and `backend/target/pit-reports/`; open each `index.html` for the HTML view.
 
 Backend unit tests currently cover:
 
 - `ForecastServiceTest`: 50-month/annual aggregation, debt principal and payoff boundaries, provisional payoff interest, child/rent transitions, salary raises and January multiplier, rounding, cash flow and negative savings.
 - `ValidationServiceTest`: valid assumptions, zero/negative/missing monetary boundaries, multiplier lower/upper bounds, interest/payment boundaries, raise bounds and missing payoff-interest confirmation.
 
-The backend currently has 29 automated tests (5 API integration, 10 forecast unit and 14 validation unit tests). The measured JaCoCo baseline is approximately 86.9% line and 77.9% branch coverage across the backend bundle.
+The backend currently has 29 automated tests (5 API integration, 10 forecast unit and 14 validation unit tests). The measured JaCoCo coverage is approximately 86.9% line and 77.9% branch across the backend bundle.
+
+Frontend tests use Vitest, Vue Test Utils and jsdom. `npm test` runs the component/service/utility tests, enforces at least 80% line and statement coverage, 70% function coverage and 75% branch coverage, then writes `frontend/coverage/lcov.info` for SonarQube. The LCOV normalizer prefixes source paths with `frontend/` so the report resolves from the repository root. The report directory is generated and ignored by Git.
+
+The frontend currently has 50 automated tests covering currency input/formatting, assumption validation, API requests and error handling, forecast presentation components and the application lifecycle/save/reset/export flows.
+
+Latest local SonarQube analysis after importing both reports: 90.3% overall coverage, 92.4% line coverage and 87.5% branch coverage. The Quality Gate passed.
 
 Backend API integration tests:
 
@@ -82,7 +88,7 @@ Backend API integration tests:
 - It verifies seed/read, update/read persistence, rejection of invalid updates without changing stored data, the 50-month forecast response and CSV download headers/content.
 - The test datasource uses `jdbc:h2:mem:` and `create-drop`; it must never point at the developer's or production PostgreSQL database.
 
-GitHub Actions workflow `.github/workflows/ci.yml` runs `mvn verify` for the backend and `npm ci` plus `npm run build` for the frontend on pushes and pull requests. The CI database is in-memory; no PostgreSQL service or secrets are required.
+GitHub Actions workflow `.github/workflows/ci.yml` runs `mvn verify` for the backend and `npm ci`, `npm test` and `npm run build` for the frontend on pushes and pull requests. The CI database is in-memory; no PostgreSQL service or secrets are required.
 
 The backend CI job also runs PIT and uploads the JaCoCo (`backend-jacoco-report`) and PIT (`backend-pit-report`) reports as artifacts for 14 days. SonarQube is intentionally local-only; CI does not depend on a developer machine or a locally hosted server.
 
@@ -116,9 +122,9 @@ SonarQube runs in a separate Compose project and uses its own PostgreSQL databas
    ./scripts/sonar-scan.ps1
    ```
 
-   The scan script securely prompts for the token if `SONAR_TOKEN` is not already set, runs `mvn clean verify` first, then invokes the official SonarScanner CLI container against the local server. It analyzes backend Java and frontend Vue/JavaScript source and imports the JaCoCo XML report. The scanner waits up to five minutes for the Quality Gate and returns a failure if the gate fails.
+   The scan script securely prompts for the token if `SONAR_TOKEN` is not already set, runs `mvn clean verify` and frontend `npm ci`/`npm test` first, then invokes the official SonarScanner CLI container against the local server. It analyzes backend Java and frontend Vue/JavaScript source and imports both JaCoCo XML and frontend LCOV reports. The scanner waits up to five minutes for the Quality Gate and returns a failure if the gate fails.
 
-4. Re-scan after changes with `./scripts/sonar-scan.ps1`. If tests and JaCoCo have already run, `./scripts/sonar-scan.ps1 -SkipTests` skips the Maven step. The project must exist in SonarQube before the first scan; create it once in the UI using the exact key above.
+4. Re-scan after changes with `./scripts/sonar-scan.ps1`. If backend and frontend tests/coverage have already run, `./scripts/sonar-scan.ps1 -SkipTests` skips both test steps. The project must exist in SonarQube before the first scan; create it once in the UI using the exact key above.
 5. Stop the server while preserving its database and analysis history:
 
    ```powershell
@@ -134,6 +140,7 @@ Frontend production build:
 ```powershell
 cd frontend
 npm ci
+npm test
 npm run build
 ```
 

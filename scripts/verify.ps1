@@ -61,11 +61,19 @@ try {
         try { mvn org.pitest:pitest-maven:mutationCoverage } finally { Pop-Location }
     }
 
-    Invoke-Check 'Frontend dependency install and production build' {
+    Invoke-Check 'Frontend unit tests and coverage' {
         Push-Location (Join-Path $repoRoot 'frontend')
         try {
             npm ci
             if ($LASTEXITCODE -ne 0) { throw "npm ci exited with code $LASTEXITCODE" }
+            npm test
+            if ($LASTEXITCODE -ne 0) { throw "npm test exited with code $LASTEXITCODE" }
+        } finally { Pop-Location }
+    }
+
+    Invoke-Check 'Frontend production build' {
+        Push-Location (Join-Path $repoRoot 'frontend')
+        try {
             npm run build
             if ($LASTEXITCODE -ne 0) { throw "npm run build exited with code $LASTEXITCODE" }
         } finally { Pop-Location }

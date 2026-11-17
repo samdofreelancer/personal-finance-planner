@@ -48,6 +48,15 @@ try {
             if ($LASTEXITCODE -ne 0) { throw "Maven verify failed with exit code $LASTEXITCODE" }
         }
         finally { Pop-Location }
+
+        Push-Location (Join-Path $repoRoot 'frontend')
+        try {
+            npm ci
+            if ($LASTEXITCODE -ne 0) { throw "npm ci failed with exit code $LASTEXITCODE" }
+            npm test
+            if ($LASTEXITCODE -ne 0) { throw "Frontend tests/coverage failed with exit code $LASTEXITCODE" }
+        }
+        finally { Pop-Location }
     }
 
     if (-not (Test-Path (Join-Path $repoRoot 'backend/target/site/jacoco/jacoco.xml'))) {
@@ -55,6 +64,9 @@ try {
     }
     if (-not (Test-Path (Join-Path $repoRoot 'backend/target/classes'))) {
         throw 'Compiled backend classes are missing. Run backend Maven verify first.'
+    }
+    if (-not (Test-Path (Join-Path $repoRoot 'frontend/coverage/lcov.info'))) {
+        throw 'Frontend LCOV report is missing. Run frontend npm test first.'
     }
 
     docker run --rm `
