@@ -1,5 +1,6 @@
 <template>
   <input
+    :id="id"
     :value="displayValue"
     :name="name"
     type="text"
@@ -20,6 +21,7 @@ import { computed, nextTick } from 'vue'
 import { formatNumber, parseCurrencyInput } from '../utils/currency.js'
 
 const props = defineProps({
+  id: { type: String, default: undefined },
   modelValue: { type: [Number, String], default: '' },
   name: { type: String, required: true },
   placeholder: { type: String, default: '' },

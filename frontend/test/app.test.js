@@ -92,8 +92,24 @@ describe('App', () => {
     await flushPromises()
 
     expect(wrapper.find('#alert-area .alert').text()).toContain('Lãi tất toán chưa được xác nhận')
+    expect(wrapper.find('#alert-area .alert').text()).toContain('đã bao gồm 1.000.000 ₫ lãi tất toán ước tính')
     expect(wrapper.get('input[name="raise2028"]').element.value).toBe('10')
     expect(wrapper.get('#metric-savings-foot').text()).toContain('Tạm tính')
+    expect(wrapper.get('#metric-savings-foot').text()).toContain('đã bao gồm lãi tất toán 1.000.000 ₫ chưa xác nhận')
+  })
+
+  it('explains that a missing payoff-interest amount is excluded from the provisional forecast', async () => {
+    const data = validAssumptions()
+    data.payoffInterest = null
+    data.payoffInterestConfirmed = false
+    getAssumptions.mockResolvedValue(data)
+    getForecast.mockResolvedValue(forecastResult({ provisional: true }))
+
+    const wrapper = mount(App)
+    await flushPromises()
+
+    expect(wrapper.find('#alert-area .alert').text()).toContain('đang tạm tính với 0 ₫ lãi tất toán')
+    expect(wrapper.get('#metric-savings-foot').text()).toContain('chưa gồm lãi tất toán')
   })
 
   it('shows the generic provisional warning after payoff interest has been confirmed', async () => {

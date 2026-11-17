@@ -65,7 +65,8 @@ Personal financial forecast for a configurable planning period. User edits incom
 - Cumulative savings = starting savings + cumulative net cash flow
 - Nov/Dec 2026: principal = fixed payment − bank interest
 - Jan 2027 payoff: full remaining principal + payoff interest
-- Missing/unconfirmed payoff interest → January marked provisional
+- Entered but unconfirmed payoff interest is included as an estimate; January and subsequent cumulative savings are marked provisional.
+- Missing payoff interest is treated as zero (excluded from the calculation); January and subsequent cumulative savings are marked provisional.
 - Integer VND rounding; negative savings shown as shortfall
 
 ## 7. Acceptance criteria
@@ -74,7 +75,7 @@ Personal financial forecast for a configurable planning period. User edits incom
 2. Frontend edits persist to PostgreSQL and recalculate via API.
 3. Nov/Dec principal from fixed payment − bank interest; Jan payoff = full principal.
 4. Cumulative savings includes negative January payoff month.
-5. Unconfirmed payoff interest visibly flagged provisional.
+5. Unconfirmed payoff interest visibly flagged provisional, with the UI explicitly stating whether an entered estimate is included or a missing amount is excluded.
 6. Annual chart labels 2026–2030; 2026 marked partial.
 7. Reload preserves inputs (from DB); reset restores defaults; CSV matches display.
 

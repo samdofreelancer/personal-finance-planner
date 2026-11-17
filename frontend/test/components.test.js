@@ -75,6 +75,7 @@ describe('AssumptionsForm', () => {
 
     await wrapper.get('input[name="payoffInterestConfirmed"]').setValue(true)
     expect(wrapper.emitted('input').at(-1)[0].payoffInterestConfirmed).toBe(true)
+    expect(dto.payoffInterestConfirmed).toBe(false)
     await wrapper.get('form').trigger('submit')
     expect(wrapper.emitted('save')).toHaveLength(1)
     await wrapper.get('#reset-button').trigger('click')
@@ -101,16 +102,36 @@ describe('AssumptionsForm', () => {
     await wrapper.get('form').trigger('input')
     expect(wrapper.emitted('input').at(-1)[0].raises[2030]).toBe(0.15)
   })
+
+  it('edits a local draft without mutating the dto prop and associates labels with controls', async () => {
+    const dto = assumptions()
+    const wrapper = mount(AssumptionsForm, { props: { dto, error: '', status: '' } })
+
+    expect(wrapper.get('label[for="living"]').element.control?.id).toBe('living')
+    await wrapper.get('#living').setValue('4500000')
+    await wrapper.get('form').trigger('input')
+
+    expect(dto.living).toBe(4000000)
+    expect(wrapper.emitted('input').at(-1)[0].living).toBe(4500000)
+  })
 })
 
 describe('forecast presentation components', () => {
   it('renders signed metrics and provisional savings copy', () => {
     const wrapper = mount(MetricCards, { props: {
-      metrics: { netCashFlow2030: -1000, savingsEnd: 5000, salary2030: 42000000 }, provisional: true,
+      metrics: { netCashFlow2030: -1000, savingsEnd: 5000, salary2030: 42000000 },
+      provisional: true, payoffInterest: 1000000, payoffInterestConfirmed: false,
     } })
     expect(wrapper.get('#metric-net').classes()).toContain('negative')
     expect(wrapper.get('#metric-savings').classes()).toContain('positive')
     expect(wrapper.get('#metric-savings-foot').text()).toContain('Tạm tính')
+    expect(wrapper.get('#metric-savings-foot').text()).toContain('đã bao gồm lãi tất toán 1.000.000 ₫ chưa xác nhận')
+
+    const missing = mount(MetricCards, { props: {
+      metrics: { netCashFlow2030: 0, savingsEnd: 0, salary2030: 0 },
+      provisional: true, payoffInterest: null, payoffInterestConfirmed: false,
+    } })
+    expect(missing.get('#metric-savings-foot').text()).toContain('chưa gồm lãi tất toán')
   })
 
   it('renders chart ticks, positive and negative bars, and an empty state', () => {
@@ -137,7 +158,11 @@ describe('forecast presentation components', () => {
     expect(wrapper.text()).toContain('Chưa nhập · tạm tính')
     expect(wrapper.find('.savings-cell').attributes('aria-label')).toContain('tạm tính')
 
-    const withAmount = mount(MonthlyTable, { props: { forecast: data, payoffInterest: 1000 } })
+    const withAmount = mount(MonthlyTable, { props: { forecast: data, payoffInterest: 1000, payoffInterestConfirmed: false } })
     expect(withAmount.text()).toContain('0 ₫ · tạm tính')
+    expect(withAmount.find('.savings-cell').attributes('aria-label')).toContain('đã gồm lãi tất toán')
+    expect(withAmount.find('.savings-cell').attributes('aria-label')).not.toContain('chưa gồm')
+    expect(wrapper.get('tbody th[scope="row"]').text()).toBe('thg 1 2027')
+    expect(wrapper.find('tbody td[scope="row"]').exists()).toBe(false)
   })
 })

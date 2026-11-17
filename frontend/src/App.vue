@@ -27,11 +27,20 @@
       </div>
     </section>
 
-    <metric-cards :metrics="metrics" :provisional="provisional" />
+    <metric-cards
+      :metrics="metrics"
+      :provisional="provisional"
+      :payoff-interest="dto.payoffInterest"
+      :payoff-interest-confirmed="dto.payoffInterestConfirmed"
+    />
     <assumptions-form :dto="dto" :error="errorMessage" :status="saveStatus" @input="onFormInput" @save="saveAndForecast" @reset="resetDefaults" />
     <annual-chart :forecast="forecast" />
     <annual-table :forecast="forecast" />
-    <monthly-table :forecast="forecast" :payoff-interest="dto.payoffInterest" />
+    <monthly-table
+      :forecast="forecast"
+      :payoff-interest="dto.payoffInterest"
+      :payoff-interest-confirmed="dto.payoffInterestConfirmed"
+    />
 
     <footer class="page-footer">
       <span>Đây là dự báo theo các giả định bạn nhập, không phải tư vấn tài chính.</span>
@@ -78,8 +87,8 @@ const alert = computed(() => {
     return {
       title: 'Lãi tất toán chưa được xác nhận.',
       text: dto.payoffInterest == null
-        ? 'Chưa nhập lãi tất toán ngân hàng. Dòng tiền tháng 01/2027 và số dư tiết kiệm sau đó đang tạm tính chưa gồm khoản lãi này.'
-        : `Lãi tất toán ${money(dto.payoffInterest)} đang lấy từ workbook nhưng chưa được đánh dấu đã đối chiếu với ngân hàng. Dòng tiền tháng 01/2027 và số dư tiết kiệm sau đó vẫn là tạm tính.`,
+        ? 'Chưa nhập lãi tất toán ngân hàng. Dự báo đang tạm tính với 0 ₫ lãi tất toán; khoản lãi thực tế chưa được tính.'
+        : `Dự báo đang tạm tính và đã bao gồm ${money(dto.payoffInterest)} lãi tất toán ước tính, chưa được đối chiếu với ngân hàng.`,
       suffix: 'Chỉ đánh dấu đã đối chiếu sau khi xác nhận với ngân hàng.',
     }
   }

@@ -21,8 +21,13 @@
 <script setup>
 import { computed } from 'vue'
 import { formatCurrency } from '../utils/currency.js'
-const props = defineProps(['metrics', 'provisional'])
-const savingsFoot = computed(() => props.provisional ? 'Tạm tính · chưa gồm lãi tất toán chưa xác nhận' : 'Dự kiến đến tháng 12/2030')
+const props = defineProps(['metrics', 'provisional', 'payoffInterest', 'payoffInterestConfirmed'])
+const savingsFoot = computed(() => {
+  if (!props.provisional) return 'Dự kiến đến tháng 12/2030'
+  if (props.payoffInterest == null) return 'Tạm tính · chưa gồm lãi tất toán (chưa nhập)'
+  if (!props.payoffInterestConfirmed) return `Tạm tính · đã bao gồm lãi tất toán ${money(props.payoffInterest)} chưa xác nhận`
+  return 'Tạm tính · có khoản dữ liệu cần xác minh'
+})
 const money = formatCurrency
 function signedClass(value) { return value < 0 ? 'negative' : 'positive' }
 </script>

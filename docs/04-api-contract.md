@@ -40,8 +40,8 @@ The frontend currently sends its current form DTO as query parameters for previe
 
 ## Forecast response
 
-- `months`: 50 monthly rows. Each row includes salary, expense components, loan principal/interest/payment, total expenses, net cash flow, cumulative savings and provisional flags.
-- `annual`: 5 annual rows. Each row includes year, partial-year flag, salary total, expense total, net cash flow, ending savings and provisional flags.
+- `months`: 50 monthly rows. Each row includes salary, expense components, loan principal/interest/payment, total expenses, net cash flow, cumulative savings and provisional flags. An entered but unconfirmed payoff-interest amount is included as an estimate; a null amount contributes zero.
+- `annual`: 5 annual rows. Each row includes year, partial-year flag, salary total, expense total, net cash flow, ending savings and provisional flags. Provisional status propagates to cumulative savings after the payoff month.
 - Exact serialized field names are defined by `ForecastMonthDTO`, `ForecastAnnualDTO` and `ForecastResponse`; update this document when those DTOs change.
 
 ## Error behavior

@@ -32,7 +32,8 @@ This document records the behavior implemented in `ForecastService` and its DTOs
 - Nov 2026 interest is `novInterest`; principal paid is `min(openingPrincipal, max(0, fixedPayment - interest))`.
 - Dec 2026 uses the same rule with `decInterest`.
 - Jan 2027 pays the entire remaining opening principal plus payoff interest.
-- When payoff interest is absent or not confirmed, January is marked provisional. If the amount is null, current calculation uses zero interest while marking the result provisional.
+- When a payoff-interest amount is entered but not confirmed, the forecast includes that amount as an estimate and marks January as provisional; it is not a confirmed bank charge.
+- If payoff interest is null, the calculation uses zero interest (the unknown charge is excluded) and marks January as provisional.
 - No further loan payment is modeled after Jan 2027 in the current forecast window.
 
 ## Cash flow and savings
@@ -42,6 +43,7 @@ This document records the behavior implemented in `ForecastService` and its DTOs
 - `cumulativeSavings = startingSavings + cumulative monthly netCashFlow`.
 - Negative cumulative savings are retained as negative values (shortfall), not clamped to zero.
 - Provisional status propagates to subsequent cumulative savings after a provisional month.
+- Every provisional savings figure must communicate whether the estimated payoff-interest amount is included or omitted; do not label an entered estimate as excluded.
 
 ## Validation constraints (current)
 

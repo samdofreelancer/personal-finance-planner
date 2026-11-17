@@ -91,8 +91,15 @@ class ForecastServiceTest {
         assertEquals(350L, january.getPrincipalPaid());
         assertEquals(25L, january.getInterestPaid());
         assertEquals(375L, january.getLoanPayment());
+        assertEquals(535L, january.getTotalExpenses());
+        assertEquals(1_465L, january.getNetCashFlow());
+        assertEquals(2_865L, january.getCumulativeSavings());
         assertTrue(january.isProvisional());
         assertTrue(january.isSavingsProvisional());
+
+        ForecastMonthDTO february = service.buildForecast(assumptions).getMonths().get(3);
+        assertEquals(3_695L, february.getCumulativeSavings());
+        assertTrue(february.isSavingsProvisional());
     }
 
     @Test
@@ -113,6 +120,7 @@ class ForecastServiceTest {
 
         assertEquals(0L, january.getInterestPaid());
         assertEquals(350L, january.getLoanPayment());
+        assertEquals(2_890L, january.getCumulativeSavings());
         assertTrue(january.isProvisional());
     }
 

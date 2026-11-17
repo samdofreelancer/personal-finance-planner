@@ -12,7 +12,7 @@
         </thead>
         <tbody>
           <tr v-for="m in forecast?.months || []" :key="m.label">
-            <td scope="row">{{ m.label }}</td>
+            <th scope="row">{{ m.label }}</th>
             <td>{{ money(m.salary) }}</td>
             <td>{{ money(m.living) }}</td>
             <td>{{ money(m.child) }}</td>
@@ -23,7 +23,7 @@
             <td>{{ money(m.loanPayment) }}</td>
             <td>{{ money(m.totalExpenses) }}</td>
             <td :class="signedClass(m.netCashFlow)">{{ money(m.netCashFlow) }}</td>
-            <td class="savings-cell" :class="m.savingsProvisional ? 'provisional' : signedClass(m.cumulativeSavings)" :aria-label="m.savingsProvisional ? `${money(m.cumulativeSavings)}; tạm tính chưa gồm lãi tất toán` : null">{{ money(m.cumulativeSavings) }}</td>
+            <td class="savings-cell" :class="m.savingsProvisional ? 'provisional' : signedClass(m.cumulativeSavings)" :aria-label="savingsAriaLabel(m)">{{ money(m.cumulativeSavings) }}</td>
           </tr>
         </tbody>
       </table>
@@ -34,9 +34,15 @@
 <script setup>
 import { formatCurrency } from '../utils/currency.js'
 
-const props = defineProps(['forecast', 'payoffInterest'])
+const props = defineProps(['forecast', 'payoffInterest', 'payoffInterestConfirmed'])
 const money = formatCurrency
 function signedClass(value) { return value < 0 ? 'negative' : 'positive' }
+function savingsAriaLabel(m) {
+  if (!m.savingsProvisional) return null
+  if (props.payoffInterest == null) return `${money(m.cumulativeSavings)}; tạm tính chưa gồm lãi tất toán vì chưa nhập`
+  if (!props.payoffInterestConfirmed) return `${money(m.cumulativeSavings)}; tạm tính đã gồm lãi tất toán ${money(props.payoffInterest)} chưa xác nhận`
+  return `${money(m.cumulativeSavings)}; tạm tính`
+}
 function interestText(m) {
   if (!m.provisional) return money(m.interestPaid)
   if (m.interestPaid === 0 && props.payoffInterest == null) return 'Chưa nhập · tạm tính'
