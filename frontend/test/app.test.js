@@ -32,11 +32,11 @@ function validAssumptions() {
 
 function forecastResult({ provisional = false, include2030 = true } = {}) {
   const annual = [{
-    year: 2027, netCashFlow: 10000000, endingSavings: 40000000,
+    year: 2027, salary: 40000000, expenses: 30000000, netCashFlow: 10000000, endingSavings: 40000000,
     provisional: false, endingSavingsProvisional: false,
   }]
   if (include2030) annual.push({
-    year: 2030, netCashFlow: 20000000, endingSavings: 90000000,
+    year: 2030, salary: 60000000, expenses: 40000000, netCashFlow: 20000000, endingSavings: 90000000,
     provisional, endingSavingsProvisional: provisional,
   })
   return {
@@ -68,9 +68,14 @@ describe('App', () => {
     expect(getAssumptions).toHaveBeenCalledOnce()
     expect(getForecast).toHaveBeenCalledOnce()
     expect(wrapper.text()).toContain('Đã lưu trên máy chủ')
+    expect(wrapper.get('.nav-link[href="#overview"]').attributes('aria-current')).toBe('page')
+    expect(wrapper.text()).toContain('12/2030 — 12/2030')
+    expect(wrapper.text()).toContain('Kế hoạch cá nhân · 2030')
     expect(wrapper.get('#metric-net').text()).toContain('20.000.000')
-    expect(wrapper.get('#metric-savings').text()).toContain('90.000.000')
-    expect(wrapper.text()).toContain('Tiết kiệm & dư nợ')
+    expect(wrapper.get('#metric-income').text()).toContain('60.000.000')
+    expect(wrapper.get('#metric-expenses').text()).toContain('40.000.000')
+    expect(wrapper.find('.outlook-result strong').text()).toContain('90.000.000')
+    expect(wrapper.text()).toContain('Hành trình tài chính dự kiến')
     expect(wrapper.text()).toContain('DƯ NỢ BAN ĐẦU')
     expect(wrapper.find('#alert-area .alert').exists()).toBe(false)
   })
@@ -96,8 +101,7 @@ describe('App', () => {
     expect(wrapper.find('#alert-area .alert').text()).toContain('Lãi tất toán chưa được xác nhận')
     expect(wrapper.find('#alert-area .alert').text()).toContain('đã bao gồm 1.000.000 ₫ lãi tất toán ước tính')
     expect(wrapper.get('input[name="raise2028"]').element.value).toBe('10')
-    expect(wrapper.get('#metric-savings-foot').text()).toContain('Tạm tính')
-    expect(wrapper.get('#metric-savings-foot').text()).toContain('đã bao gồm lãi tất toán 1.000.000 ₫ chưa xác nhận')
+    expect(wrapper.get('#metric-net-foot').text()).toContain('Tạm tính')
   })
 
   it('explains that a missing payoff-interest amount is excluded from the provisional forecast', async () => {
@@ -111,7 +115,7 @@ describe('App', () => {
     await flushPromises()
 
     expect(wrapper.find('#alert-area .alert').text()).toContain('đang tạm tính với 0 ₫ lãi tất toán')
-    expect(wrapper.get('#metric-savings-foot').text()).toContain('chưa gồm lãi tất toán')
+    expect(wrapper.get('#metric-net-foot').text()).toContain('Tạm tính')
   })
 
   it('shows the generic provisional warning after payoff interest has been confirmed', async () => {
@@ -211,6 +215,7 @@ describe('App', () => {
     const wrapper = mount(App)
     await flushPromises()
     expect(wrapper.get('#metric-net').text()).toContain('0 ₫')
-    expect(wrapper.get('#metric-savings').text()).toContain('0 ₫')
+    expect(wrapper.get('#metric-income').text()).toContain('0 ₫')
+    expect(wrapper.get('#metric-expenses').text()).toContain('0 ₫')
   })
 })

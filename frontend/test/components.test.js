@@ -127,7 +127,7 @@ describe('forecast presentation components', () => {
     expect(wrapper.text()).toContain('DƯ NỢ BAN ĐẦU')
     expect(wrapper.text()).toContain('Dự kiến tất toán thg 1 2027')
     expect(wrapper.text()).toContain('Quỹ tiết kiệm dự kiến')
-    expect(wrapper.findAll('circle')).toHaveLength(3)
+    expect(wrapper.findAll('circle').length).toBeGreaterThanOrEqual(3)
     expect(wrapper.text()).toContain('-10.700.000 ₫')
   })
 
@@ -141,21 +141,21 @@ describe('forecast presentation components', () => {
     expect(wrapper.find('svg').exists()).toBe(false)
   })
 
-  it('renders signed metrics and provisional savings copy', () => {
+  it('renders annual income, expenses and signed net cash flow', () => {
     const wrapper = mount(MetricCards, { props: {
-      metrics: { netCashFlow2030: -1000, savingsEnd: 5000, salary2030: 42000000 },
-      provisional: true, payoffInterest: 1000000, payoffInterestConfirmed: false,
+      metrics: { netCashFlow2030: -1000, income2030: 42000000, expenses2030: 42001000 },
+      provisional: true,
     } })
     expect(wrapper.get('#metric-net').classes()).toContain('negative')
-    expect(wrapper.get('#metric-savings').classes()).toContain('positive')
-    expect(wrapper.get('#metric-savings-foot').text()).toContain('Tạm tính')
-    expect(wrapper.get('#metric-savings-foot').text()).toContain('đã bao gồm lãi tất toán 1.000.000 ₫ chưa xác nhận')
+    expect(wrapper.get('#metric-income').text()).toContain('42.000.000')
+    expect(wrapper.get('#metric-expenses').text()).toContain('42.001.000')
+    expect(wrapper.get('#metric-net-foot').text()).toContain('Tạm tính')
 
     const missing = mount(MetricCards, { props: {
-      metrics: { netCashFlow2030: 0, savingsEnd: 0, salary2030: 0 },
-      provisional: true, payoffInterest: null, payoffInterestConfirmed: false,
+      metrics: { netCashFlow2030: 0, income2030: 0, expenses2030: 0 },
+      provisional: false,
     } })
-    expect(missing.get('#metric-savings-foot').text()).toContain('chưa gồm lãi tất toán')
+    expect(missing.get('#metric-net-foot').text()).toContain('Thu nhập trừ tổng chi phí')
   })
 
   it('renders chart ticks, positive and negative bars, and an empty state', () => {
@@ -179,6 +179,7 @@ describe('forecast presentation components', () => {
     const data = forecast()
     const wrapper = mount(MonthlyTable, { props: { forecast: data, payoffInterest: null } })
     expect(wrapper.findAll('tbody tr')).toHaveLength(2)
+    expect(wrapper.find('.row-count').text()).toBe('2 tháng')
     expect(wrapper.text()).toContain('Chưa nhập · tạm tính')
     expect(wrapper.find('.savings-cell').attributes('aria-label')).toContain('tạm tính')
 

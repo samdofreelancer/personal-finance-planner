@@ -11,14 +11,14 @@
       </a>
       <p class="nav-caption">WORKSPACE</p>
       <nav class="side-nav">
-        <a class="nav-link" :class="{ active: activeSection === 'overview' }" href="#overview"><span class="nav-icon">▦</span> Tổng quan</a>
-        <a class="nav-link" :class="{ active: activeSection === 'assumptions' }" href="#assumptions"><span class="nav-icon">⚙</span> Giả định tài chính</a>
-        <a class="nav-link" :class="{ active: activeSection === 'annual-report' }" href="#annual-report"><span class="nav-icon">▥</span> Tổng hợp theo năm</a>
-        <a class="nav-link" :class="{ active: activeSection === 'monthly-forecast' }" href="#monthly-forecast"><span class="nav-icon">▤</span> Dự báo theo tháng</a>
+        <a class="nav-link" :class="{ active: activeSection === 'overview' }" href="#overview" :aria-current="activeSection === 'overview' ? 'page' : undefined"><span class="nav-icon">▦</span> Tổng quan</a>
+        <a class="nav-link" :class="{ active: activeSection === 'assumptions' }" href="#assumptions" :aria-current="activeSection === 'assumptions' ? 'page' : undefined"><span class="nav-icon">⚙</span> Giả định tài chính</a>
+        <a class="nav-link" :class="{ active: activeSection === 'annual-report' }" href="#annual-report" :aria-current="activeSection === 'annual-report' ? 'page' : undefined"><span class="nav-icon">▥</span> Tổng hợp theo năm</a>
+        <a class="nav-link" :class="{ active: activeSection === 'monthly-forecast' }" href="#monthly-forecast" :aria-current="activeSection === 'monthly-forecast' ? 'page' : undefined"><span class="nav-icon">▤</span> Dự báo theo tháng</a>
       </nav>
       <div class="sidebar-bottom">
         <span class="local-indicator"><span></span> Dữ liệu lưu trên máy chủ</span>
-        <span class="sidebar-footnote">Kế hoạch cá nhân · 2026–2030</span>
+        <span class="sidebar-footnote">Kế hoạch cá nhân · {{ forecastYears }}</span>
       </div>
     </aside>
 
@@ -32,15 +32,21 @@
       </header>
 
       <main class="page">
-    <section id="overview" class="page-heading">
-      <div>
-        <p class="eyebrow">YOUR FINANCIAL JOURNEY</p>
-        <h1>Tổng quan tài chính</h1>
-        <p class="subtitle">Theo dõi dòng tiền và xem kế hoạch hiện tại sẽ đưa bạn đến đâu.</p>
+    <section id="overview" class="page-heading outlook-hero">
+      <div class="outlook-copy">
+        <p class="eyebrow">FINANCIAL OUTLOOK <span class="outlook-live-dot"></span> KỊCH BẢN ĐANG MÔ PHỎNG</p>
+        <h1>Kế hoạch tài chính<br class="mobile-break"> của bạn sẽ đi đến đâu?</h1>
+        <p class="subtitle">Bức tranh dự kiến từ {{ forecastPeriod }}, dựa trên các giả định hiện tại.</p>
+        <div class="outlook-actions">
+          <a class="button button-primary" href="#assumptions">Điều chỉnh giả định <span aria-hidden="true">↗</span></a>
+          <span class="outlook-period">{{ forecastPeriod }}</span>
+        </div>
       </div>
-      <div class="heading-actions">
-        <div class="heading-period"><span class="period-dot"></span> 11/2026 — 12/2030</div>
-        <a class="button button-primary" href="#assumptions">✎ Điều chỉnh kế hoạch</a>
+      <div class="outlook-result" aria-live="polite">
+        <span class="outlook-result-label">TIẾT KIỆM DỰ KIẾN CUỐI KỲ</span>
+        <strong :class="metrics.savingsEnd < 0 ? 'negative' : ''">{{ money(metrics.savingsEnd) }}</strong>
+        <span class="outlook-result-note">{{ provisional ? 'Kết quả tạm tính · cần xác minh' : 'Dự kiến đến tháng 12/2030' }}</span>
+        <span class="outlook-result-disclaimer">Không phải số dư tài khoản thực tế</span>
       </div>
     </section>
 
@@ -51,15 +57,14 @@
       </div>
     </section>
 
-    <section class="overview-section" aria-label="Các chỉ số kế hoạch">
-      <div class="section-intro"><div><p class="eyebrow">BỨC TRANH TỔNG THỂ</p><h2>Chỉ số kế hoạch</h2></div><span class="section-meta">Dự báo đến cuối năm 2030</span></div>
+    <section class="overview-section" aria-label="Triển vọng tài chính">
+      <div class="section-intro"><div><p class="eyebrow">YOUR FINANCIAL JOURNEY</p><h2>Hành trình tài chính dự kiến</h2><p class="section-description">Theo dõi quỹ tiết kiệm tăng lên và dư nợ giảm xuống theo thời gian.</p></div><span class="section-meta">Mô phỏng · 2026–2030</span></div>
+      <financial-position :assumptions="dto" :forecast="forecast" />
+      <div class="section-intro indicator-intro"><div><p class="eyebrow">KEY INDICATORS</p><h2>Các chỉ số đáng chú ý</h2></div><span class="section-meta">Dự báo năm 2030</span></div>
     <metric-cards
       :metrics="metrics"
       :provisional="provisional"
-      :payoff-interest="dto.payoffInterest"
-      :payoff-interest-confirmed="dto.payoffInterestConfirmed"
     />
-    <financial-position :assumptions="dto" :forecast="forecast" />
     </section>
 
     <section id="assumptions" class="content-section">
@@ -115,7 +120,7 @@ const dto = reactive({
 })
 
 const forecast = ref(null)
-const metrics = ref({ netCashFlow2030: 0, savingsEnd: 0, salary2030: 0 })
+const metrics = ref({ netCashFlow2030: 0, income2030: 0, expenses2030: 0, savingsEnd: 0 })
 const errorMessage = ref('')
 const saveStatus = ref('Đang tải...')
 const provisional = ref(false)
@@ -127,10 +132,33 @@ const sectionLabels = {
   'monthly-forecast': 'Dự báo theo tháng',
 }
 const activeSectionLabel = computed(() => sectionLabels[activeSection.value] || sectionLabels.overview)
+const forecastPeriod = computed(() => {
+  const months = forecast.value?.months || []
+  if (!months.length) return 'Chưa có dữ liệu dự báo'
+  const format = (month) => `${String(month.month).padStart(2, '0')}/${month.year}`
+  return `${format(months[0])} — ${format(months.at(-1))}`
+})
+const forecastYears = computed(() => {
+  const months = forecast.value?.months || []
+  if (!months.length) return 'Chưa xác định'
+  const first = months[0].year
+  const last = months.at(-1).year
+  return first === last ? String(first) : `${first}–${last}`
+})
 
 function syncActiveSection() {
   const section = window.location.hash.slice(1)
   activeSection.value = sectionLabels[section] ? section : 'overview'
+}
+
+function updateActiveSectionFromScroll() {
+  const sections = Object.keys(sectionLabels)
+  let current = 'overview'
+  for (const section of sections) {
+    const element = document.getElementById(section)
+    if (element && element.getBoundingClientRect().top <= 150) current = section
+  }
+  activeSection.value = current
 }
 
 let debounceTimer = null
@@ -161,6 +189,7 @@ const alert = computed(() => {
 onMounted(async () => {
   syncActiveSection()
   window.addEventListener('hashchange', syncActiveSection)
+  window.addEventListener('scroll', updateActiveSectionFromScroll, { passive: true })
   try {
     const data = await getAssumptions()
     applyDto(data)
@@ -176,6 +205,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   clearTimeout(debounceTimer)
   window.removeEventListener('hashchange', syncActiveSection)
+  window.removeEventListener('scroll', updateActiveSectionFromScroll)
 })
 
 function applyDto(data) {
@@ -199,11 +229,11 @@ async function loadForecast(source = dto) {
 function applyForecast(res) {
   forecast.value = res
   const y2030 = res.annual.find((a) => a.year === 2030)
-  const dec2030 = res.months.find((m) => m.year === 2030 && m.month === 12)
   metrics.value = {
     netCashFlow2030: y2030 ? y2030.netCashFlow : 0,
+    income2030: y2030 ? y2030.salary : 0,
+    expenses2030: y2030 ? y2030.expenses : 0,
     savingsEnd: y2030 ? y2030.endingSavings : 0,
-    salary2030: dec2030 ? dec2030.salary : 0,
   }
   provisional.value = y2030 ? (y2030.provisional || y2030.endingSavingsProvisional) : false
 }
