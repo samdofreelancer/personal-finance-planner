@@ -28,6 +28,20 @@ Delete containers and the database volume (destructive):
 docker compose down -v
 ```
 
+## Run with a Docker Engine inside WSL2 (Windows)
+
+Docker Desktop is optional. When `docker` points at a Docker Engine running inside a WSL2 distribution, a few constraints apply:
+
+- A Compose file that bind-mounts host directories must be started from inside the WSL distribution. A Linux daemon cannot resolve Windows paths such as `C:\...`; the repository has to be reachable as `/mnt/c/...`.
+- The development overlay (`docker-compose.dev.yml`) bind-mounts `./backend` and `./frontend`, so start it from WSL. A small Windows wrapper that maps the current folder and runs Compose inside WSL keeps the command usable from the repository root:
+
+  ```powershell
+  wsl-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+  ```
+
+- Published ports still reach Windows as `http://localhost`, `http://localhost:8080` and `localhost:5432`.
+- After `wsl --shutdown` the engine is offline until the distribution boots again; start it explicitly with `wsl -d Ubuntu -u root -e systemctl start docker ssh`.
+
 ## Run services independently
 
 Backend:

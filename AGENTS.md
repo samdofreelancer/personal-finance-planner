@@ -68,6 +68,7 @@ Hot-reload development stack:
 ```powershell
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 ```
+On a Windows host whose Docker Engine runs inside a WSL2 distribution, start this overlay from inside that distribution (a Linux daemon cannot resolve `C:\...` bind mounts); see `docs/06-development-guide.md`.
 
 This repository documents local Docker Compose deployment only. Do not infer or claim a production/cloud deployment procedure exists.
 
