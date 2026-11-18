@@ -1,23 +1,47 @@
 <template>
-  <header class="topbar">
-    <a class="brand" href="#" aria-label="Kế hoạch tài chính cá nhân" @click.prevent>
-      <span class="brand-mark" aria-hidden="true">₫</span>
-      <span>Plan<span class="brand-light">wise</span></span>
-    </a>
-    <div class="topbar-actions">
-      <span class="local-badge"><span aria-hidden="true"></span> Dữ liệu lưu trên máy chủ</span>
-      <button id="export-button" class="button button-secondary" type="button" :disabled="hasValidationError" @click="exportCsv">Xuất CSV</button>
-    </div>
-  </header>
-
-  <main class="page">
-    <section class="page-heading">
-      <div>
-        <p class="eyebrow">KẾ HOẠCH CÁ NHÂN · 5 NĂM</p>
-        <h1>Dòng tiền của bạn,<br class="mobile-break"> rõ ràng từng tháng.</h1>
-        <p class="subtitle">Điều chỉnh giả định để xem thu nhập, chi phí và khoản tiết kiệm thay đổi ra sao.</p>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Điều hướng chính">
+      <a class="brand" href="#overview" aria-label="Planwise - Tổng quan">
+        <svg class="brand-mark" viewBox="0 0 40 40" role="img" aria-label="">
+          <rect width="40" height="40" rx="12" fill="currentColor" />
+          <path d="M12 29V11h9.2a7 7 0 0 1 0 14H17" fill="none" stroke="#F7F8F2" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="m23 25 5 4-5 3" fill="none" stroke="#9DE3C7" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <span class="brand-word">plan<span class="brand-light">wise</span></span>
+      </a>
+      <p class="nav-caption">WORKSPACE</p>
+      <nav class="side-nav">
+        <a class="nav-link" :class="{ active: activeSection === 'overview' }" href="#overview"><span class="nav-icon">▦</span> Tổng quan</a>
+        <a class="nav-link" :class="{ active: activeSection === 'assumptions' }" href="#assumptions"><span class="nav-icon">⚙</span> Giả định tài chính</a>
+        <a class="nav-link" :class="{ active: activeSection === 'annual-report' }" href="#annual-report"><span class="nav-icon">▥</span> Tổng hợp theo năm</a>
+        <a class="nav-link" :class="{ active: activeSection === 'monthly-forecast' }" href="#monthly-forecast"><span class="nav-icon">▤</span> Dự báo theo tháng</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <span class="local-indicator"><span></span> Dữ liệu lưu trên máy chủ</span>
+        <span class="sidebar-footnote">Kế hoạch cá nhân · 2026–2030</span>
       </div>
-      <div class="heading-period"><span class="period-dot"></span> THÁNG 11/2026 — THÁNG 12/2030</div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <div class="breadcrumb">Không gian tài chính <span>/</span> <strong>{{ activeSectionLabel }}</strong></div>
+        <div class="topbar-actions">
+          <span class="local-badge"><span aria-hidden="true"></span> Dữ liệu lưu trên máy chủ</span>
+          <button id="export-button" class="button button-secondary" type="button" :disabled="hasValidationError" @click="exportCsv">↓ Xuất CSV</button>
+        </div>
+      </header>
+
+      <main class="page">
+    <section id="overview" class="page-heading">
+      <div>
+        <p class="eyebrow">YOUR FINANCIAL JOURNEY</p>
+        <h1>Tổng quan tài chính</h1>
+        <p class="subtitle">Theo dõi dòng tiền và xem kế hoạch hiện tại sẽ đưa bạn đến đâu.</p>
+      </div>
+      <div class="heading-actions">
+        <div class="heading-period"><span class="period-dot"></span> 11/2026 — 12/2030</div>
+        <a class="button button-primary" href="#assumptions">✎ Điều chỉnh kế hoạch</a>
+      </div>
     </section>
 
     <section id="alert-area" aria-live="polite">
@@ -27,26 +51,44 @@
       </div>
     </section>
 
+    <section class="overview-section" aria-label="Các chỉ số kế hoạch">
+      <div class="section-intro"><div><p class="eyebrow">BỨC TRANH TỔNG THỂ</p><h2>Chỉ số kế hoạch</h2></div><span class="section-meta">Dự báo đến cuối năm 2030</span></div>
     <metric-cards
       :metrics="metrics"
       :provisional="provisional"
       :payoff-interest="dto.payoffInterest"
       :payoff-interest-confirmed="dto.payoffInterestConfirmed"
     />
-    <assumptions-form :dto="dto" :error="errorMessage" :status="saveStatus" @input="onFormInput" @save="saveAndForecast" @reset="resetDefaults" />
-    <annual-chart :forecast="forecast" />
-    <annual-table :forecast="forecast" />
+    <financial-position :assumptions="dto" :forecast="forecast" />
+    </section>
+
+    <section id="assumptions" class="content-section">
+      <div class="section-intro"><div><p class="eyebrow">THIẾT LẬP</p><h2>Giả định tài chính</h2><p class="section-description">Cập nhật thu nhập, chi phí và khoản vay để mô phỏng kế hoạch của gia đình.</p></div></div>
+      <assumptions-form :dto="dto" :error="errorMessage" :status="saveStatus" @input="onFormInput" @save="saveAndForecast" @reset="resetDefaults" />
+    </section>
+
+    <section id="annual-report" class="content-section">
+      <div class="section-intro"><div><p class="eyebrow">PHÂN TÍCH DÀI HẠN</p><h2>Dòng tiền theo năm</h2><p class="section-description">So sánh thu nhập và chi phí qua từng năm trong kỳ kế hoạch.</p></div></div>
+      <annual-chart :forecast="forecast" />
+      <annual-table :forecast="forecast" />
+    </section>
+
+    <section id="monthly-forecast" class="content-section">
+      <div class="section-intro"><div><p class="eyebrow">CHI TIẾT DỰ BÁO</p><h2>Kế hoạch từng tháng</h2><p class="section-description">Theo dõi các khoản thu, chi, trả nợ và tiết kiệm lũy kế.</p></div></div>
     <monthly-table
       :forecast="forecast"
       :payoff-interest="dto.payoffInterest"
       :payoff-interest-confirmed="dto.payoffInterestConfirmed"
     />
+    </section>
 
-    <footer class="page-footer">
-      <span>Đây là dự báo theo các giả định bạn nhập, không phải tư vấn tài chính.</span>
-      <span>Chạy cục bộ · Không gửi dữ liệu ra ngoài</span>
-    </footer>
-  </main>
+      </main>
+      <footer class="page-footer">
+        <span>Đây là dự báo theo các giả định bạn nhập, không phải tư vấn tài chính.</span>
+        <span>Chạy cục bộ · Không gửi dữ liệu ra ngoài</span>
+      </footer>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -54,6 +96,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { getAssumptions, saveAssumptions, seedDefaults, getForecast, exportCsv as exportCsvApi } from './services/api.js'
 import { validateAssumptions } from './utils/validation.js'
 import MetricCards from './components/MetricCards.vue'
+import FinancialPosition from './components/FinancialPosition.vue'
 import AssumptionsForm from './components/AssumptionsForm.vue'
 import AnnualChart from './components/AnnualChart.vue'
 import AnnualTable from './components/AnnualTable.vue'
@@ -76,6 +119,19 @@ const metrics = ref({ netCashFlow2030: 0, savingsEnd: 0, salary2030: 0 })
 const errorMessage = ref('')
 const saveStatus = ref('Đang tải...')
 const provisional = ref(false)
+const activeSection = ref('overview')
+const sectionLabels = {
+  overview: 'Tổng quan',
+  assumptions: 'Giả định tài chính',
+  'annual-report': 'Tổng hợp theo năm',
+  'monthly-forecast': 'Dự báo theo tháng',
+}
+const activeSectionLabel = computed(() => sectionLabels[activeSection.value] || sectionLabels.overview)
+
+function syncActiveSection() {
+  const section = window.location.hash.slice(1)
+  activeSection.value = sectionLabels[section] ? section : 'overview'
+}
 
 let debounceTimer = null
 let latestRequest = 0
@@ -103,6 +159,8 @@ const alert = computed(() => {
 })
 
 onMounted(async () => {
+  syncActiveSection()
+  window.addEventListener('hashchange', syncActiveSection)
   try {
     const data = await getAssumptions()
     applyDto(data)
@@ -115,7 +173,10 @@ onMounted(async () => {
   }
 })
 
-onBeforeUnmount(() => clearTimeout(debounceTimer))
+onBeforeUnmount(() => {
+  clearTimeout(debounceTimer)
+  window.removeEventListener('hashchange', syncActiveSection)
+})
 
 function applyDto(data) {
   Object.assign(dto, data)

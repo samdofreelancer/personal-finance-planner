@@ -78,6 +78,10 @@ Personal financial forecast for a configurable planning period. User edits incom
 5. Unconfirmed payoff interest visibly flagged provisional, with the UI explicitly stating whether an entered estimate is included or a missing amount is excluded.
 6. Annual chart labels 2026–2030; 2026 marked partial.
 7. Reload preserves inputs (from DB); reset restores defaults; CSV matches display.
+8. The primary screen presents a dashboard with the existing forecast metrics and clear navigation to assumptions, annual reporting and monthly forecast details.
+9. Navigation destinations map only to capabilities in this specification; the UI must not imply that transaction tracking, account/wallet management or budgeting are implemented.
+10. The application shell and existing forecast views remain usable at desktop and narrow mobile viewport widths without horizontal page overflow.
+11. The dashboard summarizes starting savings, starting/ending debt, projected debt payoff (when derivable), and annual cumulative-savings trajectory using forecast data only; it must not label savings as total assets or net worth.
 
 ## 8. Out of scope
 

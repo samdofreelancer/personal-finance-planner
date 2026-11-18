@@ -70,6 +70,8 @@ describe('App', () => {
     expect(wrapper.text()).toContain('Đã lưu trên máy chủ')
     expect(wrapper.get('#metric-net').text()).toContain('20.000.000')
     expect(wrapper.get('#metric-savings').text()).toContain('90.000.000')
+    expect(wrapper.text()).toContain('Tiết kiệm & dư nợ')
+    expect(wrapper.text()).toContain('DƯ NỢ BAN ĐẦU')
     expect(wrapper.find('#alert-area .alert').exists()).toBe(false)
   })
 

@@ -3,6 +3,7 @@ import { mount } from '@vue/test-utils'
 import CurrencyInput from '../src/components/CurrencyInput.vue'
 import AssumptionsForm from '../src/components/AssumptionsForm.vue'
 import MetricCards from '../src/components/MetricCards.vue'
+import FinancialPosition from '../src/components/FinancialPosition.vue'
 import AnnualChart from '../src/components/AnnualChart.vue'
 import AnnualTable from '../src/components/AnnualTable.vue'
 import MonthlyTable from '../src/components/MonthlyTable.vue'
@@ -117,6 +118,29 @@ describe('AssumptionsForm', () => {
 })
 
 describe('forecast presentation components', () => {
+  it('summarizes starting savings, debt payoff and the savings trajectory', () => {
+    const wrapper = mount(FinancialPosition, { props: {
+      assumptions: { startingSavings: 5000000, loanPrincipal: 100000000 },
+      forecast: forecast(),
+    } })
+    expect(wrapper.text()).toContain('TIẾT KIỆM BAN ĐẦU')
+    expect(wrapper.text()).toContain('DƯ NỢ BAN ĐẦU')
+    expect(wrapper.text()).toContain('Dự kiến tất toán thg 1 2027')
+    expect(wrapper.text()).toContain('Quỹ tiết kiệm dự kiến')
+    expect(wrapper.findAll('circle')).toHaveLength(3)
+    expect(wrapper.text()).toContain('-10.700.000 ₫')
+  })
+
+  it('keeps the opening debt when the forecast has no monthly results', () => {
+    const wrapper = mount(FinancialPosition, { props: {
+      assumptions: { startingSavings: 0, loanPrincipal: 25000000 },
+      forecast: { annual: [], months: [] },
+    } })
+    expect(wrapper.text()).toContain('25.000.000 ₫')
+    expect(wrapper.text()).toContain('Vẫn còn dư nợ ở cuối kỳ')
+    expect(wrapper.find('svg').exists()).toBe(false)
+  })
+
   it('renders signed metrics and provisional savings copy', () => {
     const wrapper = mount(MetricCards, { props: {
       metrics: { netCashFlow2030: -1000, savingsEnd: 5000, salary2030: 42000000 },

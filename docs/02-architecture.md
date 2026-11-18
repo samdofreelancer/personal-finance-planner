@@ -17,9 +17,10 @@ Không có microservice boundary. Không tạo service/domain boundaries chỉ �
 
 ### Frontend (`frontend/src`)
 
-- `App.vue`: điều phối load, state, preview, autosave, reset và export.
+- `App.vue`: application shell, điều hướng tới các khu vực dashboard/assumptions/annual/monthly và điều phối load, state, preview, autosave, reset, export.
+- `assets/style.css`: design tokens, sidebar/topbar layout và responsive presentation cho desktop/mobile.
 - `components/AssumptionsForm.vue`: nhập giả định và phát sự kiện thay đổi/lưu/reset.
-- `MetricCards.vue`, `AnnualChart.vue`, `AnnualTable.vue`, `MonthlyTable.vue`: trình bày forecast.
+- `MetricCards.vue`, `FinancialPosition.vue`, `AnnualChart.vue`, `AnnualTable.vue`, `MonthlyTable.vue`: trình bày KPI, tiết kiệm/dư nợ mô phỏng và forecast; `FinancialPosition.vue` chỉ suy ra số dư từ assumptions và forecast response, không tạo dữ liệu tài sản thực tế.
 - `services/api.js`: HTTP client cho assumptions, forecast, reset và CSV.
 - `utils/validation.js`: client-side input validation.
 
