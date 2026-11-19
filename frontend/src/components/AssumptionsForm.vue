@@ -49,7 +49,7 @@
         <span id="save-status" class="save-status" role="status">{{ status }}</span>
         <div class="form-actions">
           <span class="form-note">Đơn vị tiền tệ: VND</span>
-          <button id="save-assumptions-button" class="button button-primary" type="submit" :disabled="status === 'Đang lưu...'">Lưu vào DB</button>
+          <button id="save-assumptions-button" class="button button-primary" type="submit" :disabled="status === 'Đang lưu...'">Lưu</button>
         </div>
       </div>
     </form>

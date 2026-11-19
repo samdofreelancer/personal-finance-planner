@@ -11,3 +11,4 @@ backend/.classpath
 *.sqlite3
 *.db
 .scannerwork/
+.superpowers/

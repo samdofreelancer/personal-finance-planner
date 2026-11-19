@@ -58,7 +58,7 @@
         <button class="button button-secondary" type="button" @click="addLoan">＋ Thêm khoản vay</button>
         <div class="loan-save-actions">
           <span class="save-status" role="status">{{ statusLabel }}</span>
-          <button class="button button-primary" type="submit" :disabled="Boolean(validationError) || status === 'Đang lưu...'"><span aria-hidden="true">✓</span> Lưu lịch trả vào DB</button>
+          <button class="button button-primary" type="submit" :disabled="Boolean(validationError) || status === 'Đang lưu...'"><span aria-hidden="true">✓</span> Lưu</button>
         </div>
       </div>
       <p class="field-hint loan-footnote">Dự báo lấy lịch trả đã lưu. Gốc trả được giới hạn theo dư nợ còn lại; lãi được cộng đúng theo từng kỳ đã nhập.</p>

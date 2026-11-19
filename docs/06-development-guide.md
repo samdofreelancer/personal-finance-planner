@@ -12,7 +12,7 @@
 - A fresh empty database runs V1–V3. V1 creates the assumptions table and synthetic defaults; V2 creates loan tables and seeds an equivalent sample repayment schedule; V3 removes the retired single-loan columns.
 - On an existing non-empty database without Flyway history, `baseline-on-migrate=true` baselines the existing schema at version 1, then runs V2/V3 to migrate the legacy loan values into dated repayment entries. The assumptions row and all non-loan values are retained.
 - **Before the first application start after this change, take a PostgreSQL backup.** Do not delete the Compose database volume. If Flyway reports a failed migration, inspect the database and migration history before retrying; never repair by dropping tables or volumes.
-- V1–V3 SQL was executed against isolated temporary PostgreSQL 16 databases for synthetic fresh defaults and a modified legacy fixture; migrated principal/interest totals and preservation of non-loan assumptions were checked, then the temporary databases were dropped. The live application database was not migrated by this implementation session.
+- V1–V3 SQL was executed against isolated temporary PostgreSQL 16 databases for synthetic fresh defaults and a modified legacy fixture. On 2026-11-19, the live local Compose database was backed up to `backups/finance-planner-pre-deploy-20261119.dump` (custom-format archive verified with `pg_restore --list`), then Flyway successfully baselined it at V1 and applied V2/V3. Post-migration checks confirmed one assumptions row, one migrated loan with three repayment entries, and removal of all six retired loan columns. Frontend, assumptions, loans, 50-month/5-year forecast and CSV HTTP smoke checks passed. The PostgreSQL volume was preserved.
 
 ## Run with Docker Compose
 
