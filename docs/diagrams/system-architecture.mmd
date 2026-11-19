@@ -4,19 +4,26 @@ flowchart LR
   FE --> N["Nginx"]
   N -->|"/api proxy"| API["Spring Boot 3<br/>Java 21 REST API"]
   API --> AC["AssumptionController"]
+  API --> LC["LoanController"]
   API --> FC["ForecastController"]
   AC --> AS["AssumptionService"]
+  LC --> LS["LoanScheduleService"]
   FC --> VS["ValidationService"]
   FC --> FS["ForecastService"]
   AS --> REPO["AssumptionRepository<br/>Spring Data JPA"]
-  REPO --> DB[("PostgreSQL 16<br/>assumptions")]
+  LS --> LREPO["LoanRepository<br/>Loan + repayment entities"]
+  REPO --> DB[("PostgreSQL 16<br/>assumptions + loans + repayments")]
+  LREPO --> DB
+  LS --> FS
   FS --> OUT["Forecast response<br/>monthly + annual"]
   OUT --> FE
   FC --> CSV["CSV export"]
   CSV --> B
-  FE --> FORM["Assumptions form<br/>validation + autosave"]
+  FE --> FORM["Assumptions form<br/>income + expenses + savings"]
+  FE --> LFORM["Loan schedule form<br/>multiple loans + dated entries"]
   FORM -->|"PUT assumptions"| AC
-  FORM -->|"GET forecast with inputs"| FC
+  LFORM -->|"PUT loan schedules"| LC
+  FORM -->|"GET forecast with saved loan schedules"| FC
   subgraph Runtime["Docker Compose · local deployment"]
     N
     API

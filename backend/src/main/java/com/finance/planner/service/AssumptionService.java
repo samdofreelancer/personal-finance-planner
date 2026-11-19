@@ -65,12 +65,6 @@ public class AssumptionService {
         dto.setChildFromApr2027(3_250_000L);
         dto.setRentThroughJan2027(3_750_000L);
         dto.setRentFromFeb2027(5_750_000L);
-        dto.setLoanPrincipal(120_000_000L);
-        dto.setFixedPayment(10_000_000L);
-        dto.setNovInterest(1_200_000L);
-        dto.setDecInterest(1_100_000L);
-        dto.setPayoffInterest(1_000_000L);
-        dto.setPayoffInterestConfirmed(false);
         dto.setStartingSavings(30_000_000L);
         Map<Integer, BigDecimal> raises = new HashMap<>();
         raises.put(2027, new BigDecimal("0.08"));
@@ -91,12 +85,6 @@ public class AssumptionService {
         dto.setChildFromApr2027(e.getChildFromApr2027());
         dto.setRentThroughJan2027(e.getRentThroughJan2027());
         dto.setRentFromFeb2027(e.getRentFromFeb2027());
-        dto.setLoanPrincipal(e.getLoanPrincipal());
-        dto.setFixedPayment(e.getFixedPayment());
-        dto.setNovInterest(e.getNovInterest());
-        dto.setDecInterest(e.getDecInterest());
-        dto.setPayoffInterest(e.getPayoffInterest());
-        dto.setPayoffInterestConfirmed(e.getPayoffInterestConfirmed());
         dto.setStartingSavings(e.getStartingSavings());
         Map<Integer, BigDecimal> raises = new HashMap<>();
         raises.put(2027, e.getRaise2027());
@@ -116,12 +104,6 @@ public class AssumptionService {
         e.setChildFromApr2027(dto.getChildFromApr2027());
         e.setRentThroughJan2027(dto.getRentThroughJan2027());
         e.setRentFromFeb2027(dto.getRentFromFeb2027());
-        e.setLoanPrincipal(dto.getLoanPrincipal());
-        e.setFixedPayment(dto.getFixedPayment());
-        e.setNovInterest(dto.getNovInterest());
-        e.setDecInterest(dto.getDecInterest());
-        e.setPayoffInterest(dto.getPayoffInterest());
-        e.setPayoffInterestConfirmed(dto.getPayoffInterestConfirmed());
         e.setStartingSavings(dto.getStartingSavings());
         if (dto.getRaises() != null) {
             e.setRaise2027(dto.getRaises().get(2027));

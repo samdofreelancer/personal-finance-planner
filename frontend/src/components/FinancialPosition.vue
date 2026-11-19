@@ -53,12 +53,12 @@
 import { computed } from 'vue'
 import { formatCurrency } from '../utils/currency.js'
 
-const props = defineProps(['assumptions', 'forecast'])
+const props = defineProps(['assumptions', 'forecast', 'loans'])
 const money = formatCurrency
 const annual = computed(() => props.forecast?.annual || [])
 const months = computed(() => props.forecast?.months || [])
 const startingSavings = computed(() => props.assumptions?.startingSavings || 0)
-const startingDebt = computed(() => props.assumptions?.loanPrincipal || 0)
+const startingDebt = computed(() => (props.loans || []).reduce((total, loan) => total + (loan.openingPrincipal || 0), 0))
 const lastMonth = computed(() => months.value.at(-1))
 const remainingDebt = computed(() => {
   if (!lastMonth.value) return startingDebt.value
@@ -72,7 +72,7 @@ const debtNote = computed(() => remainingDebt.value === 0
   : 'Vẫn còn dư nợ ở cuối kỳ')
 const savingsNote = computed(() => {
   const last = annual.value.at(-1)
-  return last?.endingSavingsProvisional ? 'Tạm tính · cần xác minh lãi tất toán' : 'Dự kiến đến cuối kỳ kế hoạch'
+  return last?.endingSavingsProvisional ? 'Có dữ liệu đang tạm tính' : 'Dự kiến đến cuối kỳ kế hoạch'
 })
 const trend = computed(() => {
   const rows = annual.value

@@ -25,20 +25,8 @@ public class ValidationService {
             throw new IllegalArgumentException("rentThroughJan2027 phải là số VND nguyên không âm.");
         if (a.getRentFromFeb2027() == null || a.getRentFromFeb2027() < 0)
             throw new IllegalArgumentException("rentFromFeb2027 phải là số VND nguyên không âm.");
-        if (a.getLoanPrincipal() == null || a.getLoanPrincipal() < 0)
-            throw new IllegalArgumentException("loanPrincipal phải là số VND nguyên không âm.");
-        if (a.getFixedPayment() == null || a.getFixedPayment() < 0)
-            throw new IllegalArgumentException("fixedPayment phải là số VND nguyên không âm.");
-        if (a.getNovInterest() == null || a.getNovInterest() < 0)
-            throw new IllegalArgumentException("novInterest phải là số VND nguyên không âm.");
-        if (a.getDecInterest() == null || a.getDecInterest() < 0)
-            throw new IllegalArgumentException("decInterest phải là số VND nguyên không âm.");
         if (a.getStartingSavings() == null || a.getStartingSavings() < 0)
             throw new IllegalArgumentException("startingSavings phải là số VND nguyên không âm.");
-        if (a.getNovInterest() > a.getFixedPayment())
-            throw new IllegalArgumentException("Lãi từng kỳ không thể lớn hơn khoản trả cố định của kỳ đó.");
-        if (a.getDecInterest() > a.getFixedPayment())
-            throw new IllegalArgumentException("Lãi từng kỳ không thể lớn hơn khoản trả cố định của kỳ đó.");
         if (a.getRaises() == null)
             throw new IllegalArgumentException("Danh sách mức tăng lương không được để trống.");
         for (int y : new int[]{2027, 2028, 2029, 2030}) {
@@ -46,7 +34,5 @@ public class ValidationService {
             if (r == null || r.compareTo(BigDecimal.ZERO) < 0 || r.compareTo(BigDecimal.ONE) > 0)
                 throw new IllegalArgumentException("Mức tăng lương năm " + y + " phải từ 0% đến 100%.");
         }
-        if (Boolean.TRUE.equals(a.getPayoffInterestConfirmed()) && a.getPayoffInterest() == null)
-            throw new IllegalArgumentException("Nhập số lãi tất toán trước khi đánh dấu đã xác nhận.");
     }
 }

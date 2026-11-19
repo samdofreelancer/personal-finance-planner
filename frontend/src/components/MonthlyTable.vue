@@ -36,19 +36,16 @@
 import { computed } from 'vue'
 import { formatCurrency } from '../utils/currency.js'
 
-const props = defineProps(['forecast', 'payoffInterest', 'payoffInterestConfirmed'])
+const props = defineProps(['forecast'])
 const months = computed(() => props.forecast?.months || [])
 const money = formatCurrency
 function signedClass(value) { return value < 0 ? 'negative' : 'positive' }
 function savingsAriaLabel(m) {
   if (!m.savingsProvisional) return null
-  if (props.payoffInterest == null) return `${money(m.cumulativeSavings)}; tạm tính chưa gồm lãi tất toán vì chưa nhập`
-  if (!props.payoffInterestConfirmed) return `${money(m.cumulativeSavings)}; tạm tính đã gồm lãi tất toán ${money(props.payoffInterest)} chưa xác nhận`
   return `${money(m.cumulativeSavings)}; tạm tính`
 }
 function interestText(m) {
   if (!m.provisional) return money(m.interestPaid)
-  if (m.interestPaid === 0 && props.payoffInterest == null) return 'Chưa nhập · tạm tính'
   return `${money(m.interestPaid)} · tạm tính`
 }
 </script>

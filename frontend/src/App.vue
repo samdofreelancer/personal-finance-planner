@@ -13,6 +13,7 @@
       <nav class="side-nav">
         <a class="nav-link" :class="{ active: activeSection === 'overview' }" href="#overview" :aria-current="activeSection === 'overview' ? 'page' : undefined"><span class="nav-icon">▦</span> Tổng quan</a>
         <a class="nav-link" :class="{ active: activeSection === 'assumptions' }" href="#assumptions" :aria-current="activeSection === 'assumptions' ? 'page' : undefined"><span class="nav-icon">⚙</span> Giả định tài chính</a>
+        <a class="nav-link" :class="{ active: activeSection === 'loans' }" href="#loans" :aria-current="activeSection === 'loans' ? 'page' : undefined"><span class="nav-icon">⌁</span> Khoản vay</a>
         <a class="nav-link" :class="{ active: activeSection === 'annual-report' }" href="#annual-report" :aria-current="activeSection === 'annual-report' ? 'page' : undefined"><span class="nav-icon">▥</span> Tổng hợp theo năm</a>
         <a class="nav-link" :class="{ active: activeSection === 'monthly-forecast' }" href="#monthly-forecast" :aria-current="activeSection === 'monthly-forecast' ? 'page' : undefined"><span class="nav-icon">▤</span> Dự báo theo tháng</a>
       </nav>
@@ -67,7 +68,7 @@
 
     <section class="overview-section" aria-label="Triển vọng tài chính">
       <div class="section-intro"><div><p class="eyebrow">YOUR FINANCIAL JOURNEY</p><h2>Hành trình tài chính dự kiến</h2><p class="section-description">Theo dõi quỹ tiết kiệm tăng lên và dư nợ giảm xuống theo thời gian.</p></div><span class="section-meta">Mô phỏng · 2026–2030</span></div>
-      <financial-position :assumptions="dto" :forecast="forecast" />
+      <financial-position :assumptions="dto" :loans="loans" :forecast="forecast" />
       <div class="section-intro indicator-intro"><div><p class="eyebrow">KEY INDICATORS</p><h2>Các chỉ số đáng chú ý</h2></div><span class="section-meta">Dự báo năm 2030</span></div>
     <metric-cards
       :metrics="metrics"
@@ -80,6 +81,11 @@
       <assumptions-form :dto="dto" :error="errorMessage" :status="saveStatus" @input="onFormInput" @save="saveAndForecast" @reset="resetDefaults" />
     </section>
 
+    <section id="loans" class="content-section">
+      <div class="section-intro"><div><p class="eyebrow">KHOẢN VAY</p><h2>Lịch trả nợ</h2><p class="section-description">Quản lý từng khoản vay và các kỳ trả linh hoạt; dữ liệu chỉ được cập nhật khi bạn lưu.</p></div></div>
+      <loan-schedule-form :loans="loans" :status="loanSaveStatus" :error="loanError" @save="saveLoanSchedule" />
+    </section>
+
     <section id="annual-report" class="content-section">
       <div class="section-intro"><div><p class="eyebrow">PHÂN TÍCH DÀI HẠN</p><h2>Dòng tiền theo năm</h2><p class="section-description">So sánh thu nhập và chi phí qua từng năm trong kỳ kế hoạch.</p></div></div>
       <annual-chart :forecast="forecast" />
@@ -90,8 +96,6 @@
       <div class="section-intro"><div><p class="eyebrow">CHI TIẾT DỰ BÁO</p><h2>Kế hoạch từng tháng</h2><p class="section-description">Theo dõi các khoản thu, chi, trả nợ và tiết kiệm lũy kế.</p></div></div>
     <monthly-table
       :forecast="forecast"
-      :payoff-interest="dto.payoffInterest"
-      :payoff-interest-confirmed="dto.payoffInterestConfirmed"
     />
     </section>
 
@@ -106,11 +110,12 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
-import { getAssumptions, saveAssumptions, seedDefaults, getForecast, exportCsv as exportCsvApi } from './services/api.js'
+import { getAssumptions, saveAssumptions, seedDefaults, getForecast, exportCsv as exportCsvApi, getLoans, saveLoans } from './services/api.js'
 import { validateAssumptions } from './utils/validation.js'
 import MetricCards from './components/MetricCards.vue'
 import FinancialPosition from './components/FinancialPosition.vue'
 import AssumptionsForm from './components/AssumptionsForm.vue'
+import LoanScheduleForm from './components/LoanScheduleForm.vue'
 import AnnualChart from './components/AnnualChart.vue'
 import AnnualTable from './components/AnnualTable.vue'
 import MonthlyTable from './components/MonthlyTable.vue'
@@ -121,22 +126,25 @@ const dto = reactive({
   baseSalary: 42000000, januaryMultiplier: 2, living: 4250000,
   childThrough2026: 2500000, childQ12027: 2750000, childFromApr2027: 3250000,
   rentThroughJan2027: 3750000, rentFromFeb2027: 5750000,
-  loanPrincipal: 120000000, fixedPayment: 10000000,
-  novInterest: 1200000, decInterest: 1100000, payoffInterest: 1000000,
-  payoffInterestConfirmed: false, startingSavings: 30000000,
+  startingSavings: 30000000,
   raises: { 2027: 0.08, 2028: 0.08, 2029: 0.08, 2030: 0.08 }
 })
 
 const forecast = ref(null)
+const loans = ref([])
 const metrics = ref({ netCashFlow2030: 0, income2030: 0, expenses2030: 0, savingsEnd: 0 })
 const errorMessage = ref('')
 const saveStatus = ref('Đang tải...')
+const loanSaveStatus = ref('')
+const loanError = ref('')
+const isSavingLoans = ref(false)
 const isLoading = ref(true)
 const provisional = ref(false)
 const activeSection = ref('overview')
 const sectionLabels = {
   overview: 'Tổng quan',
   assumptions: 'Giả định tài chính',
+  loans: 'Khoản vay',
   'annual-report': 'Tổng hợp theo năm',
   'monthly-forecast': 'Dự báo theo tháng',
 }
@@ -176,19 +184,10 @@ let latestRequest = 0
 const hasValidationError = computed(() => validateAssumptions(dto).length > 0)
 
 const alert = computed(() => {
-  if (dto.payoffInterest == null || !dto.payoffInterestConfirmed) {
-    return {
-      title: 'Lãi tất toán chưa được xác nhận.',
-      text: dto.payoffInterest == null
-        ? 'Chưa nhập lãi tất toán ngân hàng. Dự báo đang tạm tính với 0 ₫ lãi tất toán; khoản lãi thực tế chưa được tính.'
-        : `Dự báo đang tạm tính và đã bao gồm ${money(dto.payoffInterest)} lãi tất toán ước tính, chưa được đối chiếu với ngân hàng.`,
-      suffix: 'Chỉ đánh dấu đã đối chiếu sau khi xác nhận với ngân hàng.',
-    }
-  }
   if (forecast.value?.annual?.some((row) => row.provisional)) {
     return {
       title: '',
-      text: 'Một hoặc nhiều kết quả đang là tạm tính vì thiếu dữ liệu lãi tất toán.',
+      text: 'Một hoặc nhiều kết quả đang là tạm tính theo dữ liệu dự báo.',
       suffix: '',
     }
   }
@@ -202,6 +201,7 @@ onMounted(async () => {
   try {
     const data = await getAssumptions()
     applyDto(data)
+    loans.value = await getLoans()
     await loadForecast()
     errorMessage.value = ''
     saveStatus.value = 'Đã lưu trên máy chủ'
@@ -225,8 +225,6 @@ function applyDto(data) {
   for (const year of YEARS) {
     dto.raises[year] = Number(data.raises?.[year] ?? 0.1)
   }
-  if (dto.payoffInterestConfirmed == null) dto.payoffInterestConfirmed = false
-  if (dto.payoffInterest === undefined) dto.payoffInterest = null
 }
 
 function snapshot() {
@@ -312,6 +310,7 @@ async function resetDefaults() {
     const data = await seedDefaults()
     if (requestId !== latestRequest) return
     applyDto(data)
+    loans.value = await getLoans()
     errorMessage.value = ''
     const res = await getForecast(snapshot())
     if (requestId !== latestRequest) return
@@ -329,6 +328,28 @@ async function exportCsv() {
     await exportCsvApi(dto)
   } catch (e) {
     errorMessage.value = e.message
+  }
+}
+
+async function saveLoanSchedule(updatedLoans) {
+  if (isSavingLoans.value) return
+  isSavingLoans.value = true
+  loanSaveStatus.value = 'Đang lưu...'
+  loanError.value = ''
+  try {
+    loans.value = await saveLoans(updatedLoans)
+    loanSaveStatus.value = 'Đã lưu trên máy chủ'
+    try {
+      const res = await getForecast(snapshot())
+      applyForecast(res)
+    } catch (e) {
+      loanError.value = `Lịch trả đã lưu, nhưng chưa cập nhật được dự báo: ${e.message}`
+    }
+  } catch (e) {
+    loanError.value = e.message
+    loanSaveStatus.value = 'Không lưu được lịch trả'
+  } finally {
+    isSavingLoans.value = false
   }
 }
 

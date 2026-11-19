@@ -6,6 +6,14 @@
 - For isolated development: Java 21 and Maven for backend; Node.js 20.19+ (or 22.12+) and npm for frontend.
 - PostgreSQL 16 when running backend outside Docker.
 
+## Database schema migrations
+
+- Flyway is the only schema migration mechanism; Hibernate runs with `ddl-auto=validate`.
+- A fresh empty database runs V1–V3. V1 creates the assumptions table and synthetic defaults; V2 creates loan tables and seeds an equivalent sample repayment schedule; V3 removes the retired single-loan columns.
+- On an existing non-empty database without Flyway history, `baseline-on-migrate=true` baselines the existing schema at version 1, then runs V2/V3 to migrate the legacy loan values into dated repayment entries. The assumptions row and all non-loan values are retained.
+- **Before the first application start after this change, take a PostgreSQL backup.** Do not delete the Compose database volume. If Flyway reports a failed migration, inspect the database and migration history before retrying; never repair by dropping tables or volumes.
+- V1–V3 SQL was executed against isolated temporary PostgreSQL 16 databases for synthetic fresh defaults and a modified legacy fixture; migrated principal/interest totals and preservation of non-loan assumptions were checked, then the temporary databases were dropped. The live application database was not migrated by this implementation session.
+
 ## Run with Docker Compose
 
 ```powershell
@@ -81,18 +89,19 @@ cd backend
 mvn verify
 ```
 
-`mvn verify` runs the backend test suite, creates the JaCoCo HTML/XML report and enforces the current bundle thresholds: at least 80% line coverage and 70% branch coverage. The repository verification script then runs PIT mutation testing with an 80% score threshold. Reports are written to `backend/target/site/jacoco/` and `backend/target/pit-reports/`; open each `index.html` for the HTML view.
+`mvn verify` runs the backend test suite, creates the JaCoCo HTML/XML report and enforces the current bundle thresholds: at least 80% line coverage and 70% branch coverage. The repository verification script then runs PIT mutation testing with an 80% score threshold. The latest run generated 83 mutations and killed 79 (95% mutation score). Reports are written to `backend/target/site/jacoco/` and `backend/target/pit-reports/`; open each `index.html` for the HTML view.
 
 Backend unit tests currently cover:
 
-- `ForecastServiceTest`: 50-month/annual aggregation, debt principal and payoff boundaries, provisional payoff interest, child/rent transitions, salary raises and January multiplier, rounding, cash flow and negative savings.
-- `ValidationServiceTest`: valid assumptions, zero/negative/missing monetary boundaries, multiplier lower/upper bounds, interest/payment boundaries, raise bounds and missing payoff-interest confirmation.
+- `ForecastServiceTest`: 50-month/annual aggregation, per-loan principal caps, repayments outside the forecast window, child/rent transitions, salary raises and January multiplier, rounding, cash flow and negative savings.
+- `ValidationServiceTest`: valid assumptions, zero/negative/missing monetary boundaries, multiplier lower/upper bounds and raise bounds.
+- Loan schedule API integration tests: multiple loans, multi-entry monthly aggregation, validation, update/delete identity preservation, CSV parity and reset sample data.
 
-The backend currently has 29 automated tests (5 API integration, 10 forecast unit and 14 validation unit tests). The measured JaCoCo coverage is approximately 86.9% line and 77.9% branch across the backend bundle.
+The backend currently has 31 automated tests (9 API integration, 10 forecast unit, 11 validation unit and 1 assumptions service unit test). Coverage gates are enforced by `mvn verify`; see the generated JaCoCo report for the current measurement.
 
 Frontend tests use Vitest, Vue Test Utils and jsdom. `npm test` runs the component/service/utility tests, enforces at least 80% line and statement coverage, 70% function coverage and 75% branch coverage, then writes `frontend/coverage/lcov.info` for SonarQube. The LCOV normalizer prefixes source paths with `frontend/` so the report resolves from the repository root. The report directory is generated and ignored by Git.
 
-The frontend currently has 50 automated tests covering currency input/formatting, assumption validation, API requests and error handling, forecast presentation components and the application lifecycle/save/reset/export flows.
+The frontend currently has 57 automated tests covering currency input/formatting, assumption validation, loan schedule editing/dirty-state feedback, API requests and error handling, forecast presentation components and the application lifecycle/save/reset/export flows.
 
 Latest local SonarQube analysis after importing both reports: 90.3% overall coverage, 92.4% line coverage and 87.5% branch coverage. The Quality Gate passed.
 

@@ -12,8 +12,9 @@ Personal Finance Planner (UI brand: **Planwise**) là ứng dụng local-first g
 2. Frontend tải giả định đã lưu từ backend.
 3. Frontend yêu cầu backend tính forecast và hiển thị metric, chart, bảng năm và bảng tháng.
 4. Người dùng chỉnh giả định; UI validate và preview forecast.
-5. Frontend tự lưu giả định sau debounce hoặc người dùng bấm lưu.
-6. Người dùng có thể khôi phục bộ giả định demo hoặc xuất CSV.
+5. Người dùng quản lý nhiều khoản vay, thêm/sửa/xóa các kỳ trả và bấm lưu lịch trả vào PostgreSQL.
+6. Frontend chỉ lưu giả định khi người dùng bấm lưu; lịch trả có thao tác lưu riêng.
+7. Người dùng có thể khôi phục bộ giả định demo (bao gồm lịch vay mẫu) hoặc xuất CSV.
 
 ## Users and operating model
 
@@ -24,9 +25,9 @@ Personal Finance Planner (UI brand: **Planwise**) là ứng dụng local-first g
 
 ## In scope
 
-- Chỉnh sửa các giả định thu nhập, tăng lương, chi phí, tiền thuê, khoản vay, lãi và tiết kiệm ban đầu.
+- Chỉnh sửa giả định thu nhập, tăng lương, chi phí, tiền thuê và tiết kiệm ban đầu.
+- Quản lý nhiều khoản vay, mỗi khoản có dư nợ gốc ban đầu và lịch trả theo ngày gồm gốc/lãi.
 - Forecast 50 tháng, từ Nov 2026 đến Dec 2030; tổng hợp 5 năm (2026 là năm không đầy đủ).
-- Hiển thị provisional status khi lãi tất toán chưa được xác nhận.
 - Reset dữ liệu về seed defaults và export CSV.
 
 ## Out of scope (current product baseline)
@@ -42,10 +43,10 @@ Personal Finance Planner (UI brand: **Planwise**) là ứng dụng local-first g
 |---|---|
 | Assumptions | Các input do người dùng cấu hình để tính forecast |
 | Forecast | Kết quả dự báo theo tháng và tổng hợp theo năm |
-| Provisional | Kết quả còn tạm tính do dữ liệu lãi tất toán chưa xác nhận |
-| Seed defaults | Bộ giả định mẫu có sẵn trong code để khởi tạo/khôi phục |
+| Repayment entry | Một kỳ trả nợ có ngày đến hạn, tiền gốc và tiền lãi |
+| Seed defaults | Bộ giả định và lịch khoản vay mẫu dùng để khởi tạo/khôi phục |
 | Saved assumptions | Bộ giả định đã persist trong PostgreSQL |
-| Simulation/preview | Forecast tính từ input gửi trong request; hiện frontend dùng query parameters để preview |
+| Simulation/preview | Forecast tính từ giả định thu nhập/chi phí đang chỉnh sửa và lịch khoản vay đã lưu |
 
 ## Product safety statement
 

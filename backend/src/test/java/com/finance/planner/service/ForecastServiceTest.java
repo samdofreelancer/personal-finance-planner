@@ -8,7 +8,11 @@ import com.finance.planner.dto.AssumptionDTO;
 import com.finance.planner.dto.ForecastAnnualDTO;
 import com.finance.planner.dto.ForecastMonthDTO;
 import com.finance.planner.dto.ForecastResponse;
+import com.finance.planner.dto.LoanDTO;
+import com.finance.planner.dto.LoanRepaymentDTO;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +22,7 @@ class ForecastServiceTest {
 
     private ForecastService service;
     private AssumptionDTO assumptions;
+    private List<LoanDTO> loans;
 
     @BeforeEach
     void setUp() {
@@ -31,21 +36,19 @@ class ForecastServiceTest {
         assumptions.setChildFromApr2027(30L);
         assumptions.setRentThroughJan2027(40L);
         assumptions.setRentFromFeb2027(50L);
-        assumptions.setLoanPrincipal(1_000L);
-        assumptions.setFixedPayment(400L);
-        assumptions.setNovInterest(100L);
-        assumptions.setDecInterest(50L);
-        assumptions.setPayoffInterest(25L);
-        assumptions.setPayoffInterestConfirmed(false);
         assumptions.setStartingSavings(500L);
         Map<Integer, BigDecimal> raises = new HashMap<>();
         for (int year = 2027; year <= 2030; year++) raises.put(year, BigDecimal.ZERO);
         assumptions.setRaises(raises);
+        loans = List.of(new LoanDTO(1L, "Khoản vay mẫu", 1_000L, List.of(
+                new LoanRepaymentDTO(1L, LocalDate.of(2026, 11, 30), 300L, 100L),
+                new LoanRepaymentDTO(2L, LocalDate.of(2026, 12, 31), 350L, 50L),
+                new LoanRepaymentDTO(3L, LocalDate.of(2027, 1, 31), 350L, 25L))));
     }
 
     @Test
     void buildsFiftyMonthsAndFiveAnnualSummaries() {
-        ForecastResponse result = service.buildForecast(assumptions);
+        ForecastResponse result = service.buildForecast(assumptions, loans);
 
         assertEquals(50, result.getMonths().size());
         assertEquals(5, result.getAnnual().size());
@@ -59,7 +62,7 @@ class ForecastServiceTest {
 
     @Test
     void appliesNovemberAndDecemberDebtPaymentsAgainstPrincipal() {
-        ForecastResponse result = service.buildForecast(assumptions);
+        ForecastResponse result = service.buildForecast(assumptions, loans);
         ForecastMonthDTO november = result.getMonths().get(0);
         ForecastMonthDTO december = result.getMonths().get(1);
 
@@ -74,9 +77,9 @@ class ForecastServiceTest {
 
     @Test
     void capsPrincipalPaymentAtRemainingBalance() {
-        assumptions.setLoanPrincipal(200L);
+        List<LoanDTO> capped = List.of(new LoanDTO(1L, "Khoản vay mẫu", 200L, loans.get(0).repayments()));
 
-        ForecastMonthDTO november = service.buildForecast(assumptions).getMonths().get(0);
+        ForecastMonthDTO november = service.buildForecast(assumptions, capped).getMonths().get(0);
 
         assertEquals(200L, november.getPrincipalPaid());
         assertEquals(200L, november.getOpeningPrincipal());
@@ -84,8 +87,21 @@ class ForecastServiceTest {
     }
 
     @Test
-    void paysOffRemainingPrincipalInJanuaryAndMarksUnconfirmedInterestProvisional() {
-        ForecastMonthDTO january = service.buildForecast(assumptions).getMonths().get(2);
+    void ignoresRepaymentsOutsideForecastWindowAndKeepsRemainingDebt() {
+        List<LoanDTO> extended = List.of(new LoanDTO(1L, "Khoản vay mẫu", 1_000L, List.of(
+                new LoanRepaymentDTO(1L, LocalDate.of(2031, 1, 1), 500L, 25L))));
+
+        ForecastMonthDTO finalMonth = service.buildForecast(assumptions, extended).getMonths().get(49);
+
+        assertEquals(1_000L, finalMonth.getOpeningPrincipal());
+        assertEquals(0L, finalMonth.getPrincipalPaid());
+        assertEquals(0L, finalMonth.getInterestPaid());
+        assertEquals(0L, finalMonth.getLoanPayment());
+    }
+
+    @Test
+    void appliesScheduledPayoffInJanuaryAndKeepsSavingsDeterministic() {
+        ForecastMonthDTO january = service.buildForecast(assumptions, loans).getMonths().get(2);
 
         assertEquals(350L, january.getOpeningPrincipal());
         assertEquals(350L, january.getPrincipalPaid());
@@ -94,39 +110,32 @@ class ForecastServiceTest {
         assertEquals(535L, january.getTotalExpenses());
         assertEquals(1_465L, january.getNetCashFlow());
         assertEquals(2_865L, january.getCumulativeSavings());
-        assertTrue(january.isProvisional());
-        assertTrue(january.isSavingsProvisional());
-
-        ForecastMonthDTO february = service.buildForecast(assumptions).getMonths().get(3);
-        assertEquals(3_695L, february.getCumulativeSavings());
-        assertTrue(february.isSavingsProvisional());
-    }
-
-    @Test
-    void confirmedPayoffInterestIsNotProvisional() {
-        assumptions.setPayoffInterestConfirmed(true);
-
-        ForecastMonthDTO january = service.buildForecast(assumptions).getMonths().get(2);
-
         assertFalse(january.isProvisional());
         assertFalse(january.isSavingsProvisional());
+
+        ForecastMonthDTO february = service.buildForecast(assumptions, loans).getMonths().get(3);
+        assertEquals(3_695L, february.getCumulativeSavings());
+        assertFalse(february.isSavingsProvisional());
     }
 
     @Test
-    void missingPayoffInterestIsTreatedAsZeroAndProvisional() {
-        assumptions.setPayoffInterest(null);
+    void zeroInterestIsAnExplicitScheduledAmountAndIsNotProvisional() {
+        List<LoanDTO> zeroInterest = List.of(new LoanDTO(1L, "Khoản vay mẫu", 1_000L, List.of(
+                new LoanRepaymentDTO(1L, LocalDate.of(2026, 11, 30), 300L, 100L),
+                new LoanRepaymentDTO(2L, LocalDate.of(2026, 12, 31), 350L, 50L),
+                new LoanRepaymentDTO(3L, LocalDate.of(2027, 1, 31), 350L, 0L))));
 
-        ForecastMonthDTO january = service.buildForecast(assumptions).getMonths().get(2);
+        ForecastMonthDTO january = service.buildForecast(assumptions, zeroInterest).getMonths().get(2);
 
         assertEquals(0L, january.getInterestPaid());
         assertEquals(350L, january.getLoanPayment());
         assertEquals(2_890L, january.getCumulativeSavings());
-        assertTrue(january.isProvisional());
+        assertFalse(january.isProvisional());
     }
 
     @Test
     void appliesChildAndRentChangesAtTheirExactMonthBoundaries() {
-        var months = service.buildForecast(assumptions).getMonths();
+        var months = service.buildForecast(assumptions, loans).getMonths();
 
         assertEquals(10L, months.get(1).getChild()); // Dec 2026
         assertEquals(20L, months.get(2).getChild()); // Jan 2027
@@ -142,7 +151,7 @@ class ForecastServiceTest {
         assumptions.setJanuaryMultiplier(new BigDecimal("1.5"));
         assumptions.getRaises().put(2027, new BigDecimal("0.10"));
 
-        var months = service.buildForecast(assumptions).getMonths();
+        var months = service.buildForecast(assumptions, loans).getMonths();
 
         assertEquals(1_001L, months.get(4).getSalary()); // Mar 2027
         assertEquals(1_101L, months.get(5).getSalary()); // Apr 2027, 10% raise
@@ -151,7 +160,7 @@ class ForecastServiceTest {
 
     @Test
     void calculatesCashFlowAndAnnualTotalsFromMonthlyResults() {
-        ForecastResponse result = service.buildForecast(assumptions);
+        ForecastResponse result = service.buildForecast(assumptions, loans);
         ForecastMonthDTO november = result.getMonths().get(0);
         ForecastAnnualDTO year2026 = result.getAnnual().get(0);
 
@@ -170,7 +179,7 @@ class ForecastServiceTest {
         assumptions.setStartingSavings(0L);
         assumptions.setLiving(10_000L);
 
-        ForecastMonthDTO november = service.buildForecast(assumptions).getMonths().get(0);
+        ForecastMonthDTO november = service.buildForecast(assumptions, loans).getMonths().get(0);
 
         assertTrue(november.getCumulativeSavings() < 0);
         assertEquals(-9_450L, november.getCumulativeSavings());

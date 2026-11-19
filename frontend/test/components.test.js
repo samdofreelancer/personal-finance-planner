@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import CurrencyInput from '../src/components/CurrencyInput.vue'
 import AssumptionsForm from '../src/components/AssumptionsForm.vue'
+import LoanScheduleForm from '../src/components/LoanScheduleForm.vue'
 import MetricCards from '../src/components/MetricCards.vue'
 import FinancialPosition from '../src/components/FinancialPosition.vue'
 import AnnualChart from '../src/components/AnnualChart.vue'
@@ -13,8 +14,6 @@ function assumptions() {
     baseSalary: 42000000, januaryMultiplier: 2, living: 4000000,
     childThrough2026: 1000000, childQ12027: 1100000, childFromApr2027: 1200000,
     rentThroughJan2027: 2000000, rentFromFeb2027: 3000000,
-    loanPrincipal: 100000000, fixedPayment: 10000000, novInterest: 1000000,
-    decInterest: 900000, payoffInterest: null, payoffInterestConfirmed: false,
     startingSavings: 5000000,
     raises: { 2027: 0.08, 2028: 0.09, 2029: 0.1, 2030: 0.11 },
   }
@@ -63,7 +62,7 @@ describe('CurrencyInput', () => {
 })
 
 describe('AssumptionsForm', () => {
-  it('emits reset, input and save payloads with percentage raises converted to fractions', async () => {
+  it('emits reset, input and save payloads with percentage raises converted to fractions and savings separate', async () => {
     const dto = assumptions()
     const wrapper = mount(AssumptionsForm, { props: { dto, error: 'Lỗi', status: 'Đã lưu' } })
     expect(wrapper.text()).toContain('Lỗi')
@@ -74,9 +73,9 @@ describe('AssumptionsForm', () => {
     await wrapper.get('form').trigger('input')
     expect(wrapper.emitted('input').at(-1)[0].raises[2027]).toBe(0.125)
 
-    await wrapper.get('input[name="payoffInterestConfirmed"]').setValue(true)
-    expect(wrapper.emitted('input').at(-1)[0].payoffInterestConfirmed).toBe(true)
-    expect(dto.payoffInterestConfirmed).toBe(false)
+    expect(wrapper.text()).toContain('Tiết kiệm')
+    expect(wrapper.get('label[for="startingSavings"]').exists()).toBe(true)
+    expect(wrapper.find('#loanPrincipal').exists()).toBe(false)
     await wrapper.get('form').trigger('submit')
     expect(wrapper.emitted('save')).toHaveLength(1)
     await wrapper.get('#reset-button').trigger('click')
@@ -117,10 +116,66 @@ describe('AssumptionsForm', () => {
   })
 })
 
+describe('LoanScheduleForm', () => {
+  it('supports adding a loan and multiple repayment periods before saving', async () => {
+    const wrapper = mount(LoanScheduleForm, { props: { loans: [], status: '', error: '' } })
+    await wrapper.get('button').trigger('click')
+    await wrapper.get('input[id^="loan-name-"]').setValue('Vay mua nhà')
+    await wrapper.get('input[id^="loan-principal-"]').setValue('100000000')
+    await wrapper.get('button.add-repayment').trigger('click')
+
+    const dates = wrapper.findAll('input[type="date"]')
+    await dates[0].setValue('2026-11-10')
+    const principal = wrapper.findAll('input[type="number"]')
+    await principal[1].setValue('5000000')
+    await principal[2].setValue('100000')
+    await wrapper.get('button.add-repayment').trigger('click')
+    const nextDate = wrapper.findAll('input[type="date"]')[1]
+    await nextDate.setValue('2026-11-25')
+    const amounts = wrapper.findAll('input[type="number"]')
+    await amounts[3].setValue('3000000')
+    await amounts[4].setValue('80000')
+
+    await wrapper.get('form').trigger('submit')
+
+    expect(wrapper.emitted('save')).toHaveLength(1)
+    expect(wrapper.emitted('save')[0][0][0]).toMatchObject({
+      name: 'Vay mua nhà', openingPrincipal: 100000000,
+      repayments: [
+        { dueDate: '2026-11-10', principalAmount: 5000000, interestAmount: 100000 },
+        { dueDate: '2026-11-25', principalAmount: 3000000, interestAmount: 80000 },
+      ],
+    })
+  })
+
+  it('rejects invalid amounts and supports deleting a repayment and a loan', async () => {
+    const wrapper = mount(LoanScheduleForm, { props: { loans: [{
+      id: 1, name: 'Khoản vay', openingPrincipal: 1000,
+      repayments: [{ id: 2, dueDate: '2026-11-10', principalAmount: 100, interestAmount: 10 }],
+    }], status: '', error: '' } })
+    await wrapper.get('input[type="number"]').setValue('-1')
+    expect(wrapper.text()).toContain('Dư nợ gốc phải là số VND nguyên không âm.')
+    await wrapper.get('input[type="number"]').setValue('1000')
+    await wrapper.get('button[aria-label="Xóa kỳ trả 1"]').trigger('click')
+    expect(wrapper.text()).toContain('Chưa có kỳ trả')
+    await wrapper.get('.danger-text').trigger('click')
+    expect(wrapper.text()).toContain('Chưa có khoản vay')
+  })
+
+  it('marks edits as unsaved after a previously persisted schedule changes', async () => {
+    const wrapper = mount(LoanScheduleForm, { props: { status: 'Đã lưu trên máy chủ', loans: [{
+      id: 1, name: 'Khoản vay', openingPrincipal: 1000, repayments: [],
+    }] } })
+    expect(wrapper.text()).toContain('Đã lưu trên máy chủ')
+    await wrapper.get('input[id^="loan-principal-"]').setValue('900')
+    expect(wrapper.text()).toContain('Có thay đổi chưa lưu')
+  })
+})
+
 describe('forecast presentation components', () => {
   it('summarizes starting savings, debt payoff and the savings trajectory', () => {
     const wrapper = mount(FinancialPosition, { props: {
-      assumptions: { startingSavings: 5000000, loanPrincipal: 100000000 },
+      assumptions: { startingSavings: 5000000 }, loans: [{ openingPrincipal: 100000000 }],
       forecast: forecast(),
     } })
     expect(wrapper.text()).toContain('TIẾT KIỆM BAN ĐẦU')
@@ -133,7 +188,7 @@ describe('forecast presentation components', () => {
 
   it('keeps the opening debt when the forecast has no monthly results', () => {
     const wrapper = mount(FinancialPosition, { props: {
-      assumptions: { startingSavings: 0, loanPrincipal: 25000000 },
+      assumptions: { startingSavings: 0 }, loans: [{ openingPrincipal: 25000000 }],
       forecast: { annual: [], months: [] },
     } })
     expect(wrapper.text()).toContain('25.000.000 ₫')
@@ -178,16 +233,15 @@ describe('forecast presentation components', () => {
 
   it('renders monthly provisional interest, missing interest and savings state', () => {
     const data = forecast()
-    const wrapper = mount(MonthlyTable, { props: { forecast: data, payoffInterest: null } })
+    const wrapper = mount(MonthlyTable, { props: { forecast: data } })
     expect(wrapper.findAll('tbody tr')).toHaveLength(2)
     expect(wrapper.find('.row-count').text()).toBe('2 tháng')
-    expect(wrapper.text()).toContain('Chưa nhập · tạm tính')
+    expect(wrapper.text()).toContain('0 ₫ · tạm tính')
     expect(wrapper.find('.savings-cell').attributes('aria-label')).toContain('tạm tính')
 
-    const withAmount = mount(MonthlyTable, { props: { forecast: data, payoffInterest: 1000, payoffInterestConfirmed: false } })
+    const withAmount = mount(MonthlyTable, { props: { forecast: data } })
     expect(withAmount.text()).toContain('0 ₫ · tạm tính')
-    expect(withAmount.find('.savings-cell').attributes('aria-label')).toContain('đã gồm lãi tất toán')
-    expect(withAmount.find('.savings-cell').attributes('aria-label')).not.toContain('chưa gồm')
+    expect(withAmount.find('.savings-cell').attributes('aria-label')).toContain('tạm tính')
     expect(wrapper.get('tbody th[scope="row"]').text()).toBe('thg 1 2027')
     expect(wrapper.find('tbody td[scope="row"]').exists()).toBe(false)
 

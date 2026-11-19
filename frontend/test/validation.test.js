@@ -11,12 +11,6 @@ function validInput() {
     childFromApr2027: 3250000,
     rentThroughJan2027: 3750000,
     rentFromFeb2027: 5750000,
-    loanPrincipal: 120000000,
-    fixedPayment: 10000000,
-    novInterest: 1200000,
-    decInterest: 1100000,
-    payoffInterest: 1000000,
-    payoffInterestConfirmed: false,
     startingSavings: 30000000,
     raises: { 2027: 0.08, 2028: 0.08, 2029: 0.08, 2030: 0.08 },
   }
@@ -36,28 +30,6 @@ describe('validateAssumptions', () => {
       expect(validateAssumptions(input)).toContain('living phải là số VND nguyên không âm.')
     },
   )
-
-  it('allows an omitted payoff amount until it is confirmed', () => {
-    const input = validInput()
-    input.payoffInterest = null
-    expect(validateAssumptions(input)).toEqual([])
-  })
-
-  it('requires a payoff amount when confirmation is enabled', () => {
-    const input = validInput()
-    input.payoffInterest = undefined
-    input.payoffInterestConfirmed = true
-    expect(validateAssumptions(input)).toContain('Nhập số lãi tất toán trước khi đánh dấu đã xác nhận.')
-  })
-
-  it('rejects invalid payoff values and non-boolean confirmation state', () => {
-    const input = validInput()
-    input.payoffInterest = -1
-    input.payoffInterestConfirmed = 'yes'
-    const errors = validateAssumptions(input)
-    expect(errors).toContain('Lãi tất toán phải là số VND nguyên không âm hoặc để trống nếu chưa xác nhận.')
-    expect(errors).toContain('Trạng thái xác nhận lãi tất toán không hợp lệ.')
-  })
 
   it.each([0, -1, 20.01, Number.NaN])('rejects invalid January multiplier %s', (value) => {
     const input = validInput()
@@ -79,14 +51,9 @@ describe('validateAssumptions', () => {
     },
   )
 
-  it('handles a missing raises map and checks both interest limits', () => {
+  it('handles a missing raises map', () => {
     const missingRaises = validInput()
     missingRaises.raises = null
     expect(validateAssumptions(missingRaises)).toHaveLength(4)
-
-    const excessiveInterest = validInput()
-    excessiveInterest.novInterest = excessiveInterest.fixedPayment + 1
-    excessiveInterest.decInterest = excessiveInterest.fixedPayment + 1
-    expect(validateAssumptions(excessiveInterest)).toContain('Lãi từng kỳ không thể lớn hơn khoản trả cố định của kỳ đó.')
   })
 })

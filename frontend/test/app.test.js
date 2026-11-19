@@ -2,17 +2,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import App from '../src/App.vue'
 import AssumptionsForm from '../src/components/AssumptionsForm.vue'
+import LoanScheduleForm from '../src/components/LoanScheduleForm.vue'
 import {
   exportCsv,
   getAssumptions,
+  getLoans,
   getForecast,
+  saveLoans,
   saveAssumptions,
   seedDefaults,
 } from '../src/services/api.js'
 
 vi.mock('../src/services/api.js', () => ({
   getAssumptions: vi.fn(),
+  getLoans: vi.fn(),
   saveAssumptions: vi.fn(),
+  saveLoans: vi.fn(),
   seedDefaults: vi.fn(),
   getForecast: vi.fn(),
   exportCsv: vi.fn(),
@@ -23,9 +28,7 @@ function validAssumptions() {
     baseSalary: 42000000, januaryMultiplier: 2, living: 4250000,
     childThrough2026: 2500000, childQ12027: 2750000, childFromApr2027: 3250000,
     rentThroughJan2027: 3750000, rentFromFeb2027: 5750000,
-    loanPrincipal: 120000000, fixedPayment: 10000000,
-    novInterest: 1200000, decInterest: 1100000, payoffInterest: 1000000,
-    payoffInterestConfirmed: true, startingSavings: 30000000,
+    startingSavings: 30000000,
     raises: { 2027: 0.08, 2028: 0.08, 2029: 0.08, 2030: 0.08 },
   }
 }
@@ -47,6 +50,7 @@ function forecastResult({ provisional = false, include2030 = true } = {}) {
 
 async function mountLoadedApp() {
   getAssumptions.mockResolvedValue(validAssumptions())
+  getLoans.mockResolvedValue([])
   getForecast.mockResolvedValue(forecastResult())
   const wrapper = mount(App)
   await flushPromises()
@@ -56,8 +60,11 @@ async function mountLoadedApp() {
 beforeEach(() => {
   vi.clearAllMocks()
   getAssumptions.mockResolvedValue(validAssumptions())
+  getLoans.mockResolvedValue([])
   getForecast.mockResolvedValue(forecastResult())
   saveAssumptions.mockResolvedValue(validAssumptions())
+  saveLoans.mockImplementation(async (loans) => loans.map((loan, index) => ({ ...loan, id: index + 1,
+    repayments: loan.repayments.map((payment, paymentIndex) => ({ ...payment, id: paymentIndex + 1 })) })))
   seedDefaults.mockResolvedValue(validAssumptions())
   exportCsv.mockResolvedValue(undefined)
 })
@@ -66,6 +73,7 @@ describe('App', () => {
   it('loads assumptions and forecast, then displays calculated metrics', async () => {
     const wrapper = await mountLoadedApp()
     expect(getAssumptions).toHaveBeenCalledOnce()
+    expect(getLoans).toHaveBeenCalledOnce()
     expect(getForecast).toHaveBeenCalledOnce()
     expect(wrapper.text()).toContain('Đã lưu trên máy chủ')
     expect(wrapper.get('.nav-link[href="#overview"]').attributes('aria-current')).toBe('page')
@@ -89,36 +97,32 @@ describe('App', () => {
     expect(getForecast).not.toHaveBeenCalled()
   })
 
-  it('uses fallback raise defaults and keeps a warning for provisional payoff interest', async () => {
+  it('uses fallback raise defaults without treating a manually scheduled loan as provisional', async () => {
     const data = validAssumptions()
     delete data.raises[2028]
-    data.payoffInterestConfirmed = false
     getAssumptions.mockResolvedValue(data)
-    getForecast.mockResolvedValue(forecastResult({ provisional: true }))
+    getForecast.mockResolvedValue(forecastResult())
     const wrapper = mount(App)
     await flushPromises()
 
-    expect(wrapper.find('#alert-area .alert').text()).toContain('Lãi tất toán chưa được xác nhận')
-    expect(wrapper.find('#alert-area .alert').text()).toContain('đã bao gồm 1.000.000 ₫ lãi tất toán ước tính')
+    expect(wrapper.find('#alert-area .alert').exists()).toBe(false)
     expect(wrapper.get('input[name="raise2028"]').element.value).toBe('10')
-    expect(wrapper.get('#metric-net-foot').text()).toContain('Tạm tính')
+    expect(wrapper.get('#metric-net-foot').text()).not.toContain('Tạm tính')
   })
 
-  it('explains that a missing payoff-interest amount is excluded from the provisional forecast', async () => {
+  it('does not use the retired payoff-interest field to alter the schedule-driven forecast', async () => {
     const data = validAssumptions()
-    data.payoffInterest = null
-    data.payoffInterestConfirmed = false
     getAssumptions.mockResolvedValue(data)
-    getForecast.mockResolvedValue(forecastResult({ provisional: true }))
+    getForecast.mockResolvedValue(forecastResult())
 
     const wrapper = mount(App)
     await flushPromises()
 
-    expect(wrapper.find('#alert-area .alert').text()).toContain('đang tạm tính với 0 ₫ lãi tất toán')
-    expect(wrapper.get('#metric-net-foot').text()).toContain('Tạm tính')
+    expect(wrapper.find('#alert-area .alert').exists()).toBe(false)
+    expect(wrapper.get('#metric-net-foot').text()).not.toContain('Tạm tính')
   })
 
-  it('shows the generic provisional warning after payoff interest has been confirmed', async () => {
+  it('still surfaces provisional status returned by the forecast engine', async () => {
     getAssumptions.mockResolvedValue(validAssumptions())
     getForecast.mockResolvedValue(forecastResult({ provisional: true }))
     const wrapper = mount(App)
@@ -207,8 +211,22 @@ describe('App', () => {
     await wrapper.findComponent(AssumptionsForm).vm.$emit('reset')
     await flushPromises()
     expect(seedDefaults).toHaveBeenCalledOnce()
+    expect(getLoans).toHaveBeenCalledTimes(2)
     expect(wrapper.text()).toContain('Đã khôi phục mặc định')
     expect(getForecast).toHaveBeenCalledTimes(2)
+  })
+
+  it('persists edited loan schedules and refreshes the forecast', async () => {
+    const wrapper = await mountLoadedApp()
+    const schedule = wrapper.findComponent(LoanScheduleForm)
+    const updated = [{ id: null, name: 'Vay cá nhân', openingPrincipal: 5000000,
+      repayments: [{ id: null, dueDate: '2026-12-15', principalAmount: 1000000, interestAmount: 50000 }] }]
+    schedule.vm.$emit('save', updated)
+    await flushPromises()
+
+    expect(saveLoans).toHaveBeenCalledWith(updated)
+    expect(getForecast).toHaveBeenCalledTimes(2)
+    expect(wrapper.text()).toContain('Đã lưu trên máy chủ')
   })
 
   it('handles a forecast without a 2030 annual row', async () => {

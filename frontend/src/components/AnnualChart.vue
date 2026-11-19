@@ -69,7 +69,7 @@ const chart = computed(() => {
     const rectHeight = Math.max(2, Math.abs(zeroY - valueY))
     const color = row.netCashFlow < 0 ? '#cc6668' : '#3e83ca'
     const labelY = row.netCashFlow < 0 ? rectY + rectHeight + 15 : rectY - 7
-    const aria = `${row.year}${row.partial ? ', năm chỉ gồm hai tháng' : ''}: ${money(row.netCashFlow)} dòng tiền ròng${row.provisional ? ', tạm tính do lãi tất toán chưa xác nhận' : ''}`
+    const aria = `${row.year}${row.partial ? ', năm chỉ gồm hai tháng' : ''}: ${money(row.netCashFlow)} dòng tiền ròng${row.provisional ? ', kết quả tạm tính' : ''}`
     return {
       year: row.year,
       partial: row.partial,

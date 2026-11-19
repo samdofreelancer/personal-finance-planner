@@ -4,6 +4,7 @@ import com.finance.planner.dto.AssumptionDTO;
 import com.finance.planner.dto.ForecastResponse;
 import com.finance.planner.service.ForecastService;
 import com.finance.planner.service.ValidationService;
+import com.finance.planner.service.LoanScheduleService;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
@@ -19,10 +20,13 @@ public class ForecastController {
 
     private final ForecastService forecastService;
     private final ValidationService validationService;
+    private final LoanScheduleService loanScheduleService;
 
-    public ForecastController(ForecastService forecastService, ValidationService validationService) {
+    public ForecastController(ForecastService forecastService, ValidationService validationService,
+                              LoanScheduleService loanScheduleService) {
         this.forecastService = forecastService;
         this.validationService = validationService;
+        this.loanScheduleService = loanScheduleService;
     }
 
     private void ensureDefaultRaises(AssumptionDTO assumptions) {
@@ -41,14 +45,14 @@ public class ForecastController {
     public ResponseEntity<ForecastResponse> get(@ModelAttribute AssumptionDTO assumptions) {
         ensureDefaultRaises(assumptions);
         validationService.validate(assumptions);
-        return ResponseEntity.ok(forecastService.buildForecast(assumptions));
+        return ResponseEntity.ok(forecastService.buildForecast(assumptions, loanScheduleService.getLoans()));
     }
 
     @GetMapping("/export/csv")
     public ResponseEntity<ByteArrayResource> exportCsv(@ModelAttribute AssumptionDTO assumptions) {
         ensureDefaultRaises(assumptions);
         validationService.validate(assumptions);
-        ForecastResponse response = forecastService.buildForecast(assumptions);
+        ForecastResponse response = forecastService.buildForecast(assumptions, loanScheduleService.getLoans());
         StringBuilder csv = new StringBuilder();
         csv.append("\uFEFF"); // UTF-8 BOM
         csv.append("Tổng hợp theo năm\n");
@@ -67,10 +71,10 @@ public class ForecastController {
             csv.append(m.getSalary()).append(",").append(m.getLiving()).append(",").append(m.getChild()).append(",");
             csv.append(m.getRent()).append(",").append(m.getOpeningPrincipal()).append(",");
             csv.append(m.getPrincipalPaid()).append(",");
-            csv.append(m.isProvisional() ? "" : String.valueOf(m.getInterestPaid())).append(",");
+            csv.append(m.getInterestPaid()).append(",");
             csv.append(m.getLoanPayment()).append(",").append(m.getTotalExpenses()).append(",");
             csv.append(m.getNetCashFlow()).append(",").append(m.getCumulativeSavings()).append(",");
-            csv.append(m.isProvisional() ? "Dòng tiền tạm tính - chưa gồm lãi tất toán"
+            csv.append(m.isProvisional() ? "Dòng tiền tạm tính"
                     : m.isSavingsProvisional() ? "Tiết kiệm lũy kế tạm tính" : "Đầy đủ").append("\n");
         }
 

@@ -38,16 +38,10 @@
           <label class="field" for="rentFromFeb2027"><span>Tiền nhà · từ 02/2027</span><span class="input-wrap"><currency-input id="rentFromFeb2027" v-model="formDto.rentFromFeb2027" name="rentFromFeb2027" /><span>₫</span></span></label>
         </fieldset>
 
-        <fieldset class="input-group">
-          <legend><span class="legend-icon loan-icon" aria-hidden="true">⌁</span> Khoản vay &amp; tiết kiệm</legend>
-          <label class="field" for="loanPrincipal"><span>Dư nợ gốc ban đầu</span><span class="input-wrap"><currency-input id="loanPrincipal" v-model="formDto.loanPrincipal" name="loanPrincipal" /><span>₫</span></span></label>
-          <label class="field" for="fixedPayment"><span>Khoản trả cố định tháng 11–12/2026</span><span class="input-wrap"><currency-input id="fixedPayment" v-model="formDto.fixedPayment" name="fixedPayment" /><span>₫ / tháng</span></span></label>
-          <label class="field" for="novInterest"><span>Lãi ngân hàng · kỳ 1</span><span class="input-wrap"><currency-input id="novInterest" v-model="formDto.novInterest" name="novInterest" /><span>₫</span></span></label>
-          <label class="field" for="decInterest"><span>Lãi ngân hàng · kỳ 2</span><span class="input-wrap"><currency-input id="decInterest" v-model="formDto.decInterest" name="decInterest" /><span>₫</span></span></label>
-          <label class="field" for="payoffInterest"><span>Lãi tất toán dự kiến</span><span class="input-wrap"><currency-input id="payoffInterest" v-model="formDto.payoffInterest" name="payoffInterest" nullable :required="false" :aria-invalid="formDto.payoffInterest == null ? 'true' : undefined" placeholder="Chưa xác nhận" /><span>₫</span></span></label>
-          <label class="confirm-field"><input v-model="formDto.payoffInterestConfirmed" name="payoffInterestConfirmed" type="checkbox" @change="onConfirmedChange"><span>Đã đối chiếu số lãi này với ngân hàng</span></label>
-          <p class="field-hint">Lãi tất toán cần đối chiếu báo giá ngân hàng trước khi xác nhận.</p>
+        <fieldset class="input-group savings-group">
+          <legend><span class="legend-icon income-icon" aria-hidden="true">◎</span> Tiết kiệm</legend>
           <label class="field" for="startingSavings"><span>Tiền tiết kiệm ban đầu</span><span class="input-wrap"><currency-input id="startingSavings" v-model="formDto.startingSavings" name="startingSavings" /><span>₫</span></span></label>
+          <p class="field-hint">Tiết kiệm ban đầu là số dư khởi điểm; tiết kiệm lũy kế được tính từ dòng tiền dự báo.</p>
         </fieldset>
       </div>
       <div id="form-error" class="form-error" role="alert">{{ error }}</div>
@@ -106,11 +100,6 @@ function buildDto() {
 
 function onRaiseInput(year, event) {
   raiseText[year] = event.target.value
-}
-
-function onConfirmedChange(event) {
-  formDto.payoffInterestConfirmed = event.target.checked
-  emit('input', buildDto())
 }
 
 function onInput() {

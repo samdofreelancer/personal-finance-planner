@@ -35,6 +35,22 @@ export async function seedDefaults() {
   return res.json()
 }
 
+export async function getLoans() {
+  const res = await fetch(`${BASE}/loans`)
+  if (!res.ok) await throwApiError(res, 'Không tải được danh sách khoản vay')
+  return res.json()
+}
+
+export async function saveLoans(loans) {
+  const res = await fetch(`${BASE}/loans`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(loans),
+  })
+  if (!res.ok) await throwApiError(res, 'Không lưu được khoản vay và lịch trả')
+  return res.json()
+}
+
 function appendAssumptionParams(params, dto) {
   if (dto.baseSalary != null) params.set('baseSalary', dto.baseSalary)
   if (dto.januaryMultiplier != null) params.set('januaryMultiplier', dto.januaryMultiplier.toString())
@@ -44,12 +60,6 @@ function appendAssumptionParams(params, dto) {
   if (dto.childFromApr2027 != null) params.set('childFromApr2027', dto.childFromApr2027)
   if (dto.rentThroughJan2027 != null) params.set('rentThroughJan2027', dto.rentThroughJan2027)
   if (dto.rentFromFeb2027 != null) params.set('rentFromFeb2027', dto.rentFromFeb2027)
-  if (dto.loanPrincipal != null) params.set('loanPrincipal', dto.loanPrincipal)
-  if (dto.fixedPayment != null) params.set('fixedPayment', dto.fixedPayment)
-  if (dto.novInterest != null) params.set('novInterest', dto.novInterest)
-  if (dto.decInterest != null) params.set('decInterest', dto.decInterest)
-  if (dto.payoffInterest != null) params.set('payoffInterest', dto.payoffInterest)
-  if (dto.payoffInterestConfirmed != null) params.set('payoffInterestConfirmed', dto.payoffInterestConfirmed)
   if (dto.startingSavings != null) params.set('startingSavings', dto.startingSavings)
   if (dto.raises) {
     for (const [y, v] of Object.entries(dto.raises)) {

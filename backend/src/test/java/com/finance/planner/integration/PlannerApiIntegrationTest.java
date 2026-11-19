@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
         "spring.datasource.username=sa",
         "spring.datasource.password=",
         "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.flyway.enabled=false",
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
         "spring.jpa.show-sql=false"
 })
@@ -41,6 +42,11 @@ class PlannerApiIntegrationTest {
 
     @Test
     void seedThenGetReturnsPersistedDefaultAssumptions() throws Exception {
+        mockMvc.perform(put("/api/loans")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[{\"name\":\"Dữ liệu cũ\",\"openingPrincipal\":999,\"repayments\":[]}]"))
+                .andExpect(status().isOk());
+
         mockMvc.perform(post("/api/assumptions/seed"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.baseSalary").value(42_000_000))
@@ -49,8 +55,15 @@ class PlannerApiIntegrationTest {
         mockMvc.perform(get("/api/assumptions"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.living").value(4_250_000))
-                .andExpect(jsonPath("$.loanPrincipal").value(120_000_000))
                 .andExpect(jsonPath("$.raises.2030").value(0.08));
+
+        mockMvc.perform(get("/api/loans"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].openingPrincipal").value(120_000_000))
+                .andExpect(jsonPath("$[0].repayments", hasSize(3)))
+                .andExpect(jsonPath("$[0].repayments[0].principalAmount").value(8_800_000))
+                .andExpect(jsonPath("$[0].repayments[2].interestAmount").value(1_000_000));
 
         org.junit.jupiter.api.Assertions.assertEquals(1, assumptionRepository.count());
     }
@@ -117,12 +130,6 @@ class PlannerApiIntegrationTest {
                         .param("childFromApr2027", "3250000")
                         .param("rentThroughJan2027", "3750000")
                         .param("rentFromFeb2027", "5750000")
-                        .param("loanPrincipal", "120000000")
-                        .param("fixedPayment", "10000000")
-                        .param("novInterest", "1200000")
-                        .param("decInterest", "1100000")
-                        .param("payoffInterest", "1000000")
-                        .param("payoffInterestConfirmed", "false")
                         .param("startingSavings", "30000000"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.months", hasSize(50)))
@@ -133,6 +140,12 @@ class PlannerApiIntegrationTest {
 
     @Test
     void csvExportIncludesDownloadHeadersAndForecastSections() throws Exception {
+        mockMvc.perform(put("/api/loans")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[{\"name\":\"Khoản vay CSV\",\"openingPrincipal\":1000,\"repayments\":["
+                                + "{\"dueDate\":\"2026-11-10\",\"principalAmount\":100,\"interestAmount\":10}]}]"))
+                .andExpect(status().isOk());
+
         mockMvc.perform(get("/api/export/csv")
                         .param("baseSalary", "42000000")
                         .param("januaryMultiplier", "2.0")
@@ -142,18 +155,117 @@ class PlannerApiIntegrationTest {
                         .param("childFromApr2027", "3250000")
                         .param("rentThroughJan2027", "3750000")
                         .param("rentFromFeb2027", "5750000")
-                        .param("loanPrincipal", "120000000")
-                        .param("fixedPayment", "10000000")
-                        .param("novInterest", "1200000")
-                        .param("decInterest", "1100000")
-                        .param("payoffInterest", "1000000")
-                        .param("payoffInterestConfirmed", "false")
                         .param("startingSavings", "30000000"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("ke-hoach-tai-chinh")))
                 .andExpect(content().contentTypeCompatibleWith("text/csv"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Dự báo theo tháng")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Tổng hợp theo năm")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Tổng hợp theo năm")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("1000,100,10,110")));
+    }
+
+    @Test
+    void savesAndReadsMultipleLoansWithIndependentRepaymentEntries() throws Exception {
+        String loans = """
+                [
+                  {"name":"Vay mua nhà","openingPrincipal":1000,"repayments":[
+                    {"dueDate":"2026-11-10","principalAmount":100,"interestAmount":10},
+                    {"dueDate":"2026-11-25","principalAmount":200,"interestAmount":20},
+                    {"dueDate":"2026-12-05","principalAmount":50,"interestAmount":5}
+                  ]},
+                  {"name":"Vay cá nhân","openingPrincipal":500,"repayments":[
+                    {"dueDate":"2026-11-20","principalAmount":50,"interestAmount":8}
+                  ]}
+                ]
+                """;
+
+        mockMvc.perform(put("/api/loans")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loans))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].repayments", hasSize(3)))
+                .andExpect(jsonPath("$[1].name").value("Vay cá nhân"));
+
+        mockMvc.perform(get("/api/loans"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].repayments[1].principalAmount").value(200));
+    }
+
+    @Test
+    void rejectsNegativeRepaymentAmountsWithoutChangingSavedLoans() throws Exception {
+        String valid = "[{\"name\":\"Khoản vay\",\"openingPrincipal\":1000,\"repayments\":["
+                + "{\"dueDate\":\"2026-11-10\",\"principalAmount\":100,\"interestAmount\":10}]}]";
+        mockMvc.perform(put("/api/loans").contentType(MediaType.APPLICATION_JSON).content(valid))
+                .andExpect(status().isOk());
+
+        String invalid = "[{\"name\":\"Khoản vay\",\"openingPrincipal\":1000,\"repayments\":["
+                + "{\"dueDate\":\"2026-11-10\",\"principalAmount\":-1,\"interestAmount\":10}]}]";
+        mockMvc.perform(put("/api/loans").contentType(MediaType.APPLICATION_JSON).content(invalid))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/loans"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].repayments[0].principalAmount").value(100));
+    }
+
+    @Test
+    void updatesExistingLoanAndRepaymentWithoutChangingTheirIdentityAndSupportsDeletion() throws Exception {
+        String initial = "[{\"name\":\"Khoản vay cũ\",\"openingPrincipal\":1000,\"repayments\":["
+                + "{\"dueDate\":\"2026-11-10\",\"principalAmount\":100,\"interestAmount\":10}]}]";
+        String createdBody = mockMvc.perform(put("/api/loans").contentType(MediaType.APPLICATION_JSON).content(initial))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        var created = objectMapper.readTree(createdBody).get(0);
+        long loanId = created.get("id").asLong();
+        long repaymentId = created.get("repayments").get(0).get("id").asLong();
+
+        String updated = "[{\"id\":" + loanId + ",\"name\":\"Khoản vay đã sửa\",\"openingPrincipal\":900,\"repayments\":["
+                + "{\"id\":" + repaymentId + ",\"dueDate\":\"2026-11-15\",\"principalAmount\":200,\"interestAmount\":15}]}]";
+        mockMvc.perform(put("/api/loans").contentType(MediaType.APPLICATION_JSON).content(updated))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(loanId))
+                .andExpect(jsonPath("$[0].name").value("Khoản vay đã sửa"))
+                .andExpect(jsonPath("$[0].repayments[0].id").value(repaymentId))
+                .andExpect(jsonPath("$[0].repayments[0].principalAmount").value(200));
+
+        mockMvc.perform(put("/api/loans").contentType(MediaType.APPLICATION_JSON).content("[]"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test
+    void forecastAggregatesSavedRepaymentsByMonthAcrossLoans() throws Exception {
+        String loans = "[{\"name\":\"Khoản vay A\",\"openingPrincipal\":250,\"repayments\":["
+                + "{\"dueDate\":\"2026-11-10\",\"principalAmount\":100,\"interestAmount\":10},"
+                + "{\"dueDate\":\"2026-11-25\",\"principalAmount\":200,\"interestAmount\":20},"
+                + "{\"dueDate\":\"2026-12-05\",\"principalAmount\":50,\"interestAmount\":5}]} ,"
+                + "{\"name\":\"Khoản vay B\",\"openingPrincipal\":500,\"repayments\":["
+                + "{\"dueDate\":\"2026-11-20\",\"principalAmount\":50,\"interestAmount\":8}]}]";
+        mockMvc.perform(put("/api/loans").contentType(MediaType.APPLICATION_JSON).content(loans))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/forecast")
+                        .param("baseSalary", "1000")
+                        .param("januaryMultiplier", "2.0")
+                        .param("living", "100")
+                        .param("childThrough2026", "0")
+                        .param("childQ12027", "0")
+                        .param("childFromApr2027", "0")
+                        .param("rentThroughJan2027", "0")
+                        .param("rentFromFeb2027", "0")
+                        .param("startingSavings", "0")
+                        .param("raises[2027]", "0")
+                        .param("raises[2028]", "0")
+                        .param("raises[2029]", "0")
+                        .param("raises[2030]", "0"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.months[0].openingPrincipal").value(750))
+                .andExpect(jsonPath("$.months[0].principalPaid").value(300))
+                .andExpect(jsonPath("$.months[0].interestPaid").value(38))
+                .andExpect(jsonPath("$.months[0].loanPayment").value(338))
+                .andExpect(jsonPath("$.months[1].principalPaid").value(0))
+                .andExpect(jsonPath("$.months[1].interestPaid").value(5));
     }
 
     private AssumptionDTO validAssumptions() {
@@ -166,12 +278,6 @@ class PlannerApiIntegrationTest {
         dto.setChildFromApr2027(3_250_000L);
         dto.setRentThroughJan2027(3_750_000L);
         dto.setRentFromFeb2027(5_750_000L);
-        dto.setLoanPrincipal(120_000_000L);
-        dto.setFixedPayment(10_000_000L);
-        dto.setNovInterest(1_200_000L);
-        dto.setDecInterest(1_100_000L);
-        dto.setPayoffInterest(1_000_000L);
-        dto.setPayoffInterestConfirmed(false);
         dto.setStartingSavings(30_000_000L);
         dto.setRaises(Map.of(
                 2027, new BigDecimal("0.08"),

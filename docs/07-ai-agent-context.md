@@ -14,7 +14,7 @@ Do not silently broaden this product into a bank aggregator, accounting system, 
 
 - Frontend: Vue 3 + Vite; production assets are served by Nginx.
 - Backend: Spring Boot 3.3.5, Java 21, REST API and Spring Data JPA.
-- Database: PostgreSQL 16; current persistence is a single logical `assumptions` record.
+- Database: PostgreSQL 16; one household `assumptions` record plus normalized `loans` and `loan_repayments` tables, evolved by Flyway.
 - Local orchestration: Docker Compose (`frontend`, `backend`, `db`).
 - Forecast horizon: November 2026 through December 2030 (50 months).
 - Backend Java is the single implementation of forecast calculations.
@@ -49,9 +49,9 @@ Before changing code:
 - Distinguish persisted assumptions from transient forecast/simulation inputs.
 - Seed values are demo defaults, never the user's real financial profile.
 - Money behavior must be deterministic: document currency units, precision, rounding mode, timing and boundary conditions.
-- Preserve the documented loan payoff, expense-change and salary-raise timing unless an accepted requirement explicitly changes them.
+- Preserve per-loan repayment dates/amounts, expense-change and salary-raise timing unless an accepted requirement explicitly changes them.
 - CSV exports contain household financial information; treat them as sensitive output.
-- Autosave debounce and stale-response protection do not, by themselves, prove database writes are serialized.
+- Assumptions and loan schedules have explicit save actions; do not describe the current UI as autosaving.
 
 ## Preferred agent workflow
 

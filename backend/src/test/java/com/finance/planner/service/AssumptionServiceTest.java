@@ -34,7 +34,6 @@ class AssumptionServiceTest {
         ArgumentCaptor<Assumption> saved = ArgumentCaptor.forClass(Assumption.class);
         verify(repository).save(saved.capture());
         assertEquals(42_000_000L, saved.getValue().getBaseSalary());
-        assertEquals(120_000_000L, saved.getValue().getLoanPrincipal());
         assertNotNull(saved.getValue().getCreatedAt());
         assertNotNull(saved.getValue().getUpdatedAt());
         assertEquals(42_000_000L, result.getBaseSalary());

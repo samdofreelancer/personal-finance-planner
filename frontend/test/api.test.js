@@ -1,12 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { exportCsv, getAssumptions, getForecast, saveAssumptions, seedDefaults } from '../src/services/api.js'
+import { exportCsv, getAssumptions, getLoans, getForecast, saveAssumptions, saveLoans, seedDefaults } from '../src/services/api.js'
 
 const assumptions = {
   baseSalary: 42000000,
   januaryMultiplier: 2,
   living: 4000000,
-  payoffInterest: null,
-  payoffInterestConfirmed: false,
   raises: { 2027: 0.08, 2028: 0.09 },
 }
 
@@ -42,6 +40,30 @@ describe('API service', () => {
     expect(fetch).toHaveBeenCalledWith('/api/assumptions/seed', { method: 'POST' })
   })
 
+  it('loads saved loans and their repayment schedules', async () => {
+    const payload = [{ id: 1, name: 'Vay mua nhà', openingPrincipal: 100000000, repayments: [] }]
+    const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => payload })
+    vi.stubGlobal('fetch', fetch)
+
+    await expect(getLoans()).resolves.toEqual(payload)
+    expect(fetch).toHaveBeenCalledWith('/api/loans')
+  })
+
+  it('saves the complete loan schedule with an atomic JSON PUT', async () => {
+    const loans = [{ id: 1, name: 'Vay mua nhà', openingPrincipal: 100000000, repayments: [
+      { id: 2, dueDate: '2026-11-20', principalAmount: 5000000, interestAmount: 100000 },
+    ] }]
+    const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => loans })
+    vi.stubGlobal('fetch', fetch)
+
+    await expect(saveLoans(loans)).resolves.toEqual(loans)
+    expect(fetch).toHaveBeenCalledWith('/api/loans', expect.objectContaining({
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(loans),
+    }))
+  })
+
   it('uses a server validation message for failed responses', async () => {
     const fetch = vi.fn().mockResolvedValue({
       ok: false,
@@ -72,8 +94,7 @@ describe('API service', () => {
     expect(url.searchParams.get('baseSalary')).toBe('42000000')
     expect(url.searchParams.get('januaryMultiplier')).toBe('2')
     expect(url.searchParams.get('raises[2027]')).toBe('0.08')
-    expect(url.searchParams.has('payoffInterest')).toBe(false)
-    expect(url.searchParams.get('payoffInterestConfirmed')).toBe('false')
+    expect(url.searchParams.has('loanPrincipal')).toBe(false)
   })
 
   it('exports CSV through a temporary download link and revokes its URL', async () => {

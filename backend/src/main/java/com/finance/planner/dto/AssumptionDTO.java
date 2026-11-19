@@ -14,12 +14,6 @@ public class AssumptionDTO {
     private Long childFromApr2027;
     private Long rentThroughJan2027;
     private Long rentFromFeb2027;
-    private Long loanPrincipal;
-    private Long fixedPayment;
-    private Long novInterest;
-    private Long decInterest;
-    private Long payoffInterest;
-    private Boolean payoffInterestConfirmed;
     private Long startingSavings;
     private Map<Integer, BigDecimal> raises = new HashMap<>();
 
@@ -40,18 +34,6 @@ public class AssumptionDTO {
     public void setRentThroughJan2027(Long rentThroughJan2027) { this.rentThroughJan2027 = rentThroughJan2027; }
     public Long getRentFromFeb2027() { return rentFromFeb2027; }
     public void setRentFromFeb2027(Long rentFromFeb2027) { this.rentFromFeb2027 = rentFromFeb2027; }
-    public Long getLoanPrincipal() { return loanPrincipal; }
-    public void setLoanPrincipal(Long loanPrincipal) { this.loanPrincipal = loanPrincipal; }
-    public Long getFixedPayment() { return fixedPayment; }
-    public void setFixedPayment(Long fixedPayment) { this.fixedPayment = fixedPayment; }
-    public Long getNovInterest() { return novInterest; }
-    public void setNovInterest(Long novInterest) { this.novInterest = novInterest; }
-    public Long getDecInterest() { return decInterest; }
-    public void setDecInterest(Long decInterest) { this.decInterest = decInterest; }
-    public Long getPayoffInterest() { return payoffInterest; }
-    public void setPayoffInterest(Long payoffInterest) { this.payoffInterest = payoffInterest; }
-    public Boolean getPayoffInterestConfirmed() { return payoffInterestConfirmed; }
-    public void setPayoffInterestConfirmed(Boolean payoffInterestConfirmed) { this.payoffInterestConfirmed = payoffInterestConfirmed; }
     public Long getStartingSavings() { return startingSavings; }
     public void setStartingSavings(Long startingSavings) { this.startingSavings = startingSavings; }
     public Map<Integer, BigDecimal> getRaises() { return raises; }
