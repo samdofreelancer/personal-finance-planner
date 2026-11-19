@@ -2,7 +2,7 @@
   <div class="app-shell">
     <aside class="sidebar" aria-label="Điều hướng chính">
       <a class="brand" href="#overview" aria-label="Planwise - Tổng quan">
-        <svg class="brand-mark" viewBox="0 0 40 40" role="img" aria-label="">
+        <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
           <rect width="40" height="40" rx="12" fill="currentColor" />
           <path d="M12 29V11h9.2a7 7 0 0 1 0 14H17" fill="none" stroke="#F7F8F2" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
           <path d="m23 25 5 4-5 3" fill="none" stroke="#9DE3C7" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
@@ -31,7 +31,15 @@
         </div>
       </header>
 
-      <main class="page">
+      <main class="page" :aria-busy="isLoading">
+    <div v-if="isLoading && !forecast" class="loading-state" role="status">
+      <span class="loading-spinner" aria-hidden="true"></span>
+      Đang tải dữ liệu tài chính và dự báo...
+    </div>
+    <div v-else-if="errorMessage && !forecast" class="empty-state empty-state-error" role="alert">
+      <strong>Chưa thể tải dữ liệu</strong>
+      <span>{{ errorMessage }}</span>
+    </div>
     <section id="overview" class="page-heading outlook-hero">
       <div class="outlook-copy">
         <p class="eyebrow">FINANCIAL OUTLOOK <span class="outlook-live-dot"></span> KỊCH BẢN ĐANG MÔ PHỎNG</p>
@@ -123,6 +131,7 @@ const forecast = ref(null)
 const metrics = ref({ netCashFlow2030: 0, income2030: 0, expenses2030: 0, savingsEnd: 0 })
 const errorMessage = ref('')
 const saveStatus = ref('Đang tải...')
+const isLoading = ref(true)
 const provisional = ref(false)
 const activeSection = ref('overview')
 const sectionLabels = {
@@ -161,7 +170,7 @@ function updateActiveSectionFromScroll() {
   activeSection.value = current
 }
 
-let debounceTimer = null
+let previewTimer = null
 let latestRequest = 0
 
 const hasValidationError = computed(() => validateAssumptions(dto).length > 0)
@@ -199,11 +208,13 @@ onMounted(async () => {
   } catch (e) {
     errorMessage.value = e.message
     saveStatus.value = 'Lỗi kết nối máy chủ'
+  } finally {
+    isLoading.value = false
   }
 })
 
 onBeforeUnmount(() => {
-  clearTimeout(debounceTimer)
+  clearTimeout(previewTimer)
   window.removeEventListener('hashchange', syncActiveSection)
   window.removeEventListener('scroll', updateActiveSectionFromScroll)
 })
@@ -240,24 +251,19 @@ function applyForecast(res) {
 
 function onFormInput(updated) {
   Object.assign(dto, updated)
-  queueUpdate()
-}
-
-function queueUpdate() {
   const requestId = ++latestRequest
   const errors = validateAssumptions(dto)
   if (errors.length) {
-    clearTimeout(debounceTimer)
+    clearTimeout(previewTimer)
     errorMessage.value = errors[0]
-    saveStatus.value = 'Kết quả chưa cập nhật do giả định chưa hợp lệ'
+    saveStatus.value = 'Có thay đổi chưa lưu · giả định chưa hợp lệ'
     return
   }
   errorMessage.value = ''
-  saveStatus.value = 'Đang lưu...'
+  saveStatus.value = 'Có thay đổi chưa lưu'
   const payload = snapshot()
-  previewForecast(payload, requestId)
-  clearTimeout(debounceTimer)
-  debounceTimer = setTimeout(() => persistAndForecast(payload, requestId), 250)
+  clearTimeout(previewTimer)
+  previewTimer = setTimeout(() => previewForecast(payload, requestId), 180)
 }
 
 async function previewForecast(payload, requestId) {
@@ -265,11 +271,12 @@ async function previewForecast(payload, requestId) {
     const res = await getForecast(payload)
     if (requestId === latestRequest) applyForecast(res)
   } catch {
-    // The debounced save below will surface any server-side error.
+    // Preview is optional; explicit save reports persistence errors.
   }
 }
 
 async function persistAndForecast(payload = snapshot(), requestId = ++latestRequest) {
+  saveStatus.value = 'Đang lưu...'
   try {
     await saveAssumptions(payload)
     if (requestId !== latestRequest) return
@@ -290,16 +297,16 @@ async function saveAndForecast(updated) {
   const errors = validateAssumptions(dto)
   if (errors.length) {
     errorMessage.value = errors[0]
-    saveStatus.value = 'Kết quả chưa cập nhật do giả định chưa hợp lệ'
+    saveStatus.value = 'Có thay đổi chưa lưu · giả định chưa hợp lệ'
     return
   }
-  clearTimeout(debounceTimer)
+  clearTimeout(previewTimer)
   await persistAndForecast()
 }
 
 async function resetDefaults() {
   if (!window.confirm('Khôi phục toàn bộ giả định về giá trị ban đầu theo workbook?')) return
-  clearTimeout(debounceTimer)
+  clearTimeout(previewTimer)
   const requestId = ++latestRequest
   try {
     const data = await seedDefaults()

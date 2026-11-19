@@ -17,6 +17,7 @@ services:
       retries: 10
     networks:
       - finance-network
+    restart: unless-stopped
 
   backend:
     build:

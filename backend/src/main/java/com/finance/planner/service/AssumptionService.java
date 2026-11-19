@@ -22,7 +22,13 @@ public class AssumptionService {
 
     public AssumptionDTO getAssumptions() {
         Assumption entity = repository.findTopByOrderByIdAsc();
-        if (entity == null) entity = seedDefaultsEntity();
+        if (entity == null) {
+            entity = new Assumption();
+            updateEntityFromDTO(entity, defaultAssumptions());
+            entity.setCreatedAt(LocalDateTime.now());
+            entity.setUpdatedAt(LocalDateTime.now());
+            entity = repository.save(entity);
+        }
         return toDTO(entity);
     }
 
@@ -47,13 +53,6 @@ public class AssumptionService {
         updateEntityFromDTO(entity, defaultAssumptions());
         entity.setUpdatedAt(LocalDateTime.now());
         return toDTO(repository.save(entity));
-    }
-
-    private Assumption seedDefaultsEntity() {
-        Assumption entity = new Assumption();
-        entity.setCreatedAt(LocalDateTime.now());
-        entity.setUpdatedAt(LocalDateTime.now());
-        return entity;
     }
 
     private AssumptionDTO defaultAssumptions() {

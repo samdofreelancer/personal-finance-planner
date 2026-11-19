@@ -4,22 +4,26 @@
       <div><p class="eyebrow">TỔNG HỢP NĂM</p><h2>Dòng tiền dư mỗi năm</h2></div>
       <span class="chart-unit">Đơn vị: triệu đồng</span>
     </div>
-    <div id="annual-chart" class="chart-container">
+    <div v-if="chart.bars.length" id="annual-chart" class="chart-container">
       <svg :viewBox="`0 0 ${chart.width} ${chart.height}`" role="img" aria-labelledby="chart-title chart-desc">
         <title id="chart-title">Dòng tiền ròng theo năm, từ 2026 đến 2030</title>
         <desc id="chart-desc">{{ chart.description }}</desc>
         <g v-for="(tick, index) in chart.ticks" :key="'tick-' + index">
           <line :x1="chart.left" :y1="tick.y" :x2="chart.width - chart.right" :y2="tick.y" :stroke="tick.strong ? '#aebac7' : '#edf1f5'" :stroke-width="tick.strong ? 1.5 : 1" :stroke-dasharray="tick.strong ? '4 4' : undefined" />
-          <text :x="chart.left - 10" :y="tick.y + 4" text-anchor="end" fill="#8492a1" font-size="10">{{ tick.label }}</text>
+          <text :x="chart.left - 10" :y="tick.y + 4" text-anchor="end" fill="#586b60" font-size="10">{{ tick.label }}</text>
         </g>
         <g v-for="bar in chart.bars" :key="bar.year" role="img" :aria-label="bar.aria">
           <title>{{ bar.aria }}</title>
           <rect class="chart-bar" :x="bar.x" :y="bar.y" :width="bar.width" :height="bar.height" rx="5" :fill="bar.color" />
           <text :x="bar.center" :y="bar.labelY" text-anchor="middle" :fill="bar.color" font-size="10" font-weight="700">{{ bar.label }}</text>
-          <text :x="bar.center" :y="chart.height - 13" text-anchor="middle" fill="#5f7184" font-size="11" font-weight="650">{{ bar.year }}{{ bar.partial ? '*' : '' }}</text>
+          <text :x="bar.center" :y="chart.height - 13" text-anchor="middle" fill="#40594c" font-size="11" font-weight="650">{{ bar.year }}{{ bar.partial ? '*' : '' }}</text>
         </g>
         <text :x="chart.left" :y="chart.height - 1" fill="#91a0ad" font-size="9">* Năm 2026 gồm tháng 11–12 · † Dòng tiền tạm tính</text>
       </svg>
+    </div>
+    <div v-else class="empty-state" role="status">
+      <strong>Chưa có dữ liệu biểu đồ</strong>
+      <span>Dữ liệu dòng tiền theo năm sẽ xuất hiện sau khi tải được dự báo.</span>
     </div>
     <div class="chart-footnote">Dòng tiền ròng = tổng thu nhập − tổng chi phí. Năm 2026 chỉ gồm tháng 11 và 12.</div>
   </section>

@@ -165,6 +165,7 @@ describe('forecast presentation components', () => {
     expect(wrapper.text()).toContain('Dòng tiền dư mỗi năm')
     const empty = mount(AnnualChart, { props: { forecast: null } })
     expect(empty.findAll('.chart-bar')).toHaveLength(0)
+    expect(empty.text()).toContain('Chưa có dữ liệu biểu đồ')
   })
 
   it('renders annual rows with partial-year and provisional labels', () => {
@@ -189,5 +190,8 @@ describe('forecast presentation components', () => {
     expect(withAmount.find('.savings-cell').attributes('aria-label')).not.toContain('chưa gồm')
     expect(wrapper.get('tbody th[scope="row"]').text()).toBe('thg 1 2027')
     expect(wrapper.find('tbody td[scope="row"]').exists()).toBe(false)
+
+    const empty = mount(MonthlyTable, { props: { forecast: null } })
+    expect(empty.text()).toContain('Chưa có dữ liệu dự báo theo tháng')
   })
 })

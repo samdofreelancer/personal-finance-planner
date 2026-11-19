@@ -4,7 +4,7 @@
       <div><p class="eyebrow">CHI TIẾT</p><h2>Dự báo theo tháng</h2></div>
           <span class="row-count">{{ months.length }} tháng</span>
     </div>
-    <div class="table-scroll">
+    <div v-if="months.length" class="table-scroll">
       <table id="monthly-table">
         <caption class="sr-only">Dự báo thu nhập, chi phí, khoản vay, dòng tiền ròng và tiết kiệm từng tháng</caption>
         <thead>
@@ -28,6 +28,7 @@
         </tbody>
       </table>
     </div>
+    <div v-else class="empty-state" role="status">Chưa có dữ liệu dự báo theo tháng.</div>
   </section>
 </template>
 

@@ -3,7 +3,7 @@
     <div class="panel-heading">
       <div><p class="eyebrow">ĐỐI CHIẾU</p><h2>Tổng hợp theo năm</h2></div>
     </div>
-    <div class="table-scroll">
+    <div v-if="forecast?.annual?.length" class="table-scroll">
       <table id="annual-table">
         <caption class="sr-only">Tổng thu nhập, tổng chi, dòng tiền ròng và tiết kiệm cuối năm theo từng năm</caption>
         <thead>
@@ -20,6 +20,7 @@
         </tbody>
       </table>
     </div>
+    <div v-else class="empty-state" role="status">Chưa có dữ liệu tổng hợp theo năm.</div>
   </section>
 </template>
 

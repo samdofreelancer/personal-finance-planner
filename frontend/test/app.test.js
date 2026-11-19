@@ -152,33 +152,34 @@ describe('App', () => {
     expect(wrapper.text()).toContain('Không thể xuất')
   })
 
-  it('previews valid edits immediately and persists the latest snapshot after debounce', async () => {
+  it('debounces forecast previews without persisting until the user explicitly saves', async () => {
     const wrapper = await mountLoadedApp()
     vi.useFakeTimers()
     const form = wrapper.findComponent(AssumptionsForm)
     form.vm.$emit('input', validAssumptions())
-    await Promise.resolve()
-    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(180)
+    await flushPromises()
     expect(getForecast).toHaveBeenCalledTimes(2)
+    expect(saveAssumptions).not.toHaveBeenCalled()
 
-    await vi.advanceTimersByTimeAsync(250)
+    form.vm.$emit('save', validAssumptions())
     await flushPromises()
     expect(saveAssumptions).toHaveBeenCalledOnce()
     expect(getForecast).toHaveBeenCalledTimes(3)
     vi.useRealTimers()
   })
 
-  it('keeps preview failures quiet and surfaces the debounced save failure', async () => {
+  it('keeps preview failures quiet and surfaces an explicit save failure', async () => {
     const wrapper = await mountLoadedApp()
     vi.useFakeTimers()
     getForecast.mockRejectedValueOnce(new Error('Preview unavailable'))
     saveAssumptions.mockRejectedValueOnce(new Error('Save unavailable'))
     wrapper.findComponent(AssumptionsForm).vm.$emit('input', validAssumptions())
-    await Promise.resolve()
-    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(180)
+    await flushPromises()
     expect(wrapper.text()).not.toContain('Preview unavailable')
 
-    await vi.advanceTimersByTimeAsync(250)
+    wrapper.findComponent(AssumptionsForm).vm.$emit('save', validAssumptions())
     await flushPromises()
     expect(wrapper.text()).toContain('Save unavailable')
     vi.useRealTimers()
