@@ -121,6 +121,26 @@ Backend API integration tests:
 
 GitHub Actions workflow `.github/workflows/ci.yml` runs `mvn verify` for the backend and `npm ci`, `npm test` and `npm run build` for the frontend on pushes and pull requests. The CI database is in-memory; no PostgreSQL service or secrets are required.
 
+### Browser end-to-end tests (Playwright)
+
+Playwright exercises the real Vue UI through Nginx, Spring Boot and PostgreSQL. It is intentionally a separate test layer from Vitest component tests and H2 backend integration tests.
+
+Run from `frontend/`:
+
+```powershell
+npm ci
+npx playwright install chromium   # first run on a machine
+npm run e2e                       # starts isolated Compose stack, runs tests, then stops containers
+```
+
+The runner uses `docker-compose.e2e.yml` and the fixed Compose project `personal-finance-planner-e2e`: frontend `http://localhost:18088`, backend `http://localhost:18080`, PostgreSQL `localhost:15432`. It supplies a stable, local-only E2E database password and does not load the repository `.env`; this is required because the isolated E2E database volume persists between runs. The project has distinct container names, network and named database volume; it never attaches to `finance_planner_db_data` or the normal application containers. Each test resets only this synthetic E2E database through `POST /api/assumptions/seed`.
+
+The runner stops E2E containers with `docker compose down` and deliberately preserves the E2E-only volume for reuse. It never runs `down -v`. Do not manually change the E2E project to point at the normal planner database. The suite is sequential because each scenario seeds a shared isolated database.
+
+Playwright writes `frontend/playwright-report/` (HTML) and `frontend/test-results/` (traces, screenshots and video on failure). GitHub Actions runs the same `npm run e2e` command in a separate job and uploads diagnostics as `playwright-e2e-report` for 14 days.
+
+The initial browser journeys cover dashboard rendering and the 50-month/5-year forecast, user-defined expense schedules and effective-month persistence, loan/repayment persistence, and CSV download. This does not replace business-rule tests or claim cross-browser/visual-regression coverage.
+
 The backend CI job also runs PIT and uploads the JaCoCo (`backend-jacoco-report`) and PIT (`backend-pit-report`) reports as artifacts for 14 days. SonarQube is intentionally local-only; CI does not depend on a developer machine or a locally hosted server.
 
 ## Mutation testing

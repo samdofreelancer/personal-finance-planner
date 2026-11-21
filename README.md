@@ -118,6 +118,17 @@ cd backend
 mvn test
 ```
 
+## Kiểm thử E2E bằng Playwright
+
+```powershell
+cd frontend
+npm ci
+npx playwright install chromium  # chỉ cần cài một lần
+npm run e2e
+```
+
+Playwright tự dựng một Docker Compose project và PostgreSQL riêng, chạy các luồng thao tác qua trình duyệt Chromium, sau đó dừng container. Database E2E tách biệt hoàn toàn với dữ liệu planner thông thường; không dùng `docker compose down -v`. Chi tiết xem [Development & verification](docs/06-development-guide.md#browser-end-to-end-tests-playwright).
+
 ## Lưu ý
 
 - Dữ liệu lưu trong PostgreSQL (qua Docker volume `finance_planner_db_data`).

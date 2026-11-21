@@ -12,3 +12,4 @@ backend/.classpath
 *.db
 .scannerwork/
 .superpowers/
+.e2e-tmp-*/
