@@ -5,14 +5,9 @@ function validInput() {
   return {
     baseSalary: 42000000,
     januaryMultiplier: 2,
-    living: 4250000,
-    childThrough2026: 2500000,
-    childQ12027: 2750000,
-    childFromApr2027: 3250000,
-    rentThroughJan2027: 3750000,
-    rentFromFeb2027: 5750000,
     startingSavings: 30000000,
     raises: { 2027: 0.08, 2028: 0.08, 2029: 0.08, 2030: 0.08 },
+    expenses: [{ name: 'Sinh hoạt phí', changes: [{ effectiveMonth: '2026-11', amount: 4250000 }] }],
   }
 }
 
@@ -26,8 +21,8 @@ describe('validateAssumptions', () => {
   it.each([['negative', -1], ['decimal', 1.5], ['unsafe integer', Number.MAX_SAFE_INTEGER + 1], ['string', '100']])(
     'rejects %s monetary values', (_label, value) => {
       const input = validInput()
-      input.living = value
-      expect(validateAssumptions(input)).toContain('living phải là số VND nguyên không âm.')
+      input.expenses[0].changes[0].amount = value
+      expect(validateAssumptions(input)).toContain('Số tiền của khoản chi “Sinh hoạt phí” phải là VND nguyên không âm.')
     },
   )
 
@@ -55,5 +50,15 @@ describe('validateAssumptions', () => {
     const missingRaises = validInput()
     missingRaises.raises = null
     expect(validateAssumptions(missingRaises)).toHaveLength(4)
+  })
+
+  it('rejects duplicate category names and duplicate effective months', () => {
+    const duplicateNames = validInput()
+    duplicateNames.expenses.push({ name: ' sinh hoạt phí ', changes: [{ effectiveMonth: '2026-11', amount: 1 }] })
+    expect(validateAssumptions(duplicateNames)).toContain('Tên khoản chi không được trùng nhau.')
+
+    const duplicateMonths = validInput()
+    duplicateMonths.expenses[0].changes.push({ effectiveMonth: '2026-11', amount: 2 })
+    expect(validateAssumptions(duplicateMonths)).toContain('Khoản chi “Sinh hoạt phí” bị trùng tháng hiệu lực.')
   })
 })

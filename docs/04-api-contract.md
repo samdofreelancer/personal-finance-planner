@@ -11,14 +11,14 @@ Base path: `/api`. In Docker/local production-like use, the browser calls Nginx 
 | POST | `/api/assumptions/seed` | None | Resets assumptions and replaces loan schedules with the synthetic sample schedule | `AssumptionDTO` |
 | GET | `/api/loans` | None | None | `LoanDTO[]` with nested repayment entries |
 | PUT | `/api/loans` | Complete `LoanDTO[]` collection | Atomically updates supplied IDs, inserts new records and deletes omitted records | Saved `LoanDTO[]` |
-| GET | `/api/forecast` | Query-bound `AssumptionDTO` fields | None | `ForecastResponse` (`months`, `annual`); loan schedules loaded from PostgreSQL |
-| GET | `/api/export/csv` | Query-bound `AssumptionDTO` fields | None | `text/csv` attachment; uses the same saved loan schedules as forecast |
+| POST | `/api/forecast` | JSON `AssumptionDTO` including `expenses[]` | None | `ForecastResponse` (`months`, `annual`); loan schedules loaded from PostgreSQL |
+| POST | `/api/export/csv` | JSON `AssumptionDTO` including `expenses[]` | None | `text/csv` attachment using the supplied expense schedules |
 
 ## Forecast input semantics — important
 
-Current implementation of `ForecastController.get()` and `exportCsv()` binds the request query parameters to an `AssumptionDTO`, validates it and calculates salary/expense assumptions directly from that DTO. Both operations load the persisted loan schedules through `LoanScheduleService`; they do not load the saved assumptions row for preview calculations.
+The frontend sends a complete assumptions snapshot as JSON to `POST /api/forecast` and `POST /api/export/csv`. The backend validates that snapshot and calculates salary and expense assumptions directly from it. Both operations load persisted loan schedules through `LoanScheduleService`; they do not load saved assumptions for preview calculations.
 
-The frontend sends its current income/expense assumptions as query parameters for preview, refresh and CSV export. Loan schedules are managed and saved separately through `PUT /api/loans`; unsaved loan edits are not included in the forecast.
+`PUT /api/assumptions` persists income, raise, savings and the complete expense-category collection in one transaction. Loan schedules are managed separately through `PUT /api/loans`; unsaved loan edits are not included in the forecast.
 
 ## Assumptions DTO fields
 
@@ -26,14 +26,9 @@ The frontend sends its current income/expense assumptions as query parameters fo
 |---|---|---|
 | `baseSalary` | integer | Base monthly salary in VND |
 | `januaryMultiplier` | decimal | January salary multiplier |
-| `living` | integer | Monthly living expenses in VND |
-| `childThrough2026` | integer | Child expense through 2026 |
-| `childQ12027` | integer | Child expense Jan–Mar 2027 |
-| `childFromApr2027` | integer | Child expense from Apr 2027 |
-| `rentThroughJan2027` | integer | Rent through Jan 2027 |
-| `rentFromFeb2027` | integer | Rent from Feb 2027 |
 | `startingSavings` | integer | Starting savings in VND |
 | `raises` | object | Annual raise rates keyed by 2027, 2028, 2029, 2030 |
+| `expenses` | array | User-defined categories with `name` and `changes[]`; each change has `effectiveMonth` (`YYYY-MM`) and `amount` (whole VND) |
 
 ## Loan schedule DTOs
 
@@ -44,7 +39,7 @@ The frontend sends its current income/expense assumptions as query parameters fo
 
 ## Forecast response
 
-- `months`: 50 monthly rows. Each row includes salary, expense components, aggregated loan principal/interest/payment, total expenses, net cash flow, cumulative savings and provisional flags.
+- `months`: 50 monthly rows. Each row includes salary, `recurringExpenses`, `expenseBreakdown[]` (`name`, `amount`), aggregated loan principal/interest/payment, total expenses, net cash flow, cumulative savings and provisional flags.
 - `annual`: 5 annual rows. Each row includes year, partial-year flag, salary total, expense total, net cash flow, ending savings and provisional flags.
 - Exact serialized field names are defined by `ForecastMonthDTO`, `ForecastAnnualDTO` and `ForecastResponse`; update this document when those DTOs change.
 
@@ -59,4 +54,4 @@ The frontend sends its current income/expense assumptions as query parameters fo
 - Do not silently change query parameter names, DTO fields, nullability or forecast semantics.
 - Change backend and frontend consumers in one traceable feature.
 - Add contract/integration tests for externally observable behavior.
-- The desired future contract must explicitly separate forecast from saved assumptions and non-persisting simulation; see F-09 in the remediation spec.
+- The POST contract explicitly separates non-persisting forecast simulation from `PUT /api/assumptions`; keep the full forecast input as a JSON snapshot so new expense schedules are represented without query-parameter encoding.

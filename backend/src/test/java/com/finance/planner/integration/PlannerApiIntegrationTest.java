@@ -11,8 +11,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finance.planner.dto.AssumptionDTO;
+import com.finance.planner.dto.ExpenseDTO;
+import com.finance.planner.dto.ExpenseChangeDTO;
 import com.finance.planner.repository.AssumptionRepository;
+import com.finance.planner.service.ExpenseScheduleService;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,7 +58,7 @@ class PlannerApiIntegrationTest {
 
         mockMvc.perform(get("/api/assumptions"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.living").value(4_250_000))
+                .andExpect(jsonPath("$.expenses[0].changes[0].amount").value(4_250_000))
                 .andExpect(jsonPath("$.raises.2030").value(0.08));
 
         mockMvc.perform(get("/api/loans"))
@@ -75,8 +79,11 @@ class PlannerApiIntegrationTest {
 
         AssumptionDTO updated = validAssumptions();
         updated.setBaseSalary(55_000_000L);
-        updated.setLiving(6_000_000L);
-        updated.setRentFromFeb2027(7_000_000L);
+        updated.setExpenses(List.of(
+                new ExpenseDTO("Sinh hoạt phí", List.of(new ExpenseChangeDTO("2026-11", 6_000_000L))),
+                new ExpenseDTO("Tiền nhà", List.of(
+                        new ExpenseChangeDTO("2026-11", 3_750_000L),
+                        new ExpenseChangeDTO("2027-02", 7_000_000L)))));
         updated.setRaises(Map.of(
                 2027, new BigDecimal("0.05"),
                 2028, new BigDecimal("0.06"),
@@ -93,8 +100,8 @@ class PlannerApiIntegrationTest {
         mockMvc.perform(get("/api/assumptions"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.baseSalary").value(55_000_000))
-                .andExpect(jsonPath("$.living").value(6_000_000))
-                .andExpect(jsonPath("$.rentFromFeb2027").value(7_000_000))
+                .andExpect(jsonPath("$.expenses[0].changes[0].amount").value(6_000_000))
+                .andExpect(jsonPath("$.expenses[1].changes[1].amount").value(7_000_000))
                 .andExpect(jsonPath("$.raises.2028").value(0.06));
 
         org.junit.jupiter.api.Assertions.assertEquals(1, assumptionRepository.count());
@@ -106,31 +113,24 @@ class PlannerApiIntegrationTest {
                 .andExpect(status().isOk());
 
         AssumptionDTO invalid = validAssumptions();
-        invalid.setLiving(-1L);
+        invalid.setExpenses(List.of(new ExpenseDTO("Sinh hoạt phí", List.of(
+                new ExpenseChangeDTO("2026-11", -1L)))));
 
         mockMvc.perform(put("/api/assumptions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsBytes(invalid)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("living phải là số VND nguyên không âm."));
+                .andExpect(jsonPath("$.message").value("Mốc chi phí phải có tháng hiệu lực và số VND nguyên không âm."));
 
         mockMvc.perform(get("/api/assumptions"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.living").value(4_250_000));
+                .andExpect(jsonPath("$.expenses[0].changes[0].amount").value(4_250_000));
     }
 
     @Test
     void forecastEndpointReturnsFiftyMonthsAndAnnualSummaries() throws Exception {
-        mockMvc.perform(get("/api/forecast")
-                        .param("baseSalary", "42000000")
-                        .param("januaryMultiplier", "2.0")
-                        .param("living", "4250000")
-                        .param("childThrough2026", "2500000")
-                        .param("childQ12027", "2750000")
-                        .param("childFromApr2027", "3250000")
-                        .param("rentThroughJan2027", "3750000")
-                        .param("rentFromFeb2027", "5750000")
-                        .param("startingSavings", "30000000"))
+        mockMvc.perform(post("/api/forecast").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsBytes(validAssumptions())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.months", hasSize(50)))
                 .andExpect(jsonPath("$.months[0].year").value(2026))
@@ -146,22 +146,73 @@ class PlannerApiIntegrationTest {
                                 + "{\"dueDate\":\"2026-11-10\",\"principalAmount\":100,\"interestAmount\":10}]}]"))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/export/csv")
-                        .param("baseSalary", "42000000")
-                        .param("januaryMultiplier", "2.0")
-                        .param("living", "4250000")
-                        .param("childThrough2026", "2500000")
-                        .param("childQ12027", "2750000")
-                        .param("childFromApr2027", "3250000")
-                        .param("rentThroughJan2027", "3750000")
-                        .param("rentFromFeb2027", "5750000")
-                        .param("startingSavings", "30000000"))
+        mockMvc.perform(post("/api/export/csv").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsBytes(validAssumptions())))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("ke-hoach-tai-chinh")))
                 .andExpect(content().contentTypeCompatibleWith("text/csv"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Dự báo theo tháng")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Tổng hợp theo năm")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("1000,100,10,110")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("42000000,10500000,")));
+    }
+
+    @Test
+    void persistsUserDefinedExpenseCategoriesAndForecastsEffectiveMonthlyAmounts() throws Exception {
+        String assumptions = """
+                {
+                  "baseSalary": 1000,
+                  "januaryMultiplier": 2.0,
+                  "startingSavings": 0,
+                  "raises": {"2027":0,"2028":0,"2029":0,"2030":0},
+                  "expenses": [
+                    {"name":"Học phí","changes":[
+                      {"effectiveMonth":"2026-11","amount":100},
+                      {"effectiveMonth":"2027-01","amount":200}
+                    ]},
+                    {"name":"Bảo hiểm","changes":[
+                      {"effectiveMonth":"2026-11","amount":50}
+                    ]}
+                  ]
+                }
+                """;
+
+        mockMvc.perform(put("/api/assumptions").contentType(MediaType.APPLICATION_JSON).content(assumptions))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.expenses", hasSize(2)))
+                .andExpect(jsonPath("$.expenses[0].name").value("Học phí"))
+                .andExpect(jsonPath("$.expenses[0].changes[1].effectiveMonth").value("2027-01"));
+
+        mockMvc.perform(get("/api/assumptions"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.expenses", hasSize(2)))
+                .andExpect(jsonPath("$.expenses[1].changes[0].amount").value(50));
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/forecast")
+                        .contentType(MediaType.APPLICATION_JSON).content(assumptions))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.months[0].recurringExpenses").value(150))
+                .andExpect(jsonPath("$.months[0].totalExpenses").value(150))
+                .andExpect(jsonPath("$.months[2].recurringExpenses").value(250))
+                .andExpect(jsonPath("$.months[2].expenseBreakdown", hasSize(2)));
+    }
+
+    @Test
+    void rejectsInvalidExpenseScheduleWithoutOverwritingExistingCategories() throws Exception {
+        String valid = """
+                {"baseSalary":1,"januaryMultiplier":1,"startingSavings":0,
+                 "raises":{"2027":0,"2028":0,"2029":0,"2030":0},
+                 "expenses":[{"name":"Học phí","changes":[{"effectiveMonth":"2026-11","amount":100}]}]}
+                """;
+        mockMvc.perform(put("/api/assumptions").contentType(MediaType.APPLICATION_JSON).content(valid))
+                .andExpect(status().isOk());
+
+        String invalid = valid.replace("2026-11", "2026-13");
+        mockMvc.perform(put("/api/assumptions").contentType(MediaType.APPLICATION_JSON).content(invalid))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/assumptions"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.expenses[0].changes[0].effectiveMonth").value("2026-11"));
     }
 
     @Test
@@ -245,20 +296,15 @@ class PlannerApiIntegrationTest {
         mockMvc.perform(put("/api/loans").contentType(MediaType.APPLICATION_JSON).content(loans))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/forecast")
-                        .param("baseSalary", "1000")
-                        .param("januaryMultiplier", "2.0")
-                        .param("living", "100")
-                        .param("childThrough2026", "0")
-                        .param("childQ12027", "0")
-                        .param("childFromApr2027", "0")
-                        .param("rentThroughJan2027", "0")
-                        .param("rentFromFeb2027", "0")
-                        .param("startingSavings", "0")
-                        .param("raises[2027]", "0")
-                        .param("raises[2028]", "0")
-                        .param("raises[2029]", "0")
-                        .param("raises[2030]", "0"))
+        AssumptionDTO forecastInput = validAssumptions();
+        forecastInput.setBaseSalary(1_000L);
+        forecastInput.setStartingSavings(0L);
+        forecastInput.setExpenses(List.of(new ExpenseDTO("Sinh hoạt", List.of(
+                new ExpenseChangeDTO("2026-11", 100L)))));
+        forecastInput.setRaises(Map.of(2027, BigDecimal.ZERO, 2028, BigDecimal.ZERO,
+                2029, BigDecimal.ZERO, 2030, BigDecimal.ZERO));
+        mockMvc.perform(post("/api/forecast").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsBytes(forecastInput)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.months[0].openingPrincipal").value(750))
                 .andExpect(jsonPath("$.months[0].principalPaid").value(300))
@@ -272,12 +318,7 @@ class PlannerApiIntegrationTest {
         AssumptionDTO dto = new AssumptionDTO();
         dto.setBaseSalary(42_000_000L);
         dto.setJanuaryMultiplier(new BigDecimal("2.0"));
-        dto.setLiving(4_250_000L);
-        dto.setChildThrough2026(2_500_000L);
-        dto.setChildQ12027(2_750_000L);
-        dto.setChildFromApr2027(3_250_000L);
-        dto.setRentThroughJan2027(3_750_000L);
-        dto.setRentFromFeb2027(5_750_000L);
+        dto.setExpenses(ExpenseScheduleService.defaultExpenses());
         dto.setStartingSavings(30_000_000L);
         dto.setRaises(Map.of(
                 2027, new BigDecimal("0.08"),

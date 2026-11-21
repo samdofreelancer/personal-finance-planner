@@ -1,6 +1,6 @@
 package com.finance.planner.dto;
 
-import java.time.LocalDate;
+import java.util.List;
 
 public class ForecastMonthDTO {
 
@@ -8,14 +8,13 @@ public class ForecastMonthDTO {
     private int month;
     private String label;
     private long salary;
-    private long living;
-    private long child;
-    private long rent;
     private long openingPrincipal;
     private long principalPaid;
     private long interestPaid;
     private long loanPayment;
     private long totalExpenses;
+    private long recurringExpenses;
+    private List<ExpenseBreakdownDTO> expenseBreakdown = List.of();
     private long netCashFlow;
     private long cumulativeSavings;
     private boolean provisional;
@@ -23,17 +22,14 @@ public class ForecastMonthDTO {
 
     public ForecastMonthDTO() {}
 
-    public ForecastMonthDTO(int year, int month, String label, long salary, long living, long child,
-                            long rent, long openingPrincipal, long principalPaid, long interestPaid,
+    public ForecastMonthDTO(int year, int month, String label, long salary,
+                            long openingPrincipal, long principalPaid, long interestPaid,
                             long loanPayment, long totalExpenses, long netCashFlow,
                             long cumulativeSavings, boolean provisional, boolean savingsProvisional) {
         this.year = year;
         this.month = month;
         this.label = label;
         this.salary = salary;
-        this.living = living;
-        this.child = child;
-        this.rent = rent;
         this.openingPrincipal = openingPrincipal;
         this.principalPaid = principalPaid;
         this.interestPaid = interestPaid;
@@ -53,12 +49,6 @@ public class ForecastMonthDTO {
     public void setLabel(String label) { this.label = label; }
     public long getSalary() { return salary; }
     public void setSalary(long salary) { this.salary = salary; }
-    public long getLiving() { return living; }
-    public void setLiving(long living) { this.living = living; }
-    public long getChild() { return child; }
-    public void setChild(long child) { this.child = child; }
-    public long getRent() { return rent; }
-    public void setRent(long rent) { this.rent = rent; }
     public long getOpeningPrincipal() { return openingPrincipal; }
     public void setOpeningPrincipal(long openingPrincipal) { this.openingPrincipal = openingPrincipal; }
     public long getPrincipalPaid() { return principalPaid; }
@@ -69,6 +59,10 @@ public class ForecastMonthDTO {
     public void setLoanPayment(long loanPayment) { this.loanPayment = loanPayment; }
     public long getTotalExpenses() { return totalExpenses; }
     public void setTotalExpenses(long totalExpenses) { this.totalExpenses = totalExpenses; }
+    public long getRecurringExpenses() { return recurringExpenses; }
+    public void setRecurringExpenses(long recurringExpenses) { this.recurringExpenses = recurringExpenses; }
+    public List<ExpenseBreakdownDTO> getExpenseBreakdown() { return expenseBreakdown; }
+    public void setExpenseBreakdown(List<ExpenseBreakdownDTO> expenseBreakdown) { this.expenseBreakdown = expenseBreakdown; }
     public long getNetCashFlow() { return netCashFlow; }
     public void setNetCashFlow(long netCashFlow) { this.netCashFlow = netCashFlow; }
     public long getCumulativeSavings() { return cumulativeSavings; }

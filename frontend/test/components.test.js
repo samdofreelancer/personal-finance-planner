@@ -11,12 +11,20 @@ import MonthlyTable from '../src/components/MonthlyTable.vue'
 
 function assumptions() {
   return {
-    baseSalary: 42000000, januaryMultiplier: 2, living: 4000000,
-    childThrough2026: 1000000, childQ12027: 1100000, childFromApr2027: 1200000,
-    rentThroughJan2027: 2000000, rentFromFeb2027: 3000000,
+    baseSalary: 42000000, januaryMultiplier: 2,
     startingSavings: 5000000,
     raises: { 2027: 0.08, 2028: 0.09, 2029: 0.1, 2030: 0.11 },
   }
+}
+
+function expenses() {
+  return [
+    { name: 'Sinh hoạt phí', changes: [{ effectiveMonth: '2026-11', amount: 4000000 }] },
+    { name: 'Tiền nhà', changes: [
+      { effectiveMonth: '2026-11', amount: 2000000 },
+      { effectiveMonth: '2027-02', amount: 3000000 },
+    ] },
+  ]
 }
 
 function forecast() {
@@ -27,8 +35,8 @@ function forecast() {
       { year: 2028, partial: false, salary: 550000000, expenses: 210000000, netCashFlow: -10000000, endingSavings: -1000000, provisional: false, endingSavingsProvisional: false },
     ],
     months: [
-      { label: 'thg 1 2027', year: 2027, month: 1, salary: 50000000, living: 4000000, child: 1100000, rent: 2000000, openingPrincipal: 100000000, principalPaid: 100000000, interestPaid: 0, loanPayment: 100000000, totalExpenses: 107100000, netCashFlow: -57100000, cumulativeSavings: -52100000, provisional: true, savingsProvisional: true },
-      { label: 'thg 2 2027', year: 2027, month: 2, salary: 50000000, living: 4000000, child: 1100000, rent: 3000000, openingPrincipal: 0, principalPaid: 0, interestPaid: 500000, loanPayment: 500000, totalExpenses: 8600000, netCashFlow: 41400000, cumulativeSavings: -10700000, provisional: false, savingsProvisional: true },
+      { label: 'thg 1 2027', year: 2027, month: 1, salary: 50000000, recurringExpenses: 7100000, expenseBreakdown: [{ name: 'Sinh hoạt phí', amount: 4000000 }, { name: 'Tiền nhà', amount: 2000000 }, { name: 'Nuôi con', amount: 1100000 }], openingPrincipal: 100000000, principalPaid: 100000000, interestPaid: 0, loanPayment: 100000000, totalExpenses: 107100000, netCashFlow: -57100000, cumulativeSavings: -52100000, provisional: true, savingsProvisional: true },
+      { label: 'thg 2 2027', year: 2027, month: 2, salary: 50000000, recurringExpenses: 8100000, expenseBreakdown: [{ name: 'Sinh hoạt phí', amount: 4000000 }, { name: 'Tiền nhà', amount: 3000000 }, { name: 'Nuôi con', amount: 1100000 }], openingPrincipal: 0, principalPaid: 0, interestPaid: 500000, loanPayment: 500000, totalExpenses: 8600000, netCashFlow: 41400000, cumulativeSavings: -10700000, provisional: false, savingsProvisional: true },
     ],
   }
 }
@@ -64,7 +72,7 @@ describe('CurrencyInput', () => {
 describe('AssumptionsForm', () => {
   it('emits reset, input and save payloads with percentage raises converted to fractions and savings separate', async () => {
     const dto = assumptions()
-    const wrapper = mount(AssumptionsForm, { props: { dto, error: 'Lỗi', status: 'Đã lưu' } })
+    const wrapper = mount(AssumptionsForm, { props: { dto, expenses: expenses(), error: 'Lỗi', status: 'Đã lưu' } })
     expect(wrapper.text()).toContain('Lỗi')
     expect(wrapper.text()).toContain('Đã lưu')
     expect(wrapper.get('input[name="raise2027"]').element.value).toBe('8')
@@ -85,7 +93,7 @@ describe('AssumptionsForm', () => {
   it('normalizes blank and invalid raise values to zero and blank text', async () => {
     const dto = assumptions()
     dto.raises[2028] = 0
-    const wrapper = mount(AssumptionsForm, { props: { dto, error: '', status: '' } })
+    const wrapper = mount(AssumptionsForm, { props: { dto, expenses: expenses(), error: '', status: '' } })
     expect(wrapper.get('input[name="raise2028"]').element.value).toBe('')
     await wrapper.get('input[name="raise2029"]').setValue('')
     await wrapper.get('form').trigger('input')
@@ -94,7 +102,7 @@ describe('AssumptionsForm', () => {
 
   it('keeps percentage text synchronized when external raise assumptions change', async () => {
     const dto = assumptions()
-    const wrapper = mount(AssumptionsForm, { props: { dto, error: '', status: '' } })
+    const wrapper = mount(AssumptionsForm, { props: { dto, expenses: expenses(), error: '', status: '' } })
     await wrapper.setProps({ dto: { ...dto, raises: { ...dto.raises, 2030: 0.2 } } })
     expect(wrapper.get('input[name="raise2030"]').element.value).toBe('20')
 
@@ -103,16 +111,21 @@ describe('AssumptionsForm', () => {
     expect(wrapper.emitted('input').at(-1)[0].raises[2030]).toBe(0.15)
   })
 
-  it('edits a local draft without mutating the dto prop and associates labels with controls', async () => {
+  it('edits dynamic expense schedules without mutating the expense prop', async () => {
     const dto = assumptions()
-    const wrapper = mount(AssumptionsForm, { props: { dto, error: '', status: '' } })
+    const originalExpenses = expenses()
+    const wrapper = mount(AssumptionsForm, { props: { dto, expenses: originalExpenses, error: '', status: '' } })
 
-    expect(wrapper.get('label[for="living"]').element.control?.id).toBe('living')
-    await wrapper.get('#living').setValue('4500000')
+    expect(wrapper.text()).toContain('Chi phí hằng tháng')
+    await wrapper.get('input[aria-label="Số tiền khoản Sinh hoạt phí, mốc 1"]').setValue('4500000')
     await wrapper.get('form').trigger('input')
 
-    expect(dto.living).toBe(4000000)
-    expect(wrapper.emitted('input').at(-1)[0].living).toBe(4500000)
+    expect(originalExpenses[0].changes[0].amount).toBe(4000000)
+    expect(wrapper.emitted('expenses-input').at(-1)[0][0].changes[0].amount).toBe(4500000)
+    await wrapper.get('.expense-add').trigger('click')
+    expect(wrapper.emitted('expenses-input').at(-1)[0]).toHaveLength(3)
+    await wrapper.get('.expense-remove').trigger('click')
+    expect(wrapper.emitted('expenses-input').at(-1)[0]).toHaveLength(2)
   })
 })
 
@@ -243,6 +256,9 @@ describe('forecast presentation components', () => {
     expect(withAmount.text()).toContain('0 ₫ · tạm tính')
     expect(withAmount.find('.savings-cell').attributes('aria-label')).toContain('tạm tính')
     expect(wrapper.get('tbody th[scope="row"]').text()).toBe('thg 1 2027')
+    expect(wrapper.text()).toContain('Chi phí định kỳ')
+    expect(wrapper.text()).toContain('Sinh hoạt phí: 4.000.000')
+    expect(wrapper.get('tbody td:nth-child(3)').attributes('title')).toContain('Sinh hoạt phí: 4.000.000')
     expect(wrapper.find('tbody td[scope="row"]').exists()).toBe(false)
 
     const empty = mount(MonthlyTable, { props: { forecast: null } })

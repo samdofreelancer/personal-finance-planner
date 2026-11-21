@@ -18,14 +18,15 @@ This document records the behavior implemented in `ForecastService` and its DTOs
 
 ## Expenses
 
-- Monthly expenses include living, child, rent and loan payment.
-- Child amount:
-  - 2026: `childThrough2026`.
-  - Jan–Mar 2027: `childQ12027`.
-  - Apr 2027 onward: `childFromApr2027`.
-- Rent amount:
-  - Through Jan 2027: `rentThroughJan2027`.
-  - Feb 2027 onward: `rentFromFeb2027`.
+- Recurring expenses are user-managed categories; category names are not a closed or hard-coded domain enum.
+- Each category contains one or more amount changes identified by an effective `YearMonth` and a non-negative whole-VND monthly amount.
+- For a forecast month, use the amount from the latest effective month less than or equal to that month. Before the first effective month, the category contributes zero.
+- A zero amount is valid and stops the category from that effective month onward.
+- Category names are trimmed, 1–120 characters and unique case-insensitively. Each category must have at least one change and cannot contain duplicate effective months.
+- `recurringExpenses = sum(amountAt(category, forecastMonth))`.
+- `totalExpenses = recurringExpenses + loanPayment`.
+- The initial sample data has `Sinh hoạt phí`, `Quỹ nuôi con` and `Tiền nhà`; these are editable seed categories, not fixed expense types.
+- Flyway V4 converts the legacy living/child/rent values into equivalent categories and effective months before removing the fixed columns.
 
 ## Loan repayment schedule
 
@@ -39,7 +40,7 @@ This document records the behavior implemented in `ForecastService` and its DTOs
 
 ## Cash flow and savings
 
-- `totalExpenses = living + child + rent + loanPayment`.
+- `totalExpenses = recurringExpenses + loanPayment`.
 - `netCashFlow = salary - totalExpenses`.
 - `cumulativeSavings = startingSavings + cumulative monthly netCashFlow`.
 - Negative cumulative savings are retained as negative values (shortfall), not clamped to zero.

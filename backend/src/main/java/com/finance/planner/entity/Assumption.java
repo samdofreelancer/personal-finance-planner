@@ -15,12 +15,6 @@ public class Assumption {
 
     @Column(name = "base_salary", nullable = false) private Long baseSalary = 42_000_000L;
     @Column(name = "january_multiplier", nullable = false, precision = 5, scale = 2) private BigDecimal januaryMultiplier = new BigDecimal("2.0");
-    @Column(name = "living", nullable = false) private Long living = 4_250_000L;
-    @Column(name = "child_through_2026", nullable = false) private Long childThrough2026 = 2_500_000L;
-    @Column(name = "child_q1_2027", nullable = false) private Long childQ12027 = 2_750_000L;
-    @Column(name = "child_from_apr_2027", nullable = false) private Long childFromApr2027 = 3_250_000L;
-    @Column(name = "rent_through_jan_2027", nullable = false) private Long rentThroughJan2027 = 3_750_000L;
-    @Column(name = "rent_from_feb_2027", nullable = false) private Long rentFromFeb2027 = 5_750_000L;
     @Column(name = "starting_savings", nullable = false) private Long startingSavings = 30_000_000L;
     @Column(name = "raise_2027", nullable = false, precision = 5, scale = 4) private BigDecimal raise2027 = new BigDecimal("0.08");
     @Column(name = "raise_2028", nullable = false, precision = 5, scale = 4) private BigDecimal raise2028 = new BigDecimal("0.08");

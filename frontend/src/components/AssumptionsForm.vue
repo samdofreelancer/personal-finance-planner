@@ -28,14 +28,31 @@
           </div>
         </fieldset>
 
-        <fieldset class="input-group">
+        <fieldset class="input-group expense-schedules-group">
           <legend><span class="legend-icon expense-icon" aria-hidden="true">↘</span> Chi phí hằng tháng</legend>
-          <label class="field" for="living"><span>Sinh hoạt phí</span><span class="input-wrap"><currency-input id="living" v-model="formDto.living" name="living" /><span>₫</span></span></label>
-          <label class="field" for="childThrough2026"><span>Quỹ nuôi con · đến hết 12/2026</span><span class="input-wrap"><currency-input id="childThrough2026" v-model="formDto.childThrough2026" name="childThrough2026" /><span>₫</span></span></label>
-          <label class="field" for="childQ12027"><span>Quỹ nuôi con · 01–03/2027</span><span class="input-wrap"><currency-input id="childQ12027" v-model="formDto.childQ12027" name="childQ12027" /><span>₫</span></span></label>
-          <label class="field" for="childFromApr2027"><span>Quỹ nuôi con · từ 04/2027</span><span class="input-wrap"><currency-input id="childFromApr2027" v-model="formDto.childFromApr2027" name="childFromApr2027" /><span>₫</span></span></label>
-          <label class="field" for="rentThroughJan2027"><span>Tiền nhà · đến hết 01/2027</span><span class="input-wrap"><currency-input id="rentThroughJan2027" v-model="formDto.rentThroughJan2027" name="rentThroughJan2027" /><span>₫</span></span></label>
-          <label class="field" for="rentFromFeb2027"><span>Tiền nhà · từ 02/2027</span><span class="input-wrap"><currency-input id="rentFromFeb2027" v-model="formDto.rentFromFeb2027" name="rentFromFeb2027" /><span>₫</span></span></label>
+          <p class="field-hint">Tự thêm khoản chi và đặt số tiền theo từng tháng bắt đầu áp dụng. Đặt số tiền bằng 0 để ngừng khoản chi.</p>
+          <article v-for="(expense, expenseIndex) in expenseDraft" :key="expenseIndex" class="expense-editor">
+            <div class="expense-editor-heading">
+              <label class="field expense-name-field">
+                <span>Tên khoản chi</span>
+                <span class="input-wrap"><input v-model="expense.name" :aria-label="`Tên khoản chi ${expenseIndex + 1}`" maxlength="120" placeholder="Ví dụ: Học phí, bảo hiểm..."></span>
+              </label>
+              <button class="text-button expense-remove" type="button" @click="removeExpense(expenseIndex)">Xóa khoản</button>
+            </div>
+            <div v-for="(change, changeIndex) in expense.changes" :key="changeIndex" class="expense-change-row">
+              <label class="field">
+                <span>Áp dụng từ</span>
+                <span class="input-wrap"><input v-model="change.effectiveMonth" type="month" :aria-label="`Tháng hiệu lực khoản ${expenseIndex + 1}, mốc ${changeIndex + 1}`"></span>
+              </label>
+              <label class="field">
+                <span>Số tiền / tháng</span>
+                <span class="input-wrap"><currency-input v-model="change.amount" :name="`expense-${expenseIndex}-change-${changeIndex}`" :aria-label="`Số tiền khoản ${expense.name || expenseIndex + 1}, mốc ${changeIndex + 1}`" /><span>₫</span></span>
+              </label>
+              <button class="text-button expense-change-remove" type="button" :disabled="expense.changes.length === 1" @click="removeChange(expenseIndex, changeIndex)">Xóa mốc</button>
+            </div>
+            <button class="text-button expense-add-change" type="button" @click="addChange(expenseIndex)">+ Thêm mốc thay đổi</button>
+          </article>
+          <button class="button button-secondary expense-add" type="button" @click="addExpense">+ Thêm khoản chi</button>
         </fieldset>
 
         <fieldset class="input-group savings-group">
@@ -60,11 +77,12 @@
 import { reactive, watch } from 'vue'
 import CurrencyInput from './CurrencyInput.vue'
 
-const props = defineProps(['dto', 'error', 'status'])
-const emit = defineEmits(['input', 'reset', 'save'])
+const props = defineProps(['dto', 'expenses', 'error', 'status'])
+const emit = defineEmits(['input', 'expenses-input', 'reset', 'save'])
 const years = [2027, 2028, 2029, 2030]
 const formDto = reactive({})
 const raiseText = reactive({})
+const expenseDraft = reactive([])
 
 function fractionToText(value) {
   const n = Number(value)
@@ -89,6 +107,9 @@ function syncFormDto() {
 }
 
 watch(() => props.dto, syncFormDto, { deep: true, immediate: true })
+watch(() => props.expenses, (value) => {
+  expenseDraft.splice(0, expenseDraft.length, ...JSON.parse(JSON.stringify(value || [])))
+}, { deep: true, immediate: true })
 
 function buildDto() {
   const copy = { ...formDto, raises: {} }
@@ -104,9 +125,44 @@ function onRaiseInput(year, event) {
 
 function onInput() {
   emit('input', buildDto())
+  emit('expenses-input', buildExpenses())
+}
+
+function buildExpenses() {
+  return JSON.parse(JSON.stringify(expenseDraft))
+}
+
+function emitExpenseInput() {
+  emit('expenses-input', buildExpenses())
+}
+
+function addExpense() {
+  expenseDraft.push({ name: '', changes: [{ effectiveMonth: '2026-11', amount: 0 }] })
+  emitExpenseInput()
+}
+
+function removeExpense(index) {
+  expenseDraft.splice(index, 1)
+  emitExpenseInput()
+}
+
+function addChange(index) {
+  const lastMonth = expenseDraft[index].changes.at(-1)?.effectiveMonth || '2026-11'
+  const [year, month] = lastMonth.split('-').map(Number)
+  const next = new Date(year, month, 1)
+  expenseDraft[index].changes.push({
+    effectiveMonth: `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`,
+    amount: expenseDraft[index].changes.at(-1)?.amount ?? 0,
+  })
+  emitExpenseInput()
+}
+
+function removeChange(expenseIndex, changeIndex) {
+  expenseDraft[expenseIndex].changes.splice(changeIndex, 1)
+  emitExpenseInput()
 }
 
 function onSubmit() {
-  emit('save', buildDto())
+  emit('save', buildDto(), buildExpenses())
 }
 </script>

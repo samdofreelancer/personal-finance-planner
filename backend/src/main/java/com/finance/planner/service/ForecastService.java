@@ -6,6 +6,9 @@ import com.finance.planner.dto.ForecastMonthDTO;
 import com.finance.planner.dto.ForecastResponse;
 import com.finance.planner.dto.LoanDTO;
 import com.finance.planner.dto.LoanRepaymentDTO;
+import com.finance.planner.dto.ExpenseDTO;
+import com.finance.planner.dto.ExpenseChangeDTO;
+import com.finance.planner.dto.ExpenseBreakdownDTO;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.YearMonth;
@@ -45,8 +48,8 @@ public class ForecastService {
                     * applyRaises(a, year, month)
                     * (month == 1 ? a.getJanuaryMultiplier().doubleValue() : 1.0));
 
-            long child = childAmount(a, year, month);
-            long rent = rentAmount(a, year, month);
+            List<ExpenseBreakdownDTO> expenseBreakdown = expenseBreakdown(a, period);
+            long recurringExpenses = expenseBreakdown.stream().mapToLong(ExpenseBreakdownDTO::amount).sum();
 
             long openingPrincipal = remainingByLoan.values().stream().mapToLong(Long::longValue).sum();
             long principalPaid = 0;
@@ -61,15 +64,18 @@ public class ForecastService {
             }
 
             long loanPayment = principalPaid + interestPaid;
-            long totalExpenses = a.getLiving() + child + rent + loanPayment;
+            long totalExpenses = recurringExpenses + loanPayment;
             long netCashFlow = salary - totalExpenses;
             cumulativeSavings += netCashFlow;
 
             months.add(new ForecastMonthDTO(
                     year, month, "thg " + month + " " + year,
-                    salary, a.getLiving(), child, rent,
+                    salary,
                     openingPrincipal, principalPaid, interestPaid,
                     loanPayment, totalExpenses, netCashFlow, cumulativeSavings, false, false));
+            ForecastMonthDTO forecastMonth = months.get(months.size() - 1);
+            forecastMonth.setRecurringExpenses(recurringExpenses);
+            forecastMonth.setExpenseBreakdown(expenseBreakdown);
         }
 
         List<ForecastAnnualDTO> annual = new ArrayList<>();
@@ -98,15 +104,17 @@ public class ForecastService {
         return factor;
     }
 
-    private long childAmount(AssumptionDTO a, int year, int month) {
-        if (year == 2026) return a.getChildThrough2026();
-        if (year == 2027 && month <= 3) return a.getChildQ12027();
-        return a.getChildFromApr2027();
-    }
-
-    private long rentAmount(AssumptionDTO a, int year, int month) {
-        if (year < 2027 || (year == 2027 && month == 1)) return a.getRentThroughJan2027();
-        return a.getRentFromFeb2027();
+    private List<ExpenseBreakdownDTO> expenseBreakdown(AssumptionDTO assumptions, YearMonth period) {
+        List<ExpenseDTO> expenses = assumptions.getExpenses();
+        List<ExpenseBreakdownDTO> result = new ArrayList<>();
+        for (ExpenseDTO expense : expenses) {
+            long amount = expense.getChanges().stream()
+                    .filter(change -> !YearMonth.parse(change.getEffectiveMonth()).isAfter(period))
+                    .max(java.util.Comparator.comparing(change -> YearMonth.parse(change.getEffectiveMonth())))
+                    .map(ExpenseChangeDTO::getAmount).orElse(0L);
+            result.add(new ExpenseBreakdownDTO(expense.getName(), amount));
+        }
+        return result;
     }
 
     private long round(double value) {

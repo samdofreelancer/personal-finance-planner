@@ -3,9 +3,11 @@ package com.finance.planner.service;
 import com.finance.planner.dto.AssumptionDTO;
 import com.finance.planner.entity.Assumption;
 import com.finance.planner.repository.AssumptionRepository;
+import com.finance.planner.dto.ExpenseDTO;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,9 +17,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class AssumptionService {
 
     private final AssumptionRepository repository;
+    private final ExpenseScheduleService expenseScheduleService;
 
-    public AssumptionService(AssumptionRepository repository) {
+    public AssumptionService(AssumptionRepository repository, ExpenseScheduleService expenseScheduleService) {
         this.repository = repository;
+        this.expenseScheduleService = expenseScheduleService;
     }
 
     public AssumptionDTO getAssumptions() {
@@ -28,6 +32,7 @@ public class AssumptionService {
             entity.setCreatedAt(LocalDateTime.now());
             entity.setUpdatedAt(LocalDateTime.now());
             entity = repository.save(entity);
+            expenseScheduleService.seedDefaults();
         }
         return toDTO(entity);
     }
@@ -41,6 +46,7 @@ public class AssumptionService {
             entity.setCreatedAt(LocalDateTime.now());
         }
         Assumption saved = repository.save(entity);
+        expenseScheduleService.saveExpenses(dto.getExpenses());
         return toDTO(saved);
     }
 
@@ -52,19 +58,16 @@ public class AssumptionService {
         }
         updateEntityFromDTO(entity, defaultAssumptions());
         entity.setUpdatedAt(LocalDateTime.now());
-        return toDTO(repository.save(entity));
+        Assumption saved = repository.save(entity);
+        expenseScheduleService.seedDefaults();
+        return toDTO(saved);
     }
 
     private AssumptionDTO defaultAssumptions() {
         AssumptionDTO dto = new AssumptionDTO();
         dto.setBaseSalary(42_000_000L);
         dto.setJanuaryMultiplier(new BigDecimal("2.0"));
-        dto.setLiving(4_250_000L);
-        dto.setChildThrough2026(2_500_000L);
-        dto.setChildQ12027(2_750_000L);
-        dto.setChildFromApr2027(3_250_000L);
-        dto.setRentThroughJan2027(3_750_000L);
-        dto.setRentFromFeb2027(5_750_000L);
+        dto.setExpenses(ExpenseScheduleService.defaultExpenses());
         dto.setStartingSavings(30_000_000L);
         Map<Integer, BigDecimal> raises = new HashMap<>();
         raises.put(2027, new BigDecimal("0.08"));
@@ -79,12 +82,8 @@ public class AssumptionService {
         AssumptionDTO dto = new AssumptionDTO();
         dto.setBaseSalary(e.getBaseSalary());
         dto.setJanuaryMultiplier(e.getJanuaryMultiplier());
-        dto.setLiving(e.getLiving());
-        dto.setChildThrough2026(e.getChildThrough2026());
-        dto.setChildQ12027(e.getChildQ12027());
-        dto.setChildFromApr2027(e.getChildFromApr2027());
-        dto.setRentThroughJan2027(e.getRentThroughJan2027());
-        dto.setRentFromFeb2027(e.getRentFromFeb2027());
+        List<ExpenseDTO> expenses = expenseScheduleService.getExpenses();
+        dto.setExpenses(expenses);
         dto.setStartingSavings(e.getStartingSavings());
         Map<Integer, BigDecimal> raises = new HashMap<>();
         raises.put(2027, e.getRaise2027());
@@ -98,12 +97,6 @@ public class AssumptionService {
     private void updateEntityFromDTO(Assumption e, AssumptionDTO dto) {
         e.setBaseSalary(dto.getBaseSalary());
         e.setJanuaryMultiplier(dto.getJanuaryMultiplier());
-        e.setLiving(dto.getLiving());
-        e.setChildThrough2026(dto.getChildThrough2026());
-        e.setChildQ12027(dto.getChildQ12027());
-        e.setChildFromApr2027(dto.getChildFromApr2027());
-        e.setRentThroughJan2027(dto.getRentThroughJan2027());
-        e.setRentFromFeb2027(dto.getRentFromFeb2027());
         e.setStartingSavings(dto.getStartingSavings());
         if (dto.getRaises() != null) {
             e.setRaise2027(dto.getRaises().get(2027));
@@ -112,4 +105,5 @@ public class AssumptionService {
             e.setRaise2030(dto.getRaises().get(2030));
         }
     }
+
 }

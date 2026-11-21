@@ -11,7 +11,7 @@
 - [ ] Create AssumptionDTO + ForecastResponse DTOs
 - [ ] Create AssumptionController (GET/PUT /api/assumptions, POST /api/seed)
 - [ ] Create ForecastService implementing the documented forecast business rules in Java
-- [ ] Create ForecastController (GET /api/forecast, GET /api/export/csv)
+- [ ] Create ForecastController (POST /api/forecast, POST /api/export/csv)
 - [ ] Create WebConfig (CORS for Vue frontend)
 - [ ] Add seeder: insert default assumptions on startup if table empty
 - [ ] Write unit tests for ForecastService using approved synthetic fixtures and business-rule examples
@@ -28,7 +28,7 @@
 - [ ] Create AnnualTable.vue + MonthlyTable.vue
 - [ ] Wire form inputs → API PUT assumptions → API GET forecast → render
 - [ ] Add reset button (calls POST /api/seed or PUT defaults)
-- [ ] Add CSV export button (calls GET /api/export/csv)
+- [ ] Add CSV export button (calls POST /api/export/csv with assumptions snapshot)
 - [ ] Add Vietnamese VND formatting
 
 ## Phase 3 — Verify & Deliver

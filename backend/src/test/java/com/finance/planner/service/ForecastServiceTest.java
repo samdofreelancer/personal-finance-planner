@@ -8,6 +8,8 @@ import com.finance.planner.dto.AssumptionDTO;
 import com.finance.planner.dto.ForecastAnnualDTO;
 import com.finance.planner.dto.ForecastMonthDTO;
 import com.finance.planner.dto.ForecastResponse;
+import com.finance.planner.dto.ExpenseDTO;
+import com.finance.planner.dto.ExpenseChangeDTO;
 import com.finance.planner.dto.LoanDTO;
 import com.finance.planner.dto.LoanRepaymentDTO;
 import java.math.BigDecimal;
@@ -30,12 +32,15 @@ class ForecastServiceTest {
         assumptions = new AssumptionDTO();
         assumptions.setBaseSalary(1_000L);
         assumptions.setJanuaryMultiplier(new BigDecimal("2.0"));
-        assumptions.setLiving(100L);
-        assumptions.setChildThrough2026(10L);
-        assumptions.setChildQ12027(20L);
-        assumptions.setChildFromApr2027(30L);
-        assumptions.setRentThroughJan2027(40L);
-        assumptions.setRentFromFeb2027(50L);
+        assumptions.setExpenses(List.of(
+                new ExpenseDTO("Sinh hoạt phí", List.of(new ExpenseChangeDTO("2026-11", 100L))),
+                new ExpenseDTO("Nuôi con", List.of(
+                        new ExpenseChangeDTO("2026-11", 10L),
+                        new ExpenseChangeDTO("2027-01", 20L),
+                        new ExpenseChangeDTO("2027-04", 30L))),
+                new ExpenseDTO("Tiền nhà", List.of(
+                        new ExpenseChangeDTO("2026-11", 40L),
+                        new ExpenseChangeDTO("2027-02", 50L)))));
         assumptions.setStartingSavings(500L);
         Map<Integer, BigDecimal> raises = new HashMap<>();
         for (int year = 2027; year <= 2030; year++) raises.put(year, BigDecimal.ZERO);
@@ -134,15 +139,38 @@ class ForecastServiceTest {
     }
 
     @Test
-    void appliesChildAndRentChangesAtTheirExactMonthBoundaries() {
+    void appliesUserDefinedExpenseChangesAtTheirExactMonthBoundaries() {
         var months = service.buildForecast(assumptions, loans).getMonths();
 
-        assertEquals(10L, months.get(1).getChild()); // Dec 2026
-        assertEquals(20L, months.get(2).getChild()); // Jan 2027
-        assertEquals(20L, months.get(4).getChild()); // Mar 2027
-        assertEquals(30L, months.get(5).getChild()); // Apr 2027
-        assertEquals(40L, months.get(2).getRent()); // Jan 2027
-        assertEquals(50L, months.get(3).getRent()); // Feb 2027
+        assertEquals(150L, months.get(0).getRecurringExpenses()); // Nov 2026
+        assertEquals(150L, months.get(1).getRecurringExpenses()); // Dec 2026
+        assertEquals(160L, months.get(2).getRecurringExpenses()); // Jan 2027
+        assertEquals(170L, months.get(4).getRecurringExpenses()); // Mar 2027
+        assertEquals(180L, months.get(5).getRecurringExpenses()); // Apr 2027
+        assertEquals(3, months.get(5).getExpenseBreakdown().size());
+    }
+
+    @Test
+    void expensesWithoutAnEffectiveAmountAreZeroUntilTheirFirstEffectiveMonth() {
+        assumptions.setExpenses(List.of(new ExpenseDTO("Học phí", List.of(
+                new ExpenseChangeDTO("2027-01", 500L)))));
+
+        var months = service.buildForecast(assumptions, loans).getMonths();
+
+        assertEquals(0L, months.get(0).getRecurringExpenses());
+        assertEquals(500L, months.get(2).getRecurringExpenses());
+    }
+
+    @Test
+    void allowsAnExpenseToBeStoppedBySettingItsAmountToZero() {
+        assumptions.setExpenses(List.of(new ExpenseDTO("Học phí", List.of(
+                new ExpenseChangeDTO("2026-11", 500L),
+                new ExpenseChangeDTO("2027-02", 0L)))));
+
+        var months = service.buildForecast(assumptions, loans).getMonths();
+
+        assertEquals(500L, months.get(2).getRecurringExpenses());
+        assertEquals(0L, months.get(3).getRecurringExpenses());
     }
 
     @Test
@@ -177,11 +205,12 @@ class ForecastServiceTest {
     @Test
     void preservesNegativeSavingsAsShortfall() {
         assumptions.setStartingSavings(0L);
-        assumptions.setLiving(10_000L);
+        assumptions.setExpenses(List.of(new ExpenseDTO("Sinh hoạt", List.of(
+                new ExpenseChangeDTO("2026-11", 10_000L)))));
 
         ForecastMonthDTO november = service.buildForecast(assumptions, loans).getMonths().get(0);
 
         assertTrue(november.getCumulativeSavings() < 0);
-        assertEquals(-9_450L, november.getCumulativeSavings());
+        assertEquals(-9_400L, november.getCumulativeSavings());
     }
 }

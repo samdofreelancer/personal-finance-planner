@@ -4,8 +4,9 @@ import { exportCsv, getAssumptions, getLoans, getForecast, saveAssumptions, save
 const assumptions = {
   baseSalary: 42000000,
   januaryMultiplier: 2,
-  living: 4000000,
+  startingSavings: 30000000,
   raises: { 2027: 0.08, 2028: 0.09 },
+  expenses: [{ name: 'Học phí', changes: [{ effectiveMonth: '2026-11', amount: 4000000 }] }],
 }
 
 afterEach(() => vi.unstubAllGlobals())
@@ -84,17 +85,16 @@ describe('API service', () => {
     await expect(saveAssumptions(assumptions)).rejects.toThrow('Không lưu được giả định')
   })
 
-  it('serializes defined forecast assumptions and omits null values', async () => {
+  it('sends forecast assumptions and dynamic expense schedules as a JSON POST', async () => {
     const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ months: [] }) })
     vi.stubGlobal('fetch', fetch)
 
     await getForecast(assumptions)
-    const url = new URL(fetch.mock.calls[0][0], 'http://localhost')
-    expect(url.pathname).toBe('/api/forecast')
-    expect(url.searchParams.get('baseSalary')).toBe('42000000')
-    expect(url.searchParams.get('januaryMultiplier')).toBe('2')
-    expect(url.searchParams.get('raises[2027]')).toBe('0.08')
-    expect(url.searchParams.has('loanPrincipal')).toBe(false)
+    expect(fetch).toHaveBeenCalledWith('/api/forecast', expect.objectContaining({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(assumptions),
+    }))
   })
 
   it('exports CSV through a temporary download link and revokes its URL', async () => {
@@ -108,6 +108,11 @@ describe('API service', () => {
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(click)
 
     await exportCsv(assumptions)
+
+    expect(fetch).toHaveBeenCalledWith('/api/export/csv', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify(assumptions),
+    }))
 
     expect(createObjectURL).toHaveBeenCalledWith(blob)
     expect(click).toHaveBeenCalledOnce()

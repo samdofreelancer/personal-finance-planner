@@ -20,6 +20,9 @@ class AssumptionServiceTest {
     @Mock
     private AssumptionRepository repository;
 
+    @Mock
+    private ExpenseScheduleService expenseScheduleService;
+
     @InjectMocks
     private AssumptionService service;
 
@@ -28,11 +31,13 @@ class AssumptionServiceTest {
         when(repository.findTopByOrderByIdAsc()).thenReturn(null);
         when(repository.save(org.mockito.ArgumentMatchers.any(Assumption.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
+        when(expenseScheduleService.getExpenses()).thenReturn(ExpenseScheduleService.defaultExpenses());
 
         var result = service.getAssumptions();
 
         ArgumentCaptor<Assumption> saved = ArgumentCaptor.forClass(Assumption.class);
         verify(repository).save(saved.capture());
+        verify(expenseScheduleService).seedDefaults();
         assertEquals(42_000_000L, saved.getValue().getBaseSalary());
         assertNotNull(saved.getValue().getCreatedAt());
         assertNotNull(saved.getValue().getUpdatedAt());

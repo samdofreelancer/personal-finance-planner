@@ -7,23 +7,26 @@ flowchart LR
   API --> LC["LoanController"]
   API --> FC["ForecastController"]
   AC --> AS["AssumptionService"]
+  AS --> ES["ExpenseScheduleService"]
   LC --> LS["LoanScheduleService"]
   FC --> VS["ValidationService"]
   FC --> FS["ForecastService"]
   AS --> REPO["AssumptionRepository<br/>Spring Data JPA"]
+  ES --> EREPO["ExpenseCategoryRepository<br/>categories + amount changes"]
   LS --> LREPO["LoanRepository<br/>Loan + repayment entities"]
-  REPO --> DB[("PostgreSQL 16<br/>assumptions + loans + repayments")]
+  REPO --> DB[("PostgreSQL 16<br/>assumptions + expenses + loans + repayments")]
+  EREPO --> DB
   LREPO --> DB
   LS --> FS
   FS --> OUT["Forecast response<br/>monthly + annual"]
   OUT --> FE
   FC --> CSV["CSV export"]
   CSV --> B
-  FE --> FORM["Assumptions form<br/>income + expenses + savings"]
+  FE --> FORM["Assumptions form<br/>income + user-defined expenses + savings"]
   FE --> LFORM["Loan schedule form<br/>multiple loans + dated entries"]
   FORM -->|"PUT assumptions"| AC
   LFORM -->|"PUT loan schedules"| LC
-  FORM -->|"GET forecast with saved loan schedules"| FC
+  FORM -->|"POST forecast JSON snapshot"| FC
   subgraph Runtime["Docker Compose · local deployment"]
     N
     API

@@ -9,10 +9,11 @@
 ## Database schema migrations
 
 - Flyway is the only schema migration mechanism; Hibernate runs with `ddl-auto=validate`.
-- A fresh empty database runs V1–V3. V1 creates the assumptions table and synthetic defaults; V2 creates loan tables and seeds an equivalent sample repayment schedule; V3 removes the retired single-loan columns.
-- On an existing non-empty database without Flyway history, `baseline-on-migrate=true` baselines the existing schema at version 1, then runs V2/V3 to migrate the legacy loan values into dated repayment entries. The assumptions row and all non-loan values are retained.
+- A fresh empty database runs V1–V4. V1 creates the assumptions table and synthetic defaults; V2 creates loan tables and seeds an equivalent sample repayment schedule; V3 removes the retired single-loan columns; V4 converts fixed living/child/rent fields into flexible expense categories and effective-month amount changes.
+- On an existing non-empty database without Flyway history, `baseline-on-migrate=true` baselines the existing schema at version 1, then runs V2–V4. The assumptions row, existing loan schedule and equivalent recurring expense amounts are retained.
 - **Before the first application start after this change, take a PostgreSQL backup.** Do not delete the Compose database volume. If Flyway reports a failed migration, inspect the database and migration history before retrying; never repair by dropping tables or volumes.
 - V1–V3 SQL was executed against isolated temporary PostgreSQL 16 databases for synthetic fresh defaults and a modified legacy fixture. On 2026-11-19, the live local Compose database was backed up to `backups/finance-planner-pre-deploy-20261119.dump` (custom-format archive verified with `pg_restore --list`), then Flyway successfully baselined it at V1 and applied V2/V3. Post-migration checks confirmed one assumptions row, one migrated loan with three repayment entries, and removal of all six retired loan columns. Frontend, assumptions, loans, 50-month/5-year forecast and CSV HTTP smoke checks passed. The PostgreSQL volume was preserved.
+- On 2026-11-21, the live local Compose database was backed up to `backups/finance-planner-pre-v4-20261121.dump` (PostgreSQL custom-format archive; `pg_restore --list` succeeded; SHA-256: `3BA09863587E53E9DD2D15C2F719680A832E5282087B9E3E28D987BBCB4ED2C1`). The rebuilt backend applied Flyway V4 successfully on PostgreSQL 16.15. Verification confirmed three migrated expense categories with six effective-month changes, all legacy expense amounts/months preserved, and all six retired fixed-expense columns removed. Existing assumptions and loan data remained present (one assumptions row, one loan and three repayment entries). A temporary expense category was added, renamed, assigned a future effective-month amount, forecasted and exported to CSV through the live API, then deleted; the original assumptions snapshot was restored and compared exactly. The 50-month forecast and frontend HTML/JS/CSS assets returned successfully. Both backend and frontend Compose images were rebuilt and are running. The backup is ignored by Git and must not be committed. Never use `docker compose down -v` for this migration.
 
 ## Run with Docker Compose
 
@@ -95,19 +96,20 @@ cd backend
 mvn verify
 ```
 
-`mvn verify` runs the backend test suite, creates the JaCoCo HTML/XML report and enforces the current bundle thresholds: at least 80% line coverage and 70% branch coverage. The repository verification script then runs PIT mutation testing with an 80% score threshold. The latest run generated 83 mutations and killed 79 (95% mutation score). Reports are written to `backend/target/site/jacoco/` and `backend/target/pit-reports/`; open each `index.html` for the HTML view.
+`mvn verify` runs the backend test suite, creates the JaCoCo HTML/XML report and enforces the current bundle thresholds: at least 80% line coverage and 70% branch coverage. The repository verification script then runs PIT mutation testing with an 80% score threshold. The latest run generated 72 mutations and killed 68 (94% mutation score). Reports are written to `backend/target/site/jacoco/` and `backend/target/pit-reports/`; open each `index.html` for the HTML view.
 
 Backend unit tests currently cover:
 
-- `ForecastServiceTest`: 50-month/annual aggregation, per-loan principal caps, repayments outside the forecast window, child/rent transitions, salary raises and January multiplier, rounding, cash flow and negative savings.
-- `ValidationServiceTest`: valid assumptions, zero/negative/missing monetary boundaries, multiplier lower/upper bounds and raise bounds.
+- `ForecastServiceTest`: 50-month/annual aggregation, per-loan principal caps, repayments outside the forecast window, user-defined expense effective-month boundaries, salary raises and January multiplier, rounding, cash flow and negative savings.
+- `ValidationServiceTest`: valid assumptions, expense names/schedules/duplicate effective months and amounts, zero/negative/missing monetary boundaries, multiplier lower/upper bounds and raise bounds.
+- `ExpenseMigrationTest`: V1-to-V4 fixture migration preserves every legacy expense amount and removes the retired fixed expense columns.
 - Loan schedule API integration tests: multiple loans, multi-entry monthly aggregation, validation, update/delete identity preservation, CSV parity and reset sample data.
 
-The backend currently has 31 automated tests (9 API integration, 10 forecast unit, 11 validation unit and 1 assumptions service unit test). Coverage gates are enforced by `mvn verify`; see the generated JaCoCo report for the current measurement.
+The backend currently has 41 automated tests (11 API integration, 12 forecast unit, 16 validation unit, 1 assumptions service unit and 1 migration test). Coverage gates are enforced by `mvn verify`; see the generated JaCoCo report for the current measurement.
 
 Frontend tests use Vitest, Vue Test Utils and jsdom. `npm test` runs the component/service/utility tests, enforces at least 80% line and statement coverage, 70% function coverage and 75% branch coverage, then writes `frontend/coverage/lcov.info` for SonarQube. The LCOV normalizer prefixes source paths with `frontend/` so the report resolves from the repository root. The report directory is generated and ignored by Git.
 
-The frontend currently has 57 automated tests covering currency input/formatting, assumption validation, loan schedule editing/dirty-state feedback, API requests and error handling, forecast presentation components and the application lifecycle/save/reset/export flows.
+The frontend currently has 58 automated tests covering currency input/formatting, dynamic expense schedule editing and validation, loan schedule editing/dirty-state feedback, API requests and error handling, forecast presentation components and the application lifecycle/save/reset/export flows.
 
 Latest local SonarQube analysis after importing both reports: 90.3% overall coverage, 92.4% line coverage and 87.5% branch coverage. The Quality Gate passed.
 

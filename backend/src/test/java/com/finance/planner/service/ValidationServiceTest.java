@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.finance.planner.dto.AssumptionDTO;
+import com.finance.planner.dto.ExpenseDTO;
+import com.finance.planner.dto.ExpenseChangeDTO;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,12 +23,8 @@ class ValidationServiceTest {
         assumptions = new AssumptionDTO();
         assumptions.setBaseSalary(42_000_000L);
         assumptions.setJanuaryMultiplier(new BigDecimal("2.0"));
-        assumptions.setLiving(4_000_000L);
-        assumptions.setChildThrough2026(1_000_000L);
-        assumptions.setChildQ12027(1_000_000L);
-        assumptions.setChildFromApr2027(1_000_000L);
-        assumptions.setRentThroughJan2027(2_000_000L);
-        assumptions.setRentFromFeb2027(3_000_000L);
+        assumptions.setExpenses(java.util.List.of(new ExpenseDTO("Sinh hoạt", java.util.List.of(
+                new ExpenseChangeDTO("2026-11", 4_000_000L)))));
         assumptions.setStartingSavings(5_000_000L);
         Map<Integer, BigDecimal> raises = new HashMap<>();
         for (int year = 2027; year <= 2030; year++) raises.put(year, new BigDecimal("0.08"));
@@ -40,19 +38,16 @@ class ValidationServiceTest {
 
     @Test
     void rejectsNegativeMonetaryValues() {
-        assumptions.setLiving(-1L);
+        assumptions.setExpenses(java.util.List.of(new ExpenseDTO("Sinh hoạt", java.util.List.of(
+                new ExpenseChangeDTO("2026-11", -1L)))));
         assertThrows(IllegalArgumentException.class, () -> service.validate(assumptions));
     }
 
     @Test
     void acceptsZeroForAllNonNegativeMonetaryInputs() {
         assumptions.setBaseSalary(0L);
-        assumptions.setLiving(0L);
-        assumptions.setChildThrough2026(0L);
-        assumptions.setChildQ12027(0L);
-        assumptions.setChildFromApr2027(0L);
-        assumptions.setRentThroughJan2027(0L);
-        assumptions.setRentFromFeb2027(0L);
+        assumptions.setExpenses(java.util.List.of(new ExpenseDTO("Sinh hoạt", java.util.List.of(
+                new ExpenseChangeDTO("2026-11", 0L)))));
         assumptions.setStartingSavings(0L);
 
         assertDoesNotThrow(() -> service.validate(assumptions));
@@ -106,6 +101,48 @@ class ValidationServiceTest {
     @Test
     void rejectsRaiseOutsideZeroToOneHundredPercent() {
         assumptions.getRaises().put(2030, new BigDecimal("1.01"));
+        assertThrows(IllegalArgumentException.class, () -> service.validate(assumptions));
+    }
+
+    @Test
+    void acceptsAnEmptyExpenseList() {
+        assumptions.setExpenses(java.util.List.of());
+        assertDoesNotThrow(() -> service.validate(assumptions));
+    }
+
+    @Test
+    void rejectsANullExpenseList() {
+        assumptions.setExpenses(null);
+        assertThrows(IllegalArgumentException.class, () -> service.validate(assumptions));
+    }
+
+    @Test
+    void rejectsExpenseWithoutAValidNameOrSchedule() {
+        assumptions.setExpenses(java.util.List.of(new ExpenseDTO(" ", java.util.List.of(
+                new ExpenseChangeDTO("2026-11", 100L)))));
+        assertThrows(IllegalArgumentException.class, () -> service.validate(assumptions));
+
+        assumptions.setExpenses(java.util.List.of(new ExpenseDTO("Học phí", java.util.List.of())));
+        assertThrows(IllegalArgumentException.class, () -> service.validate(assumptions));
+    }
+
+    @Test
+    void rejectsInvalidOrDuplicateExpenseEffectiveMonths() {
+        assumptions.setExpenses(java.util.List.of(new ExpenseDTO("Học phí", java.util.List.of(
+                new ExpenseChangeDTO("2026-13", 100L)))));
+        assertThrows(IllegalArgumentException.class, () -> service.validate(assumptions));
+
+        assumptions.setExpenses(java.util.List.of(new ExpenseDTO("Học phí", java.util.List.of(
+                new ExpenseChangeDTO("2026-11", 100L),
+                new ExpenseChangeDTO("2026-11", 200L)))));
+        assertThrows(IllegalArgumentException.class, () -> service.validate(assumptions));
+    }
+
+    @Test
+    void rejectsDuplicateExpenseNamesIgnoringCase() {
+        assumptions.setExpenses(java.util.List.of(
+                new ExpenseDTO("Học phí", java.util.List.of(new ExpenseChangeDTO("2026-11", 100L))),
+                new ExpenseDTO(" học phí ", java.util.List.of(new ExpenseChangeDTO("2026-11", 200L)))));
         assertThrows(IllegalArgumentException.class, () -> service.validate(assumptions));
     }
 

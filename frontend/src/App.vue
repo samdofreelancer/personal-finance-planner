@@ -78,7 +78,7 @@
 
     <section id="assumptions" class="content-section">
       <div class="section-intro"><div><p class="eyebrow">THIẾT LẬP</p><h2>Giả định tài chính</h2><p class="section-description">Cập nhật thu nhập, chi phí và khoản vay để mô phỏng kế hoạch của gia đình.</p></div></div>
-      <assumptions-form :dto="dto" :error="errorMessage" :status="saveStatus" @input="onFormInput" @save="saveAndForecast" @reset="resetDefaults" />
+      <assumptions-form :dto="dto" :expenses="expenses" :error="errorMessage" :status="saveStatus" @input="onFormInput" @expenses-input="onExpenseInput" @save="saveAndForecast" @reset="resetDefaults" />
     </section>
 
     <section id="loans" class="content-section">
@@ -121,16 +121,14 @@ import AnnualTable from './components/AnnualTable.vue'
 import MonthlyTable from './components/MonthlyTable.vue'
 import { formatCurrency } from './utils/currency.js'
 
-const YEARS = [2027, 2028, 2029, 2030]
 const dto = reactive({
-  baseSalary: 42000000, januaryMultiplier: 2, living: 4250000,
-  childThrough2026: 2500000, childQ12027: 2750000, childFromApr2027: 3250000,
-  rentThroughJan2027: 3750000, rentFromFeb2027: 5750000,
+  baseSalary: 42000000, januaryMultiplier: 2,
   startingSavings: 30000000,
   raises: { 2027: 0.08, 2028: 0.08, 2029: 0.08, 2030: 0.08 }
 })
 
 const forecast = ref(null)
+const expenses = ref([])
 const loans = ref([])
 const metrics = ref({ netCashFlow2030: 0, income2030: 0, expenses2030: 0, savingsEnd: 0 })
 const errorMessage = ref('')
@@ -181,7 +179,7 @@ function updateActiveSectionFromScroll() {
 let previewTimer = null
 let latestRequest = 0
 
-const hasValidationError = computed(() => validateAssumptions(dto).length > 0)
+const hasValidationError = computed(() => validateAssumptions(snapshot()).length > 0)
 
 const alert = computed(() => {
   if (forecast.value?.annual?.some((row) => row.provisional)) {
@@ -220,18 +218,23 @@ onBeforeUnmount(() => {
 })
 
 function applyDto(data) {
-  Object.assign(dto, data)
+  Object.assign(dto, {
+    baseSalary: data.baseSalary,
+    januaryMultiplier: Number(data.januaryMultiplier),
+    startingSavings: data.startingSavings,
+  })
   dto.raises = {}
-  for (const year of YEARS) {
+  for (const year of [2027, 2028, 2029, 2030]) {
     dto.raises[year] = Number(data.raises?.[year] ?? 0.1)
   }
+  expenses.value = JSON.parse(JSON.stringify(data.expenses || []))
 }
 
 function snapshot() {
-  return JSON.parse(JSON.stringify(dto))
+  return JSON.parse(JSON.stringify({ ...dto, expenses: expenses.value }))
 }
 
-async function loadForecast(source = dto) {
+async function loadForecast(source = snapshot()) {
   applyForecast(await getForecast(source))
 }
 
@@ -249,8 +252,18 @@ function applyForecast(res) {
 
 function onFormInput(updated) {
   Object.assign(dto, updated)
+  schedulePreview()
+}
+
+function onExpenseInput(updated) {
+  expenses.value = updated
+  schedulePreview()
+}
+
+function schedulePreview() {
   const requestId = ++latestRequest
-  const errors = validateAssumptions(dto)
+  const payload = snapshot()
+  const errors = validateAssumptions(payload)
   if (errors.length) {
     clearTimeout(previewTimer)
     errorMessage.value = errors[0]
@@ -259,7 +272,6 @@ function onFormInput(updated) {
   }
   errorMessage.value = ''
   saveStatus.value = 'Có thay đổi chưa lưu'
-  const payload = snapshot()
   clearTimeout(previewTimer)
   previewTimer = setTimeout(() => previewForecast(payload, requestId), 180)
 }
@@ -290,16 +302,18 @@ async function persistAndForecast(payload = snapshot(), requestId = ++latestRequ
   }
 }
 
-async function saveAndForecast(updated) {
+async function saveAndForecast(updated, updatedExpenses) {
   Object.assign(dto, updated)
-  const errors = validateAssumptions(dto)
+  if (updatedExpenses) expenses.value = updatedExpenses
+  const payload = snapshot()
+  const errors = validateAssumptions(payload)
   if (errors.length) {
     errorMessage.value = errors[0]
     saveStatus.value = 'Có thay đổi chưa lưu · giả định chưa hợp lệ'
     return
   }
   clearTimeout(previewTimer)
-  await persistAndForecast()
+  await persistAndForecast(payload)
 }
 
 async function resetDefaults() {
@@ -325,7 +339,7 @@ async function resetDefaults() {
 
 async function exportCsv() {
   try {
-    await exportCsvApi(dto)
+      await exportCsvApi(snapshot())
   } catch (e) {
     errorMessage.value = e.message
   }

@@ -51,35 +51,22 @@ export async function saveLoans(loans) {
   return res.json()
 }
 
-function appendAssumptionParams(params, dto) {
-  if (dto.baseSalary != null) params.set('baseSalary', dto.baseSalary)
-  if (dto.januaryMultiplier != null) params.set('januaryMultiplier', dto.januaryMultiplier.toString())
-  if (dto.living != null) params.set('living', dto.living)
-  if (dto.childThrough2026 != null) params.set('childThrough2026', dto.childThrough2026)
-  if (dto.childQ12027 != null) params.set('childQ12027', dto.childQ12027)
-  if (dto.childFromApr2027 != null) params.set('childFromApr2027', dto.childFromApr2027)
-  if (dto.rentThroughJan2027 != null) params.set('rentThroughJan2027', dto.rentThroughJan2027)
-  if (dto.rentFromFeb2027 != null) params.set('rentFromFeb2027', dto.rentFromFeb2027)
-  if (dto.startingSavings != null) params.set('startingSavings', dto.startingSavings)
-  if (dto.raises) {
-    for (const [y, v] of Object.entries(dto.raises)) {
-      params.set(`raises[${y}]`, v.toString())
-    }
-  }
-}
-
 export async function getForecast(dto) {
-  const params = new URLSearchParams()
-  appendAssumptionParams(params, dto)
-  const res = await fetch(`${BASE}/forecast?${params.toString()}`)
+  const res = await fetch(`${BASE}/forecast`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(dto),
+  })
   if (!res.ok) await throwApiError(res, 'Không tính toán được dự báo')
   return res.json()
 }
 
 export async function exportCsv(dto) {
-  const params = new URLSearchParams()
-  appendAssumptionParams(params, dto)
-  const res = await fetch(`${BASE}/export/csv?${params.toString()}`)
+  const res = await fetch(`${BASE}/export/csv`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(dto),
+  })
   if (!res.ok) await throwApiError(res, 'Không xuất được CSV')
   const blob = await res.blob()
   const url = URL.createObjectURL(blob)

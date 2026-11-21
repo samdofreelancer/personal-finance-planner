@@ -25,11 +25,21 @@ vi.mock('../src/services/api.js', () => ({
 
 function validAssumptions() {
   return {
-    baseSalary: 42000000, januaryMultiplier: 2, living: 4250000,
-    childThrough2026: 2500000, childQ12027: 2750000, childFromApr2027: 3250000,
-    rentThroughJan2027: 3750000, rentFromFeb2027: 5750000,
+    baseSalary: 42000000, januaryMultiplier: 2,
     startingSavings: 30000000,
     raises: { 2027: 0.08, 2028: 0.08, 2029: 0.08, 2030: 0.08 },
+    expenses: [
+      { name: 'Sinh hoạt phí', changes: [{ effectiveMonth: '2026-11', amount: 4250000 }] },
+      { name: 'Quỹ nuôi con', changes: [
+        { effectiveMonth: '2026-11', amount: 2500000 },
+        { effectiveMonth: '2027-01', amount: 2750000 },
+        { effectiveMonth: '2027-04', amount: 3250000 },
+      ] },
+      { name: 'Tiền nhà', changes: [
+        { effectiveMonth: '2026-11', amount: 3750000 },
+        { effectiveMonth: '2027-02', amount: 5750000 },
+      ] },
+    ],
   }
 }
 
@@ -133,9 +143,9 @@ describe('App', () => {
   it('rejects invalid saves locally and persists valid saves before refreshing forecast', async () => {
     const wrapper = await mountLoadedApp()
     const form = wrapper.findComponent(AssumptionsForm)
-    form.vm.$emit('save', { ...validAssumptions(), living: -1 })
+    form.vm.$emit('save', { ...validAssumptions(), baseSalary: -1 })
     await flushPromises()
-    expect(wrapper.text()).toContain('living phải là số VND nguyên không âm.')
+    expect(wrapper.text()).toContain('baseSalary phải là số VND nguyên không âm.')
     expect(saveAssumptions).not.toHaveBeenCalled()
 
     form.vm.$emit('save', validAssumptions())
