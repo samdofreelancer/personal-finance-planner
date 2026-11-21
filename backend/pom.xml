@@ -120,6 +120,9 @@
                             <rules>
                                 <rule>
                                     <element>BUNDLE</element>
+                                    <includes>
+                                        <include>com/finance/planner/service/*</include>
+                                    </includes>
                                     <limits>
                                         <limit>
                                             <counter>LINE</counter>
