@@ -1,10 +1,12 @@
 package com.finance.planner.service;
 
 import com.finance.planner.dto.AssumptionDTO;
-import com.finance.planner.entity.Assumption;
-import com.finance.planner.repository.AssumptionRepository;
 import com.finance.planner.dto.ExpenseDTO;
 import com.finance.planner.dto.IncomeChangeDTO;
+import com.finance.planner.entity.Assumption;
+import com.finance.planner.household.HouseholdContext;
+import com.finance.planner.household.HouseholdRepository;
+import com.finance.planner.repository.AssumptionRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,69 +16,74 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class AssumptionService {
-
     private final AssumptionRepository repository;
     private final ExpenseScheduleService expenseScheduleService;
     private final IncomeSchedulePersistenceService incomeSchedulePersistenceService;
+    private final HouseholdRepository householdRepository;
 
     public AssumptionService(AssumptionRepository repository, ExpenseScheduleService expenseScheduleService,
-                             IncomeSchedulePersistenceService incomeSchedulePersistenceService) {
+            IncomeSchedulePersistenceService incomeSchedulePersistenceService, HouseholdRepository householdRepository) {
         this.repository = repository;
         this.expenseScheduleService = expenseScheduleService;
         this.incomeSchedulePersistenceService = incomeSchedulePersistenceService;
+        this.householdRepository = householdRepository;
     }
 
-    public AssumptionDTO getAssumptions() {
-        Assumption entity = repository.findTopByOrderByIdAsc();
+    public AssumptionDTO getAssumptions(HouseholdContext context) {
+        lockHousehold(context);
+        Assumption entity = repository.findTopByHouseholdIdOrderByIdAsc(context.householdId());
         if (entity == null) {
             entity = new Assumption();
+            entity.setHousehold(householdRepository.getReferenceById(context.householdId()));
             updateEntityFromDTO(entity, defaultAssumptions());
             entity.setCreatedAt(LocalDateTime.now());
             entity.setUpdatedAt(LocalDateTime.now());
             entity = repository.save(entity);
             incomeSchedulePersistenceService.saveIncomeChanges(entity, defaultAssumptions().getIncomeChanges());
-            expenseScheduleService.seedDefaults();
+            expenseScheduleService.seedDefaults(context);
         }
-        return toDTO(entity);
+        return toDTO(entity, context);
     }
 
-    public AssumptionDTO saveAssumptions(AssumptionDTO dto) {
-        Assumption entity = repository.findTopByOrderByIdAsc();
-        if (entity == null) entity = new Assumption();
-        updateEntityFromDTO(entity, dto);
-        entity.setUpdatedAt(LocalDateTime.now());
-        if (entity.getCreatedAt() == null) {
-            entity.setCreatedAt(LocalDateTime.now());
-        }
-        Assumption saved = repository.save(entity);
-        incomeSchedulePersistenceService.saveIncomeChanges(saved, dto.getIncomeChanges());
-        expenseScheduleService.saveExpenses(dto.getExpenses());
-        return toDTO(saved);
-    }
-
-    public AssumptionDTO seedDefaults() {
-        Assumption entity = repository.findTopByOrderByIdAsc();
+    public AssumptionDTO saveAssumptions(HouseholdContext context, AssumptionDTO dto) {
+        lockHousehold(context);
+        Assumption entity = repository.findTopByHouseholdIdOrderByIdAsc(context.householdId());
         if (entity == null) {
             entity = new Assumption();
+            entity.setHousehold(householdRepository.getReferenceById(context.householdId()));
+        }
+        updateEntityFromDTO(entity, dto);
+        entity.setUpdatedAt(LocalDateTime.now());
+        if (entity.getCreatedAt() == null) entity.setCreatedAt(LocalDateTime.now());
+        Assumption saved = repository.save(entity);
+        incomeSchedulePersistenceService.saveIncomeChanges(saved, dto.getIncomeChanges());
+        expenseScheduleService.saveExpenses(context, dto.getExpenses());
+        return toDTO(saved, context);
+    }
+
+    public AssumptionDTO seedDefaults(HouseholdContext context) {
+        lockHousehold(context);
+        Assumption entity = repository.findTopByHouseholdIdOrderByIdAsc(context.householdId());
+        if (entity == null) {
+            entity = new Assumption();
+            entity.setHousehold(householdRepository.getReferenceById(context.householdId()));
             entity.setCreatedAt(LocalDateTime.now());
         }
-        updateEntityFromDTO(entity, defaultAssumptions());
+        AssumptionDTO defaults = defaultAssumptions();
+        updateEntityFromDTO(entity, defaults);
         entity.setUpdatedAt(LocalDateTime.now());
         Assumption saved = repository.save(entity);
-        incomeSchedulePersistenceService.saveIncomeChanges(saved, defaultAssumptions().getIncomeChanges());
-        expenseScheduleService.seedDefaults();
-        return toDTO(saved);
+        incomeSchedulePersistenceService.saveIncomeChanges(saved, defaults.getIncomeChanges());
+        expenseScheduleService.seedDefaults(context);
+        return toDTO(saved, context);
     }
 
     private AssumptionDTO defaultAssumptions() {
         AssumptionDTO dto = new AssumptionDTO();
         dto.setIncomeChanges(List.of(
-                new IncomeChangeDTO("2026-11", 42_000_000L),
-                new IncomeChangeDTO("2027-04", 45_360_000L),
-                new IncomeChangeDTO("2028-04", 48_988_800L),
-                new IncomeChangeDTO("2029-04", 52_907_904L),
-                new IncomeChangeDTO("2030-04", 57_140_536L),
-                new IncomeChangeDTO("2031-04", 57_140_536L),
+                new IncomeChangeDTO("2026-11", 42_000_000L), new IncomeChangeDTO("2027-04", 45_360_000L),
+                new IncomeChangeDTO("2028-04", 48_988_800L), new IncomeChangeDTO("2029-04", 52_907_904L),
+                new IncomeChangeDTO("2030-04", 57_140_536L), new IncomeChangeDTO("2031-04", 57_140_536L),
                 new IncomeChangeDTO("2032-04", 57_140_536L)));
         dto.setJanuaryMultiplier(new BigDecimal("2.0"));
         dto.setExpenses(ExpenseScheduleService.defaultExpenses());
@@ -85,21 +92,26 @@ public class AssumptionService {
         return dto;
     }
 
-    private AssumptionDTO toDTO(Assumption e) {
+    private AssumptionDTO toDTO(Assumption entity, HouseholdContext context) {
         AssumptionDTO dto = new AssumptionDTO();
-        dto.setIncomeChanges(incomeSchedulePersistenceService.getIncomeChanges(e));
-        dto.setJanuaryMultiplier(e.getJanuaryMultiplier());
-        List<ExpenseDTO> expenses = expenseScheduleService.getExpenses();
+        dto.setIncomeChanges(incomeSchedulePersistenceService.getIncomeChanges(entity));
+        dto.setJanuaryMultiplier(entity.getJanuaryMultiplier());
+        List<ExpenseDTO> expenses = expenseScheduleService.getExpenses(context);
         dto.setExpenses(expenses);
-        dto.setStartingSavings(e.getStartingSavings());
-        dto.setForecastYears(e.getForecastYears());
+        dto.setStartingSavings(entity.getStartingSavings());
+        dto.setForecastYears(entity.getForecastYears());
         return dto;
     }
 
-    private void updateEntityFromDTO(Assumption e, AssumptionDTO dto) {
-        e.setJanuaryMultiplier(dto.getJanuaryMultiplier());
-        e.setStartingSavings(dto.getStartingSavings());
-        e.setForecastYears(dto.getForecastYears());
+    private void updateEntityFromDTO(Assumption entity, AssumptionDTO dto) {
+        entity.setJanuaryMultiplier(dto.getJanuaryMultiplier());
+        entity.setStartingSavings(dto.getStartingSavings());
+        entity.setForecastYears(dto.getForecastYears());
     }
 
+    private void lockHousehold(HouseholdContext context) {
+        if (context == null || context.householdId() == null) throw new IllegalArgumentException("Household context is required");
+        householdRepository.findForUpdateById(context.householdId())
+                .orElseThrow(() -> new IllegalArgumentException("Household does not exist"));
+    }
 }

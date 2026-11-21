@@ -13,7 +13,7 @@ const dockerE2eDirectory = process.platform === 'win32'
   : e2eDirectory
 const projectName = 'personal-finance-planner-e2e'
 const frontendUrl = 'http://127.0.0.1:18088'
-const apiUrl = `${frontendUrl}/api/assumptions`
+const apiUrl = `${frontendUrl}/api/auth/bootstrap`
 // Stable across runs because the isolated E2E-only PostgreSQL volume persists.
 const e2eDatabasePassword = 'planner-e2e-local-only'
 

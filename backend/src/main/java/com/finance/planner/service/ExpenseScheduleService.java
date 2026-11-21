@@ -5,6 +5,8 @@ import com.finance.planner.dto.ExpenseDTO;
 import com.finance.planner.entity.ExpenseAmountChange;
 import com.finance.planner.entity.ExpenseCategory;
 import com.finance.planner.repository.ExpenseCategoryRepository;
+import com.finance.planner.household.HouseholdContext;
+import com.finance.planner.household.HouseholdRepository;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -16,23 +18,28 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class ExpenseScheduleService {
     private final ExpenseCategoryRepository repository;
+    private final HouseholdRepository householdRepository;
 
-    public ExpenseScheduleService(ExpenseCategoryRepository repository) {
+    public ExpenseScheduleService(ExpenseCategoryRepository repository, HouseholdRepository householdRepository) {
         this.repository = repository;
+        this.householdRepository = householdRepository;
     }
 
     @Transactional(readOnly = true)
-    public List<ExpenseDTO> getExpenses() {
-        return repository.findAllByOrderByIdAsc().stream().map(this::toDto).toList();
+    public List<ExpenseDTO> getExpenses(HouseholdContext context) {
+        requireHousehold(context);
+        return repository.findAllByHouseholdIdOrderByIdAsc(context.householdId()).stream().map(this::toDto).toList();
     }
 
-    public List<ExpenseDTO> saveExpenses(List<ExpenseDTO> expenses) {
-        repository.deleteAll(repository.findAll());
+    public List<ExpenseDTO> saveExpenses(HouseholdContext context, List<ExpenseDTO> expenses) {
+        requireHousehold(context);
+        repository.deleteAll(repository.findAllByHouseholdIdOrderByIdAsc(context.householdId()));
         repository.flush();
         LocalDateTime now = LocalDateTime.now();
         List<ExpenseCategory> entities = new ArrayList<>();
         for (ExpenseDTO dto : expenses) {
             ExpenseCategory category = new ExpenseCategory();
+            category.setHousehold(householdRepository.getReferenceById(context.householdId()));
             category.setName(dto.getName().trim());
             category.setCreatedAt(now);
             category.setUpdatedAt(now);
@@ -47,8 +54,8 @@ public class ExpenseScheduleService {
         return repository.saveAll(entities).stream().map(this::toDto).toList();
     }
 
-    public List<ExpenseDTO> seedDefaults() {
-        return saveExpenses(defaultExpenses());
+    public List<ExpenseDTO> seedDefaults(HouseholdContext context) {
+        return saveExpenses(context, defaultExpenses());
     }
 
     public static List<ExpenseDTO> defaultExpenses() {
@@ -67,5 +74,11 @@ public class ExpenseScheduleService {
         return new ExpenseDTO(entity.getName(), entity.getChanges().stream()
                 .map(change -> new ExpenseChangeDTO(YearMonth.from(change.getEffectiveMonth()).toString(), change.getAmount()))
                 .toList());
+    }
+
+    private void requireHousehold(HouseholdContext context) {
+        if (context == null || context.householdId() == null) {
+            throw new IllegalArgumentException("Household context is required");
+        }
     }
 }

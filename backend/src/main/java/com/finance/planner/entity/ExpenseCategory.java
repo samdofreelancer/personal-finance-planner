@@ -1,5 +1,6 @@
 package com.finance.planner.entity;
 
+import com.finance.planner.household.Household;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -14,6 +15,10 @@ import lombok.Setter;
 public class ExpenseCategory {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "household_id", nullable = false)
+    private Household household;
 
     @Column(nullable = false, length = 120)
     private String name;

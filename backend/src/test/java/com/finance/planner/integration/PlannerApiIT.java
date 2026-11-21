@@ -16,14 +16,31 @@ import com.finance.planner.dto.ExpenseChangeDTO;
 import com.finance.planner.dto.IncomeChangeDTO;
 import com.finance.planner.repository.AssumptionRepository;
 import com.finance.planner.service.ExpenseScheduleService;
+import com.finance.planner.auth.AuthenticatedUser;
+import com.finance.planner.auth.User;
+import com.finance.planner.auth.UserRepository;
+import com.finance.planner.household.Household;
+import com.finance.planner.household.HouseholdContext;
+import com.finance.planner.household.HouseholdMember;
+import com.finance.planner.household.HouseholdMemberRepository;
+import com.finance.planner.household.HouseholdRepository;
+import com.finance.planner.household.HouseholdRole;
 import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.web.context.WebApplicationContext;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest(properties = {
@@ -40,9 +57,29 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class PlannerApiIT {
 
-    @Autowired private MockMvc mockMvc;
+    @Autowired private WebApplicationContext webApplicationContext;
+    private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private AssumptionRepository assumptionRepository;
+    @Autowired private HouseholdRepository householdRepository;
+    @Autowired private HouseholdMemberRepository householdMemberRepository;
+    @Autowired private UserRepository userRepository;
+
+    @BeforeEach
+    void configureAuthenticatedMockMvcWithCsrf() {
+        Household household = householdRepository.save(new Household("Integration household", true));
+        User user = userRepository.save(new User("integration@example.com", "synthetic-test-hash"));
+        householdMemberRepository.save(new HouseholdMember(household, user, HouseholdRole.OWNER));
+        AuthenticatedUser principal = new AuthenticatedUser(user.getId(), user.getEmail(), household.getId(), HouseholdRole.OWNER);
+        var authentication = UsernamePasswordAuthenticationToken.authenticated(principal, null,
+                List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
+                .apply(SecurityMockMvcConfigurers.springSecurity())
+                .defaultRequest(get("/")
+                        .with(SecurityMockMvcRequestPostProcessors.authentication(authentication))
+                        .with(SecurityMockMvcRequestPostProcessors.csrf()))
+                .build();
+    }
 
     @Test
     void seedThenGetReturnsPersistedDefaultAssumptions() throws Exception {

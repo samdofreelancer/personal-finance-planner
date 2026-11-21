@@ -1,6 +1,6 @@
 import { test, expect } from '../fixtures/test.js'
 
-test('changing the forecast horizon updates every dashboard section and persists after save', async ({ page }) => {
+test('changing the forecast horizon updates every dashboard section and persists after save', async ({ authenticatedPage: page }) => {
   await page.goto('/#assumptions')
   const requestedHorizons = []
   page.on('request', (request) => {

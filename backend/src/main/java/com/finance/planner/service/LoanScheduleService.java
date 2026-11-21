@@ -5,6 +5,8 @@ import com.finance.planner.dto.LoanRepaymentDTO;
 import com.finance.planner.entity.Loan;
 import com.finance.planner.entity.LoanRepayment;
 import com.finance.planner.repository.LoanRepository;
+import com.finance.planner.household.HouseholdContext;
+import com.finance.planner.household.HouseholdRepository;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -20,21 +22,25 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class LoanScheduleService {
     private final LoanRepository repository;
+    private final HouseholdRepository householdRepository;
 
-    public LoanScheduleService(LoanRepository repository) {
+    public LoanScheduleService(LoanRepository repository, HouseholdRepository householdRepository) {
         this.repository = repository;
+        this.householdRepository = householdRepository;
     }
 
     @Transactional(readOnly = true)
-    public List<LoanDTO> getLoans() {
-        return repository.findAllByOrderByIdAsc().stream().map(this::toDto).toList();
+    public List<LoanDTO> getLoans(HouseholdContext context) {
+        requireHousehold(context);
+        return repository.findAllByHouseholdIdOrderByIdAsc(context.householdId()).stream().map(this::toDto).toList();
     }
 
-    public List<LoanDTO> replaceLoans(List<LoanDTO> requestedLoans) {
+    public List<LoanDTO> replaceLoans(HouseholdContext context, List<LoanDTO> requestedLoans) {
+        requireHousehold(context);
         if (requestedLoans == null) throw new IllegalArgumentException("Danh sách khoản vay không được để trống.");
 
         Map<Long, Loan> existingLoans = new HashMap<>();
-        repository.findAllByOrderByIdAsc().forEach(loan -> existingLoans.put(loan.getId(), loan));
+        repository.findAllByHouseholdIdOrderByIdAsc(context.householdId()).forEach(loan -> existingLoans.put(loan.getId(), loan));
         Set<Long> seenLoanIds = new HashSet<>();
         List<Loan> updatedLoans = new ArrayList<>();
 
@@ -43,6 +49,7 @@ public class LoanScheduleService {
             Loan loan;
             if (requested.id() == null) {
                 loan = new Loan();
+                loan.setHousehold(householdRepository.getReferenceById(context.householdId()));
                 loan.setCreatedAt(LocalDateTime.now());
             } else {
                 if (!seenLoanIds.add(requested.id())) throw new IllegalArgumentException("Khoản vay bị lặp ID.");
@@ -61,14 +68,15 @@ public class LoanScheduleService {
         return repository.saveAll(updatedLoans).stream().map(this::toDto).toList();
     }
 
-    public void resetToSample(List<LoanDTO> sample) {
-        repository.deleteAll(repository.findAll());
-        replaceLoans(sample.stream().map(loan -> new LoanDTO(null, loan.name(), loan.openingPrincipal(),
+    public void resetToSample(HouseholdContext context, List<LoanDTO> sample) {
+        requireHousehold(context);
+        repository.deleteAll(repository.findAllByHouseholdIdOrderByIdAsc(context.householdId()));
+        replaceLoans(context, sample.stream().map(loan -> new LoanDTO(null, loan.name(), loan.openingPrincipal(),
                 loan.repayments().stream().map(payment -> new LoanRepaymentDTO(null, payment.dueDate(),
                         payment.principalAmount(), payment.interestAmount())).toList())).toList());
     }
 
-    public void resetToDefaultSample() {
+    public void resetToDefaultSample(HouseholdContext context) {
         long opening = 120_000_000L;
         long fixedPayment = 10_000_000L;
         long novemberInterest = 1_200_000L;
@@ -81,7 +89,7 @@ public class LoanScheduleService {
                 new LoanRepaymentDTO(null, LocalDate.of(2026, 11, 30), novemberPrincipal, novemberInterest),
                 new LoanRepaymentDTO(null, LocalDate.of(2026, 12, 31), decemberPrincipal, decemberInterest),
                 new LoanRepaymentDTO(null, LocalDate.of(2027, 1, 31), januaryPrincipal, 1_000_000L));
-        resetToSample(List.of(new LoanDTO(null, "Khoản vay mẫu", opening, repayments)));
+        resetToSample(context, List.of(new LoanDTO(null, "Khoản vay mẫu", opening, repayments)));
     }
 
     private void replaceRepayments(Loan loan, List<LoanRepaymentDTO> requested) {
@@ -132,5 +140,11 @@ public class LoanScheduleService {
                         .map(payment -> new LoanRepaymentDTO(payment.getId(), payment.getDueDate(),
                                 payment.getPrincipalAmount(), payment.getInterestAmount()))
                         .toList());
+    }
+
+    private void requireHousehold(HouseholdContext context) {
+        if (context == null || context.householdId() == null) {
+            throw new IllegalArgumentException("Household context is required");
+        }
     }
 }

@@ -8,7 +8,8 @@ export class AssumptionsPage extends BasePage {
   }
 
   async open() {
-    await this.goto('/#assumptions')
+    await this.page.getByRole('link', { name: /Giả định tài chính/ }).click()
+    await this.saveStatus.waitFor({ state: 'visible' })
   }
 
   async addExpenseSchedule({ name, initialMonth, initialAmount, nextMonth, nextAmount }) {

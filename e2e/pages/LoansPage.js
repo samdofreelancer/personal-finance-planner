@@ -14,7 +14,8 @@ export class LoansPage extends BasePage {
   }
 
   async open() {
-    await this.goto('/#loans')
+    await this.page.getByRole('link', { name: /Khoản vay/ }).click()
+    await this.panel.waitFor({ state: 'visible' })
   }
 
   async createLoanWithRepayment({ name, principal, repaymentDate, repaymentPrincipal, repaymentInterest }) {

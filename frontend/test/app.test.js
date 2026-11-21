@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
-import App from '../src/App.vue'
+import PlannerView from '../src/PlannerView.vue'
 import AssumptionsForm from '../src/components/AssumptionsForm.vue'
 import LoanScheduleForm from '../src/components/LoanScheduleForm.vue'
 import {
@@ -63,7 +63,7 @@ async function mountLoadedApp() {
   getAssumptions.mockResolvedValue(validAssumptions())
   getLoans.mockResolvedValue([])
   getForecast.mockResolvedValue(forecastResult())
-  const wrapper = mount(App)
+  const wrapper = mount(PlannerView)
   await flushPromises()
   return wrapper
 }
@@ -80,7 +80,7 @@ beforeEach(() => {
   exportCsv.mockResolvedValue(undefined)
 })
 
-describe('App', () => {
+describe('PlannerView', () => {
   it('loads assumptions and forecast, then displays calculated metrics', async () => {
     const wrapper = await mountLoadedApp()
     expect(getAssumptions).toHaveBeenCalledOnce()
@@ -101,7 +101,7 @@ describe('App', () => {
 
   it('shows an actionable error when initial assumptions cannot be loaded', async () => {
     getAssumptions.mockRejectedValue(new Error('API offline'))
-    const wrapper = mount(App)
+    const wrapper = mount(PlannerView)
     await flushPromises()
     expect(wrapper.text()).toContain('API offline')
     expect(wrapper.text()).toContain('Lỗi kết nối máy chủ')
@@ -113,7 +113,7 @@ describe('App', () => {
     data.incomeChanges.push({ effectiveMonth: '2027-04', amount: 50000000 })
     getAssumptions.mockResolvedValue(data)
     getForecast.mockResolvedValue(forecastResult())
-    const wrapper = mount(App)
+    const wrapper = mount(PlannerView)
     await flushPromises()
 
     expect(wrapper.find('#alert-area .alert').exists()).toBe(false)
@@ -126,7 +126,7 @@ describe('App', () => {
     getAssumptions.mockResolvedValue(data)
     getForecast.mockResolvedValue(forecastResult())
 
-    const wrapper = mount(App)
+    const wrapper = mount(PlannerView)
     await flushPromises()
 
     expect(wrapper.find('#alert-area .alert').exists()).toBe(false)
@@ -136,7 +136,7 @@ describe('App', () => {
   it('still surfaces provisional status returned by the forecast engine', async () => {
     getAssumptions.mockResolvedValue(validAssumptions())
     getForecast.mockResolvedValue(forecastResult({ provisional: true }))
-    const wrapper = mount(App)
+    const wrapper = mount(PlannerView)
     await flushPromises()
     expect(wrapper.find('#alert-area .alert').text()).toContain('Một hoặc nhiều kết quả đang là tạm tính')
   })
@@ -242,7 +242,7 @@ describe('App', () => {
 
   it('handles a forecast without a 2030 annual row', async () => {
     getForecast.mockResolvedValue(forecastResult({ include2030: false }))
-    const wrapper = mount(App)
+    const wrapper = mount(PlannerView)
     await flushPromises()
     expect(wrapper.get('#metric-net').text()).toContain('0 ₫')
     expect(wrapper.get('#metric-income').text()).toContain('0 ₫')

@@ -31,6 +31,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
       SERVER_PORT: 8080
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
     networks:
       - finance-network
     restart: unless-stopped
