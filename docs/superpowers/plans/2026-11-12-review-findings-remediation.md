@@ -221,9 +221,9 @@
 - Test: backend controller/service tests and frontend API behavior tests.
 
 **Interfaces:**
-- `GET /api/forecast`: load persisted assumptions through AssumptionService and calculate the saved forecast.
+- `POST /api/forecast`: validate a complete assumptions JSON snapshot (including recurring expense schedules) and calculate a non-persisting preview with saved loan schedules.
 - `POST /api/forecast/simulate`: accept an AssumptionDTO, validate it, calculate from request data, and perform no persistence writes.
-- `GET /api/export/csv`: export the saved forecast.
+- `POST /api/export/csv`: export the forecast from the same assumptions JSON snapshot.
 - Frontend `getForecast()` has no DTO argument; `simulateForecast(dto)` accepts temporary assumptions.
 
 - [ ] **Step 1: Write failing tests proving GET uses saved assumptions and POST simulation does not persist.**

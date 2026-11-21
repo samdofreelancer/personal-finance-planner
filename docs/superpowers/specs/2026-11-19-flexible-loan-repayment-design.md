@@ -60,5 +60,5 @@ The selected approach follows the user's choice of A.
 
 - **Paid/planned status — resolved:** no status field. Entries are planned forecast inputs; a paid/unpaid ledger is out of scope.
 - **API save contract — resolved:** `GET /api/loans` reads the collection and `PUT /api/loans` atomically replaces it. Existing IDs are retained for updates; omitted IDs are deleted; null IDs create records. Backend validates the entire payload before committing.
-- **Forecast input source — resolved:** non-loan assumptions remain query-bound for preview compatibility; loan schedules are read from PostgreSQL and are included in forecast/CSV only after the user saves them.
+- **Forecast input source — current:** income assumptions and user-defined expense schedules are sent as a complete JSON snapshot for non-persisting preview; loan schedules are read from PostgreSQL and are included in forecast/CSV only after the user saves them.
 - **Schema lifecycle — resolved:** introduce Flyway V1 baseline and V2 backfill of the former single-loan fields, then V3 drops those retired columns. Existing assumptions and non-loan values remain intact.
