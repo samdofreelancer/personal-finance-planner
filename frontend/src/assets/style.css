@@ -492,6 +492,7 @@ tbody th[scope="row"] { padding: 10px 11px; border-bottom: 1px solid #edf0f3; co
 .savings-group { align-self: start; }
 .expense-schedules-group { grid-column: span 2; }
 .expense-editor { margin-top: 13px; padding: 13px; border: 1px solid #e9eee6; border-radius: 9px; background: #fcfdf9; }
+.income-change-row { margin-top: 13px; padding: 13px; border: 1px solid #e9eee6; border-radius: 9px; background: #fcfdf9; }
 .expense-editor-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; }
 .expense-name-field { min-width: 0; margin-top: 0; }
 .expense-name-field input { width: 100%; min-width: 0; padding: 8px 0; border: 0; outline: 0; color: #203a54; background: transparent; font-size: 13px; font-weight: 650; }
@@ -501,7 +502,6 @@ tbody th[scope="row"] { padding: 10px 11px; border-bottom: 1px solid #edf0f3; co
 .expense-change-row input[type="month"], .income-change-row input[type="month"] { width: 100%; min-width: 0; padding: 8px 0; border: 0; outline: 0; color: #203a54; background: transparent; font-size: 12px; }
 .expense-change-remove, .income-change-remove { align-self: end; min-height: 37px; color: #a14b43; white-space: nowrap; }
 .expense-add-change, .income-add-change { margin-top: 8px; }
-.income-change-row + .income-change-row { border-top: 1px solid #edf0e9; }
 .expense-add { margin-top: 13px; }
 .expense-breakdown-hint { display: block; max-width: 180px; overflow: hidden; color: #637568; font-size: 9px; text-overflow: ellipsis; }
 @media (max-width: 900px) {
