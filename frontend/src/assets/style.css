@@ -513,6 +513,8 @@ tbody th[scope="row"] { padding: 10px 11px; border-bottom: 1px solid #edf0f3; co
   .icon-button { justify-self: end; }
 }
 @media (max-width: 600px) {
+  .input-groups { grid-template-columns: minmax(0, 1fr); }
+  .expense-schedules-group { grid-column: 1 / -1; }
   .expense-editor { padding: 11px 9px; }
   .expense-change-row, .income-change-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 7px; }
   .expense-change-remove, .income-change-remove { grid-column: 2; justify-self: end; min-height: 25px; }

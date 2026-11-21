@@ -1,5 +1,18 @@
 import { test, expect } from '../fixtures/test.js'
 
+test('stretches the income assumptions group across the available width on mobile', async ({ assumptionsPage }) => {
+  await assumptionsPage.page.setViewportSize({ width: 393, height: 852 })
+  await assumptionsPage.open()
+
+  const layout = await assumptionsPage.page.evaluate(() => {
+    const grid = document.querySelector('.input-groups').getBoundingClientRect()
+    const income = document.querySelector('.input-group').getBoundingClientRect()
+    return { gridWidth: grid.width, incomeWidth: income.width }
+  })
+
+  expect(layout.incomeWidth).toBeGreaterThanOrEqual(layout.gridWidth - 2)
+})
+
 test('creates and persists effective-month income changes reflected in monthly forecast', async ({ assumptionsPage }) => {
   await assumptionsPage.open()
   await expect(assumptionsPage.saveStatus).toHaveText('Đã lưu trên máy chủ')
