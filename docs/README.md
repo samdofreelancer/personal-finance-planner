@@ -14,6 +14,8 @@ Tài liệu chuẩn của Personal Finance Planner. Đọc theo thứ tự dư�
 | [08 — Engineering constitution](08-engineering-constitution.md) | Nguyên tắc bất biến về thiết kế, chất lượng, bảo mật và quy trình |
 | [10 — E2E agent workflow](10-e2e-agent-workflow.md) | Routing giữa QA Orchestrator, Playwright Planner, Generator và Healer |
 | [11 — Remote access with Tailscale](11-remote-access-tailscale.md) | Truy cập riêng tư từ Internet qua Tailscale Serve, không cần domain hoặc mở port router |
+| [12 — Tailscale network flow](12-tailscale-network-flow.md) | Sơ đồ và luồng request khi truy cập app qua tailnet |
+| [13 — New machine deployment](13-new-machine-deployment.md) | Cài đặt PC Windows mới, backup/restore PostgreSQL, triển khai Docker và cấu hình Tailscale/auto-start |
 | [Architecture decisions](decisions/README.md) | Quyết định đã chốt, đang đề xuất hoặc cần xem xét |
 | [Diagrams](diagrams/) | Diagram source; dùng draw.io để render/chỉnh sửa trực quan |
 
