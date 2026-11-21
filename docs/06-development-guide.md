@@ -96,16 +96,20 @@ cd backend
 mvn verify
 ```
 
-`mvn verify` runs the backend test suite, creates the JaCoCo HTML/XML report and enforces the current bundle thresholds: at least 80% line coverage and 70% branch coverage. The repository verification script then runs PIT mutation testing with an 80% score threshold. The latest run generated 72 mutations and killed 68 (94% mutation score). Reports are written to `backend/target/site/jacoco/` and `backend/target/pit-reports/`; open each `index.html` for the HTML view.
+`mvn verify` runs both backend unit tests (Surefire) and integration tests (Failsafe), creates the JaCoCo HTML/XML report and enforces the current bundle thresholds: at least 80% line coverage and 70% branch coverage. CI separates these into independent jobs: `mvn verify -Dskip.integration.tests=true` runs unit tests plus the JaCoCo gate; `mvn verify -Dskip.unit.tests=true -Djacoco.skip=true` runs integration tests only. The repository verification script keeps running the complete suite with plain `mvn verify`, then runs PIT mutation testing with an 80% score threshold. The latest run generated 72 mutations and killed 68 (94% mutation score). Reports are written to `backend/target/site/jacoco/` and `backend/target/pit-reports/`; open each `index.html` for the HTML view.
 
 Backend unit tests currently cover:
 
+- `AssumptionServiceTest`: assumption service behavior.
 - `ForecastServiceTest`: 50-month/annual aggregation, per-loan principal caps, repayments outside the forecast window, user-defined expense effective-month boundaries, salary raises and January multiplier, rounding, cash flow and negative savings.
 - `ValidationServiceTest`: valid assumptions, expense names/schedules/duplicate effective months and amounts, zero/negative/missing monetary boundaries, multiplier lower/upper bounds and raise bounds.
-- `ExpenseMigrationTest`: V1-to-V4 fixture migration preserves every legacy expense amount and removes the retired fixed expense columns.
-- Loan schedule API integration tests: multiple loans, multi-entry monthly aggregation, validation, update/delete identity preservation, CSV parity and reset sample data.
 
-The backend currently has 41 automated tests (11 API integration, 12 forecast unit, 16 validation unit, 1 assumptions service unit and 1 migration test). Coverage gates are enforced by `mvn verify`; see the generated JaCoCo report for the current measurement.
+Backend integration tests currently cover:
+
+- `PlannerApiIT`: loan schedule API behavior, multiple loans, multi-entry monthly aggregation, validation, update/delete identity preservation, CSV parity and reset sample data.
+- `ExpenseMigrationIT`: V1-to-V4 fixture migration preserves every legacy expense amount and removes the retired fixed expense columns.
+
+The backend currently has 41 automated tests: 29 unit tests (12 forecast, 16 validation and 1 assumptions service) and 12 integration tests (11 API and 1 migration). Surefire discovers unit tests named `*Test`; Failsafe discovers integration tests named `*IT`. Coverage gates are enforced by the unit-test CI job and plain local `mvn verify`; see the generated JaCoCo report for the current measurement.
 
 Frontend tests use Vitest, Vue Test Utils and jsdom. `npm test` runs the component/service/utility tests, enforces at least 80% line and statement coverage, 70% function coverage and 75% branch coverage, then writes `frontend/coverage/lcov.info` for SonarQube. The LCOV normalizer prefixes source paths with `frontend/` so the report resolves from the repository root. The report directory is generated and ignored by Git.
 
@@ -115,17 +119,19 @@ Latest local SonarQube analysis after importing both reports: 90.3% overall cove
 
 Backend API integration tests:
 
-- `PlannerApiIntegrationTest` boots the real Spring application, MVC controllers, services, Spring Data JPA and an isolated in-memory H2 database in PostgreSQL compatibility mode.
+- `PlannerApiIT` boots the real Spring application, MVC controllers, services, Spring Data JPA and an isolated in-memory H2 database in PostgreSQL compatibility mode.
 - It verifies seed/read, update/read persistence, rejection of invalid updates without changing stored data, the 50-month forecast response and CSV download headers/content.
 - The test datasource uses `jdbc:h2:mem:` and `create-drop`; it must never point at the developer's or production PostgreSQL database.
 
-GitHub Actions workflow `.github/workflows/ci.yml` runs `mvn verify` for the backend and `npm ci`, `npm test` and `npm run build` for the frontend on pushes and pull requests. The CI database is in-memory; no PostgreSQL service or secrets are required.
+GitHub Actions workflow `.github/workflows/ci.yml` runs backend unit tests and backend integration tests in separate jobs, plus `npm ci`, `npm test` and `npm run build` for the frontend on pushes and pull requests. The integration job uses the isolated in-memory H2 database; no PostgreSQL service or secrets are required.
 
 ### Browser end-to-end tests (Playwright)
 
 Playwright exercises the real Vue UI through Nginx, Spring Boot and PostgreSQL. It is intentionally a separate test layer from Vitest component tests and H2 backend integration tests.
 
-Run from `frontend/`:
+Playwright is maintained as an independent npm package under `e2e/`. Frontend Vitest tests and their dependencies remain under `frontend/`; browser specs live in `e2e/tests/` and use Page Objects from `e2e/pages/`. Fixtures in `e2e/fixtures/` provide the page objects and seed synthetic data before each test.
+
+Run from `e2e/`:
 
 ```powershell
 npm ci
@@ -133,13 +139,13 @@ npx playwright install chromium   # first run on a machine
 npm run e2e                       # starts isolated Compose stack, runs tests, then stops containers
 ```
 
-The runner uses `docker-compose.e2e.yml` and the fixed Compose project `personal-finance-planner-e2e`: frontend `http://localhost:18088`, backend `http://localhost:18080`, PostgreSQL `localhost:15432`. It supplies a stable, local-only E2E database password and does not load the repository `.env`; this is required because the isolated E2E database volume persists between runs. The project has distinct container names, network and named database volume; it never attaches to `finance_planner_db_data` or the normal application containers. Each test resets only this synthetic E2E database through `POST /api/assumptions/seed`.
+The runner is `e2e/scripts/run-e2e.mjs`; it uses `docker-compose.e2e.yml` and the fixed Compose project `personal-finance-planner-e2e`: frontend `http://127.0.0.1:18088`, backend `http://127.0.0.1:18080`, PostgreSQL `localhost:15432`. It supplies a stable, local-only E2E database password and does not load the repository `.env`; this is required because the isolated E2E database volume persists between runs. The project has distinct container names, network and named database volume; it never attaches to `finance_planner_db_data` or the normal application containers. Each test resets only this synthetic E2E database through `POST /api/assumptions/seed`.
 
 The runner stops E2E containers with `docker compose down` and deliberately preserves the E2E-only volume for reuse. It never runs `down -v`. Do not manually change the E2E project to point at the normal planner database. The suite is sequential because each scenario seeds a shared isolated database.
 
-Playwright writes `frontend/playwright-report/` (HTML) and `frontend/test-results/` (traces, screenshots and video on failure). GitHub Actions runs the same `npm run e2e` command in a separate job and uploads diagnostics as `playwright-e2e-report` for 14 days.
+Playwright writes `e2e/playwright-report/` (HTML) and `e2e/test-results/` (traces, screenshots and video on failure). GitHub Actions installs from `e2e/package-lock.json`, runs the same `npm run e2e` command in a separate job and uploads diagnostics as `playwright-e2e-report` for 14 days.
 
-The initial browser journeys cover dashboard rendering and the 50-month/5-year forecast, user-defined expense schedules and effective-month persistence, loan/repayment persistence, and CSV download. This does not replace business-rule tests or claim cross-browser/visual-regression coverage.
+The browser specs are split by business journey: dashboard rendering and the 50-month/5-year forecast, user-defined expense schedules and effective-month persistence, loan/repayment persistence, and CSV download. Specs contain scenario intent and assertions; Page Objects encapsulate UI locators and interactions. This does not replace business-rule tests or claim cross-browser/visual-regression coverage.
 
 The backend CI job also runs PIT and uploads the JaCoCo (`backend-jacoco-report`) and PIT (`backend-pit-report`) reports as artifacts for 14 days. SonarQube is intentionally local-only; CI does not depend on a developer machine or a locally hosted server.
 

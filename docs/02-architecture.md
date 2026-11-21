@@ -42,6 +42,17 @@ Không có microservice boundary. Không tạo service/domain boundaries chỉ �
 - `db`: PostgreSQL 16, volume `finance_planner_db_data`.
 - Backend chờ database healthcheck thành công trước khi khởi động.
 
+### Browser E2E automation (`e2e/`)
+
+- `tests/*.spec.js`: business journeys và assertions quan sát được.
+- `pages/*.js`: Page Objects đóng gói locator, navigation và thao tác UI.
+- `fixtures/test.js`: inject Page Objects và seed dữ liệu synthetic qua API của E2E stack.
+- `playwright.config.js`: Chromium, chạy tuần tự và thu thập diagnostics.
+- `scripts/run-e2e.mjs`: điều khiển Compose project riêng và gọi Playwright CLI.
+- `package.json`/`package-lock.json`: dependency boundary độc lập với frontend.
+
+E2E chạy qua một Docker Compose project và PostgreSQL volume riêng; nó không kết nối database planner thông thường. Vitest vẫn thuộc `frontend/` và không cài Playwright.
+
 ## Request/data flows
 
 ### Initial load

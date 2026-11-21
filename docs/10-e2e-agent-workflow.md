@@ -61,6 +61,10 @@ The orchestrator reports the selected specialist(s), changed paths, requirement 
 
 ## Related configuration
 
+- Editable Excalidraw source: [`docs/diagrams/e2e-agent-routing.excalidraw`](diagrams/e2e-agent-routing.excalidraw)
+- Mermaid source (text-based fallback): [`docs/diagrams/e2e-agent-routing.mmd`](diagrams/e2e-agent-routing.mmd)
+- Open the `.excalidraw` file in [Excalidraw](https://excalidraw.com/) to continue editing the diagram.
+
 - Orchestrator Skill: `/skills/personal-finance-planner-qa-orchestrator/SKILL.md`
 - Planner Skill: `/skills/playwright-test-planner/SKILL.md`
 - Generator Skill: `/skills/playwright-test-generator/SKILL.md`

@@ -12,8 +12,12 @@ Tài liệu chuẩn của Personal Finance Planner. Đọc theo thứ tự dư�
 | [06 — Development guide](06-development-guide.md) | Setup, test, workflow và checklist thay đổi |
 | [07 — AI agent context](07-ai-agent-context.md) | Context bắt buộc để AI agent hiểu repo trước khi làm việc |
 | [08 — Engineering constitution](08-engineering-constitution.md) | Nguyên tắc bất biến về thiết kế, chất lượng, bảo mật và quy trình |
+| [10 — E2E agent workflow](10-e2e-agent-workflow.md) | Routing giữa QA Orchestrator, Playwright Planner, Generator và Healer |
+| [11 — Remote access with Tailscale](11-remote-access-tailscale.md) | Truy cập riêng tư từ Internet qua Tailscale Serve, không cần domain hoặc mở port router |
 | [Architecture decisions](decisions/README.md) | Quyết định đã chốt, đang đề xuất hoặc cần xem xét |
 | [Diagrams](diagrams/) | Diagram source; dùng draw.io để render/chỉnh sửa trực quan |
+
+Browser E2E automation có package độc lập tại [`../e2e/`](../e2e/): specs, Page Objects, fixtures, Playwright config và runner. Agent routing được mô tả tại [10 — E2E agent workflow](10-e2e-agent-workflow.md), diagram source tại [`diagrams/e2e-agent-routing.mmd`](diagrams/e2e-agent-routing.mmd).
 
 ## Quy tắc về độ tin cậy
 
