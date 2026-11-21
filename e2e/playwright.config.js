@@ -1,12 +1,11 @@
 import { defineConfig, devices } from '@playwright/test'
 
-// Keep this fixed: the suite calls the seed endpoint and must never be
-// redirected to a developer's normal planner instance via an environment var.
+// Keep this fixed: the suite must never target a developer's normal planner instance.
 const baseURL = 'http://127.0.0.1:18088'
 
 export default defineConfig({
-  testDir: './e2e',
-  testMatch: '**/*.e2e.js',
+  testDir: './tests',
+  testMatch: '**/*.spec.js',
   fullyParallel: false,
   workers: 1,
   forbidOnly: Boolean(process.env.CI),

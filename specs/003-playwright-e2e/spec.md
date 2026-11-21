@@ -14,6 +14,8 @@ Exercise the deployed frontend, reverse proxy, REST API, backend services and Po
 3. Automate browser journeys for dashboard rendering, expense schedule creation/effective-month persistence, loan schedule creation/persistence and CSV download.
 4. Capture Playwright traces, screenshots and video on failure; produce an HTML report.
 5. Run the same isolated E2E suite locally and in GitHub Actions.
+6. Keep Playwright in an independently installable `e2e/` npm package, separate from frontend/Vitest dependencies.
+7. Organize browser journeys as `e2e/tests/*.spec.js`; specs use shared fixtures and Page Objects from `e2e/pages/` for UI navigation, locators and interactions.
 
 ## Acceptance criteria
 
@@ -25,6 +27,8 @@ Exercise the deployed frontend, reverse proxy, REST API, backend services and Po
 - **E2E-06 Diagnostics:** Failed tests retain trace, screenshot and video; HTML report is generated.
 - **E2E-07 CI:** GitHub Actions runs E2E independently of unit tests and uploads the report/results even on failure.
 - **E2E-08 Repeatability:** Tests run sequentially and reset only the isolated E2E database before each scenario.
+- **E2E-09 Package boundary:** `e2e/package.json` and its lockfile own Playwright; frontend package scripts and dependencies contain only frontend build/unit-test responsibilities.
+- **E2E-10 Page Object Model:** Browser specs express business scenarios and observable assertions; UI selectors and interactions are encapsulated by Page Objects supplied through shared fixtures.
 
 ## Out of scope
 

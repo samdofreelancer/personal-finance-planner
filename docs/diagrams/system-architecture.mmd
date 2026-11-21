@@ -32,3 +32,12 @@ flowchart LR
     API
     DB
   end
+
+  subgraph E2E["Isolated E2E · docker-compose.e2e.yml"]
+    SPEC["e2e/tests/*.spec.js"] --> FIXTURE["Playwright fixtures"]
+    FIXTURE --> POM["e2e/pages/* · Page Objects"]
+    POM --> PW["Playwright · Chromium"]
+    PW --> E2EN["E2E Nginx frontend"]
+    E2EN -->|"/api proxy"| E2EAPI["E2E Spring Boot API"]
+    E2EAPI --> E2EDB[("E2E PostgreSQL volume")]
+  end

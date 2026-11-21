@@ -1,15 +1,23 @@
 import { spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const frontendDirectory = join(repositoryRoot, 'frontend')
+const e2eDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const repositoryRoot = resolve(e2eDirectory, '..')
+const playwrightCli = join(e2eDirectory, 'node_modules', '@playwright', 'test', 'cli.js')
 const projectName = 'personal-finance-planner-e2e'
 const frontendUrl = 'http://127.0.0.1:18088'
 const apiUrl = `${frontendUrl}/api/assumptions`
 // Stable across runs because the isolated E2E-only PostgreSQL volume persists.
 const e2eDatabasePassword = 'planner-e2e-local-only'
+
+if (!existsSync(playwrightCli)) {
+  console.error('E2E dependencies are missing. Run `npm ci` from the e2e/ directory first.')
+  process.exit(1)
+}
+
 // Keep the temporary env file under the checkout so WSL-backed Docker CLI
 // wrappers can resolve it through the repository's /mnt/<drive> mount.
 const tempDirectory = await mkdtemp(join(repositoryRoot, '.e2e-tmp-'))
@@ -96,10 +104,10 @@ try {
 
   console.log('\nRunning Playwright tests...')
   exitCode = await run(process.execPath, [
-    join(frontendDirectory, 'node_modules', '@playwright', 'test', 'cli.js'),
+    playwrightCli,
     'test',
     ...process.argv.slice(2),
-  ], frontendDirectory)
+  ], e2eDirectory)
 } catch (error) {
   console.error(`\nE2E execution failed: ${error.message}`)
   exitCode = 1
