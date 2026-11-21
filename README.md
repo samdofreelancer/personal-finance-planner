@@ -52,6 +52,10 @@ Copy-Item .env.example .env
 docker compose up --build
 ```
 
+## Truy cập an toàn từ bất cứ đâu
+
+Sử dụng **Tailscale** để truy cập riêng tư từ điện thoại/laptop khi ở ngoài nhà. Không cần mua domain, mở port router hay public backend/PostgreSQL. Hướng dẫn cài Tailscale trên Windows, bật HTTPS bằng Tailscale Serve và kết nối thiết bị nằm tại [Remote access with Tailscale](docs/11-remote-access-tailscale.md). Docker chỉ bind Nginx vào `127.0.0.1`; các thiết bị khác không thể truy cập trực tiếp qua LAN.
+
 ## Development bằng Docker với hot reload
 
 Chạy cấu hình development riêng (không thay đổi production Compose):
@@ -75,8 +79,8 @@ Các service sẽ khởi động:
 | Service | URL | Mô tả |
 |---------|-----|-------|
 | Frontend | http://localhost | Vue.js + Nginx |
-| Backend API | http://localhost:8080 | Spring Boot REST API |
-| PostgreSQL | localhost:5432 | Database (internal network) |
+| Backend API | `http://localhost/api` | Spring Boot REST API qua Nginx; backend không publish port riêng |
+| PostgreSQL | Docker network only | Database không publish port ra host/LAN |
 
 Dừng và xóa volume:
 
