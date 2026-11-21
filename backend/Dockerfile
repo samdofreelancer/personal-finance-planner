@@ -3,9 +3,14 @@ FROM maven:3.9.9-eclipse-temurin-21 AS build
 WORKDIR /app
 COPY pom.xml .
 # Reuse the BuildKit Maven cache so dependency resolution is not re-downloaded.
-RUN --mount=type=cache,target=/root/.m2 mvn dependency:go-offline -q
+# -B/-ntp keep the build log small and non-interactive; the dependency layer is
+# only invalidated when pom.xml changes.
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B -ntp -q dependency:go-offline
 COPY src ./src
-RUN --mount=type=cache,target=/root/.m2 mvn package -DskipTests -q
+# Tests are executed by `mvn verify` and CI, so skip compiling and running them here.
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B -ntp -q package -Dmaven.test.skip=true
 
 # Run stage
 FROM eclipse-temurin:21-jre-alpine

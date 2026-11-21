@@ -1,8 +1,10 @@
 # Build stage
 FROM node:20-alpine AS build
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
+COPY package.json package-lock.json ./
+# `npm ci` installs the exact lockfile versions and is faster than `npm install`;
+# the npm cache mount avoids re-downloading packages on every build.
+RUN --mount=type=cache,target=/root/.npm npm ci
 COPY . .
 RUN npm run build
 

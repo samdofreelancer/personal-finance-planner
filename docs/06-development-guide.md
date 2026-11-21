@@ -22,6 +22,12 @@ Copy-Item .env.example .env
 docker compose up --build
 ```
 
+### Image build caching
+
+`docker compose build` builds both images in stages. The backend keeps Maven's local repository in a BuildKit cache mount (`/root/.m2`) and only re-resolves dependencies when `pom.xml` changes; the frontend installs with `npm ci` against `package-lock.json` and keeps npm's cache in a mount (`/root/.npm`). The image build skips backend test compilation and execution (`-Dmaven.test.skip=true`) because `mvn verify` and CI own the test run.
+
+The first build on a machine downloads the whole Maven dependency tree and can take several minutes; later builds reuse the cache mount. An interrupted build keeps the artifacts it already downloaded.
+
 Current compose publishes frontend on `http://localhost`, backend on `http://localhost:8080`, and PostgreSQL on `localhost:5432`. These are the **current** bindings, not the desired secure default. Until F-01 is implemented, do not expose this stack to an untrusted network; prefer a trusted local machine and firewall.
 
 Stop containers but keep persisted data:
