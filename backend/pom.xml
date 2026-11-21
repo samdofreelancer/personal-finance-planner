@@ -23,6 +23,8 @@
         <jacoco.version>0.8.13</jacoco.version>
         <pitest.version>1.17.4</pitest.version>
         <pitest.junit5.version>1.2.1</pitest.junit5.version>
+        <skip.unit.tests>false</skip.unit.tests>
+        <skip.integration.tests>false</skip.integration.tests>
     </properties>
 
     <dependencies>
@@ -162,6 +164,28 @@
                     <timestampedReports>false</timestampedReports>
                     <threads>2</threads>
                     <mutationThreshold>80</mutationThreshold>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <skipTests>${skip.unit.tests}</skipTests>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <skipITs>${skip.integration.tests}</skipITs>
                 </configuration>
             </plugin>
             <plugin>

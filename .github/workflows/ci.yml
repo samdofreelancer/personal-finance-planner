@@ -12,8 +12,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  backend:
-    name: Backend tests (Java 21)
+  backend-unit:
+    name: Backend unit tests (Java 21)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -30,8 +30,8 @@ jobs:
           cache: maven
           cache-dependency-path: backend/pom.xml
 
-      - name: Run backend tests
-        run: mvn --batch-mode --no-transfer-progress verify
+      - name: Run unit tests and JaCoCo coverage gate
+        run: mvn --batch-mode --no-transfer-progress verify -Dskip.integration.tests=true
 
       - name: Run mutation tests for financial services
         run: mvn --batch-mode --no-transfer-progress org.pitest:pitest-maven:mutationCoverage
@@ -53,6 +53,27 @@ jobs:
           path: backend/target/pit-reports/
           if-no-files-found: error
           retention-days: 14
+
+  backend-integration:
+    name: Backend integration tests (Java 21 + H2)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+
+      - name: Run integration tests only
+        run: mvn --batch-mode --no-transfer-progress verify -Dskip.unit.tests=true -Djacoco.skip=true
 
   frontend:
     name: Frontend tests, coverage and production build

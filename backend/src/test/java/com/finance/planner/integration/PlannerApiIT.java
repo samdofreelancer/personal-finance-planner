@@ -38,7 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 })
 @AutoConfigureMockMvc
 @Transactional
-class PlannerApiIntegrationTest {
+class PlannerApiIT {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
