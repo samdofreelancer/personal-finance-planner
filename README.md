@@ -11,7 +11,7 @@ Web app duyệt qua các giả định, xem dự báo dòng tiền từng tháng
 Vue 3 + Spring Boot là ứng dụng duy nhất được hỗ trợ. Backend Java là nguồn tính toán forecast duy nhất.
 
 - **Backend:** Spring Boot 3 (Java 21), REST API, PostgreSQL
-- **Database:** PostgreSQL (bảng `assumptions`, 1 dòng)
+- **Database:** PostgreSQL (household-owned assumptions, expense schedules và loan schedules)
 - **Frontend:** Vue.js 3 + Vite (build static), Nginx serve
 - **Orchestration:** Docker Compose
 
@@ -39,6 +39,14 @@ docker-compose.yml
 - [Development & verification](docs/06-development-guide.md)
 - [Architecture decisions](docs/decisions/README.md)
 - [System architecture diagram source](docs/diagrams/system-architecture.mmd)
+
+## Tài khoản và hộ gia đình
+
+- Lần đầu mở ứng dụng trên database chưa có tài khoản: tạo tài khoản đầu tiên; tài khoản này trở thành `OWNER` và nhận household hiện có.
+- Sau bootstrap, đăng ký mới chỉ được phép qua invitation link/code do chủ hộ tạo. Link dùng một lần, mặc định hết hạn sau 7 ngày; token thô chỉ hiển thị lúc tạo.
+- Mỗi người có email/tài khoản và mật khẩu riêng. `OWNER` và `MEMBER` cùng xem/chỉnh sửa dữ liệu tài chính của household; chỉ `OWNER` quản lý lời mời.
+- Đăng nhập sử dụng server-side session cookie `HttpOnly`; request thay đổi dữ liệu cần CSRF token. Không lưu access/session token trong `localStorage`.
+- Nếu truy cập HTTP thuần và trình duyệt không gửi Secure cookie, đặt `SESSION_COOKIE_SECURE=false` trong `.env` chỉ cho môi trường local HTTP. Với truy cập từ xa, giữ `true` và dùng HTTPS qua Tailscale Serve.
 
 ## Yêu cầu hệ thống
 
@@ -109,11 +117,21 @@ npm run dev
 
 | Method | Endpoint | Mô tả |
 |--------|----------|-------|
-| GET | `/api/assumptions` | Lấy giả định từ DB |
-| PUT | `/api/assumptions` | Lưu giả định vào DB |
-| POST | `/api/assumptions/seed` | Seed dữ liệu mặc định |
-| GET | `/api/forecast` | Tính toán dự báo |
-| GET | `/api/export/csv` | Xuất CSV |
+| GET | `/api/auth/bootstrap` | Kiểm tra có cho phép đăng ký chủ hộ đầu tiên không |
+| POST | `/api/auth/register` | Đăng ký chủ hộ đầu tiên hoặc thành viên bằng invitation token |
+| POST | `/api/auth/login` | Đăng nhập, tạo server-side session |
+| POST | `/api/auth/logout` | Hủy session hiện tại |
+| GET | `/api/auth/me` | Lấy user và role của session hiện tại |
+| GET | `/api/csrf` | Lấy CSRF token cho SPA |
+| GET/PUT | `/api/assumptions` | Đọc/lưu giả định của household hiện tại |
+| POST | `/api/assumptions/seed` | Khôi phục dữ liệu mẫu của household hiện tại |
+| GET/PUT | `/api/loans` | Đọc/lưu lịch trả nợ của household hiện tại |
+| POST | `/api/forecast` | Tính toán dự báo với dữ liệu khoản vay của household hiện tại |
+| POST | `/api/export/csv` | Xuất CSV của household hiện tại |
+| GET/POST | `/api/household/invitations` | Chủ hộ liệt kê/tạo lời mời |
+| DELETE | `/api/household/invitations/{id}` | Chủ hộ thu hồi lời mời chưa sử dụng |
+
+Financial APIs require an authenticated session. Household identity is resolved from the server-side principal; clients cannot select another `householdId`. Unsafe methods require `X-XSRF-TOKEN` from `/api/csrf`.
 
 ## Kiểm thử backend
 
@@ -138,4 +156,4 @@ Playwright nằm trong npm package độc lập `e2e/`; các spec trong `e2e/tes
 - Dữ liệu lưu trong PostgreSQL (qua Docker volume `finance_planner_db_data`).
 - Frontend production được build bởi Vite và serve bằng Nginx, proxy `/api` sang backend.
 - Cấu hình kết nối DB dùng environment variables (xem `docker-compose.yml` và `backend/src/main/resources/application.properties`).
-- Đây là ứng dụng local-first cho một hộ gia đình; không có đăng nhập, multi-tenant hay đồng bộ ngân hàng.
+- Đây là ứng dụng local-first dùng tài khoản riêng và dữ liệu chia sẻ theo household; không có đồng bộ ngân hàng, password reset qua email, MFA, social login hoặc cloud hosting.

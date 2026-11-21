@@ -11,7 +11,7 @@ export class DashboardPage extends BasePage {
   }
 
   async open() {
-    await this.goto('/')
+    await this.heading.waitFor({ state: 'visible' })
   }
 
   async exportCsv() {

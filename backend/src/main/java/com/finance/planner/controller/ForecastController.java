@@ -5,6 +5,8 @@ import com.finance.planner.dto.ForecastResponse;
 import com.finance.planner.service.ForecastService;
 import com.finance.planner.service.ValidationService;
 import com.finance.planner.service.LoanScheduleService;
+import com.finance.planner.security.HouseholdContextResolver;
+import com.finance.planner.household.HouseholdContext;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -18,28 +20,31 @@ public class ForecastController {
     private final ForecastService forecastService;
     private final ValidationService validationService;
     private final LoanScheduleService loanScheduleService;
+    private final HouseholdContextResolver contextResolver;
 
     public ForecastController(ForecastService forecastService, ValidationService validationService,
-                              LoanScheduleService loanScheduleService) {
+                              LoanScheduleService loanScheduleService, HouseholdContextResolver contextResolver) {
         this.forecastService = forecastService;
         this.validationService = validationService;
         this.loanScheduleService = loanScheduleService;
+        this.contextResolver = contextResolver;
     }
 
     @PostMapping("/forecast")
     public ResponseEntity<ForecastResponse> simulate(@RequestBody AssumptionDTO assumptions) {
         validationService.validate(assumptions);
-        return ResponseEntity.ok(forecastService.buildForecast(assumptions, loanScheduleService.getLoans()));
+        return ResponseEntity.ok(forecastService.buildForecast(assumptions,
+                loanScheduleService.getLoans(contextResolver.requireContext())));
     }
 
     @PostMapping("/export/csv")
     public ResponseEntity<ByteArrayResource> exportCsvSimulation(@RequestBody AssumptionDTO assumptions) {
         validationService.validate(assumptions);
-        return csvResponse(assumptions);
+        return csvResponse(assumptions, contextResolver.requireContext());
     }
 
-    private ResponseEntity<ByteArrayResource> csvResponse(AssumptionDTO assumptions) {
-        ForecastResponse response = forecastService.buildForecast(assumptions, loanScheduleService.getLoans());
+    private ResponseEntity<ByteArrayResource> csvResponse(AssumptionDTO assumptions, HouseholdContext context) {
+        ForecastResponse response = forecastService.buildForecast(assumptions, loanScheduleService.getLoans(context));
         StringBuilder csv = new StringBuilder();
         csv.append("\uFEFF"); // UTF-8 BOM
         csv.append("Tổng hợp theo năm\n");

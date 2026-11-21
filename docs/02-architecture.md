@@ -92,7 +92,7 @@ Các điểm dưới đây là trạng thái quan sát được từ source/conf
 | CORS | Explicit origins are configured in properties; verify actual environment-specific allowlist | Keep strict allowlist; document local origins |
 | Autosave consistency | UI request IDs suppress stale UI responses, but concurrent PUTs can still race at persistence | Serialize writes or implement server-side concurrency control |
 | Money arithmetic | ForecastService uses `BigDecimal` for January multiplier and HALF_UP rounding | Keep decimal-safe arithmetic end-to-end and explicit rounding |
-| Schema lifecycle | Flyway V1–V6 migrations; Hibernate `ddl-auto=validate` | Continue evolving schema only through reviewed migrations |
+| Schema lifecycle | Flyway V1–V7 migrations; Hibernate `ddl-auto=validate` | Continue evolving schema only through reviewed migrations |
 | Forecast source | Income and expense schedules are supplied as a JSON preview snapshot; loan schedules are loaded from PostgreSQL | Keep preview input explicit and non-persisting |
 | Automated tests | Backend Java is the only forecast calculation implementation. Meaningful backend unit/integration tests are required to verify its behavior. | Add and maintain backend tests for forecast, validation, persistence and API contracts |
 
@@ -104,3 +104,11 @@ Review finding source of truth: [`specs/001-review-findings-remediation/spec.md`
 - Keep forecast policy independent from HTTP and database infrastructure as it is refactored.
 - Treat API DTOs as contracts; update frontend and backend together when changing them.
 - Do not treat frontend validation as a security or correctness boundary; backend must validate independently.
+
+## Authentication and household data isolation
+
+- Spring Security uses server-side sessions, HttpOnly cookies and CSRF tokens for unsafe requests.
+- `App.vue` restores the current session and routes unauthenticated users to `AuthView`; authenticated users use `PlannerView`.
+- The first registrant becomes household OWNER. Subsequent registrations require a valid, single-use invitation; MEMBER accounts share the household financial plan.
+- All financial aggregate reads and writes are scoped by the authenticated `HouseholdContext`; client-supplied household IDs are not authorization inputs.
+- Household invitations are owner-managed and persist only a hash of the one-time raw token.

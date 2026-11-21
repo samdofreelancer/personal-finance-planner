@@ -17,27 +17,36 @@ describe('API service', () => {
     vi.stubGlobal('fetch', fetch)
 
     await expect(getAssumptions()).resolves.toEqual(payload)
-    expect(fetch).toHaveBeenCalledWith('/api/assumptions')
+    expect(fetch).toHaveBeenCalledWith('/api/assumptions', { credentials: 'same-origin' })
   })
 
   it('saves assumptions with a JSON PUT request', async () => {
-    const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => assumptions })
+    const fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ token: 'csrf-token' }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => assumptions })
     vi.stubGlobal('fetch', fetch)
 
     await expect(saveAssumptions(assumptions)).resolves.toEqual(assumptions)
-    expect(fetch).toHaveBeenCalledWith('/api/assumptions', expect.objectContaining({
+    expect(fetch).toHaveBeenNthCalledWith(1, '/api/csrf', { credentials: 'same-origin' })
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/assumptions', expect.objectContaining({
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': 'csrf-token' },
       body: JSON.stringify(assumptions),
     }))
   })
 
   it('seeds default assumptions', async () => {
-    const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => assumptions })
+    const fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ token: 'csrf-token' }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => assumptions })
     vi.stubGlobal('fetch', fetch)
 
     await expect(seedDefaults()).resolves.toEqual(assumptions)
-    expect(fetch).toHaveBeenCalledWith('/api/assumptions/seed', { method: 'POST' })
+    expect(fetch).toHaveBeenNthCalledWith(1, '/api/csrf', { credentials: 'same-origin' })
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/assumptions/seed', expect.objectContaining({
+      method: 'POST', credentials: 'same-origin', headers: { 'X-XSRF-TOKEN': 'csrf-token' },
+    }))
   })
 
   it('loads saved loans and their repayment schedules', async () => {
@@ -46,20 +55,23 @@ describe('API service', () => {
     vi.stubGlobal('fetch', fetch)
 
     await expect(getLoans()).resolves.toEqual(payload)
-    expect(fetch).toHaveBeenCalledWith('/api/loans')
+    expect(fetch).toHaveBeenCalledWith('/api/loans', { credentials: 'same-origin' })
   })
 
   it('saves the complete loan schedule with an atomic JSON PUT', async () => {
     const loans = [{ id: 1, name: 'Vay mua nhà', openingPrincipal: 100000000, repayments: [
       { id: 2, dueDate: '2026-11-20', principalAmount: 5000000, interestAmount: 100000 },
     ] }]
-    const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => loans })
+    const fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ token: 'csrf-token' }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => loans })
     vi.stubGlobal('fetch', fetch)
 
     await expect(saveLoans(loans)).resolves.toEqual(loans)
-    expect(fetch).toHaveBeenCalledWith('/api/loans', expect.objectContaining({
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/loans', expect.objectContaining({
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': 'csrf-token' },
       body: JSON.stringify(loans),
     }))
   })
@@ -79,26 +91,33 @@ describe('API service', () => {
     vi.stubGlobal('fetch', invalidJson)
     await expect(getAssumptions()).rejects.toThrow('Không tải được giả định')
 
-    const blankMessage = vi.fn().mockResolvedValue({ ok: false, json: async () => ({ message: '  ' }) })
+    const blankMessage = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ token: 'csrf-token' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ message: '  ' }) })
     vi.stubGlobal('fetch', blankMessage)
     await expect(saveAssumptions(assumptions)).rejects.toThrow('Không lưu được giả định')
   })
 
   it('sends forecast assumptions and dynamic expense schedules as a JSON POST', async () => {
-    const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ months: [] }) })
+    const fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ token: 'csrf-token' }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ months: [] }) })
     vi.stubGlobal('fetch', fetch)
 
     await getForecast(assumptions)
-    expect(fetch).toHaveBeenCalledWith('/api/forecast', expect.objectContaining({
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/forecast', expect.objectContaining({
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': 'csrf-token' },
       body: JSON.stringify(assumptions),
     }))
   })
 
   it('exports CSV through a temporary download link and revokes its URL', async () => {
     const blob = new Blob(['csv'])
-    const fetch = vi.fn().mockResolvedValue({ ok: true, blob: async () => blob })
+    const fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ token: 'csrf-token' }) })
+      .mockResolvedValueOnce({ ok: true, blob: async () => blob })
     const createObjectURL = vi.fn().mockReturnValue('blob:forecast')
     const revokeObjectURL = vi.fn()
     const click = vi.fn()
@@ -108,8 +127,10 @@ describe('API service', () => {
 
     await exportCsv(assumptions)
 
-    expect(fetch).toHaveBeenCalledWith('/api/export/csv', expect.objectContaining({
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/export/csv', expect.objectContaining({
       method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': 'csrf-token' },
       body: JSON.stringify(assumptions),
     }))
 
@@ -120,10 +141,9 @@ describe('API service', () => {
   })
 
   it('reports CSV download failures without creating a blob', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: false,
-      json: async () => ({ message: 'CSV export failed' }),
-    }))
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ token: 'csrf-token' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ message: 'CSV export failed' }) }))
     await expect(exportCsv(assumptions)).rejects.toThrow('CSV export failed')
   })
 })

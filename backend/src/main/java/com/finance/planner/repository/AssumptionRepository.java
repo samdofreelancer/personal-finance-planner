@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface AssumptionRepository extends JpaRepository<Assumption, Long> {
-    Assumption findTopByOrderByIdAsc();
+    Assumption findTopByHouseholdIdOrderByIdAsc(Long householdId);
 }

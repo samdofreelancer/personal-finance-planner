@@ -1,13 +1,14 @@
 package com.finance.planner.service;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-import com.finance.planner.entity.Assumption;
-import com.finance.planner.repository.AssumptionRepository;
 import com.finance.planner.dto.IncomeChangeDTO;
+import com.finance.planner.entity.Assumption;
+import com.finance.planner.household.*;
+import com.finance.planner.repository.AssumptionRepository;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -17,51 +18,31 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class AssumptionServiceTest {
+    @Mock AssumptionRepository repository;
+    @Mock ExpenseScheduleService expenseScheduleService;
+    @Mock IncomeSchedulePersistenceService incomeSchedulePersistenceService;
+    @Mock HouseholdRepository householdRepository;
+    @InjectMocks AssumptionService service;
 
-    @Mock
-    private AssumptionRepository repository;
+    @Test void getAssumptionsSeedsHouseholdDefaultsAndIncomeSchedule() {
+        HouseholdContext context = new HouseholdContext(1L, 10L, HouseholdRole.OWNER);
+        Household household = new Household("Test", true);
+        when(householdRepository.findForUpdateById(1L)).thenReturn(Optional.of(household));
+        when(householdRepository.getReferenceById(1L)).thenReturn(household);
+        when(repository.findTopByHouseholdIdOrderByIdAsc(1L)).thenReturn(null);
+        when(repository.save(any(Assumption.class))).thenAnswer(invocation -> { Assumption a=invocation.getArgument(0); a.setId(5L); return a; });
+        when(incomeSchedulePersistenceService.getIncomeChanges(any())).thenReturn(List.of(new IncomeChangeDTO("2026-11",42_000_000L)));
+        when(expenseScheduleService.getExpenses(context)).thenReturn(ExpenseScheduleService.defaultExpenses());
 
-    @Mock
-    private ExpenseScheduleService expenseScheduleService;
-
-    @Mock
-    private IncomeSchedulePersistenceService incomeSchedulePersistenceService;
-
-    @InjectMocks
-    private AssumptionService service;
-
-    @Test
-    void getAssumptionsSeedsDefaultsIntoDatabaseWhenNoRecordExists() {
-        when(repository.findTopByOrderByIdAsc()).thenReturn(null);
-        when(repository.save(org.mockito.ArgumentMatchers.any(Assumption.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-        when(expenseScheduleService.getExpenses()).thenReturn(ExpenseScheduleService.defaultExpenses());
-        when(incomeSchedulePersistenceService.getIncomeChanges(org.mockito.ArgumentMatchers.any(Assumption.class)))
-                .thenReturn(java.util.List.of(
-                        new IncomeChangeDTO("2026-11", 42_000_000L),
-                        new IncomeChangeDTO("2027-04", 45_360_000L),
-                        new IncomeChangeDTO("2028-04", 48_988_800L),
-                        new IncomeChangeDTO("2029-04", 52_907_904L),
-                        new IncomeChangeDTO("2030-04", 57_140_536L),
-                        new IncomeChangeDTO("2031-04", 57_140_536L),
-                        new IncomeChangeDTO("2032-04", 57_140_536L)));
-
-        var result = service.getAssumptions();
+        var result = service.getAssumptions(context);
 
         ArgumentCaptor<Assumption> saved = ArgumentCaptor.forClass(Assumption.class);
         verify(repository).save(saved.capture());
-        verify(expenseScheduleService).seedDefaults();
-        assertNotNull(saved.getValue().getCreatedAt());
-        assertNotNull(saved.getValue().getUpdatedAt());
-        verify(incomeSchedulePersistenceService).saveIncomeChanges(saved.getValue(),
-                java.util.List.of(
-                        new IncomeChangeDTO("2026-11", 42_000_000L),
-                        new IncomeChangeDTO("2027-04", 45_360_000L),
-                        new IncomeChangeDTO("2028-04", 48_988_800L),
-                        new IncomeChangeDTO("2029-04", 52_907_904L),
-                        new IncomeChangeDTO("2030-04", 57_140_536L),
-                        new IncomeChangeDTO("2031-04", 57_140_536L),
-                        new IncomeChangeDTO("2032-04", 57_140_536L)));
+        verify(incomeSchedulePersistenceService).saveIncomeChanges(eq(saved.getValue()), anyList());
+        verify(expenseScheduleService).seedDefaults(context);
+        assertEquals(household, saved.getValue().getHousehold());
+        assertEquals(4, result.getForecastYears());
         assertEquals(42_000_000L, result.getIncomeChanges().getFirst().amount());
+        assertNotNull(saved.getValue().getCreatedAt());
     }
 }

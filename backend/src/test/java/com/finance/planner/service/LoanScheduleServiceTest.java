@@ -13,10 +13,15 @@ import com.finance.planner.dto.LoanRepaymentDTO;
 import com.finance.planner.entity.Loan;
 import com.finance.planner.entity.LoanRepayment;
 import com.finance.planner.repository.LoanRepository;
+import com.finance.planner.household.Household;
+import com.finance.planner.household.HouseholdContext;
+import com.finance.planner.household.HouseholdRepository;
+import com.finance.planner.household.HouseholdRole;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -27,16 +32,24 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class LoanScheduleServiceTest {
 
     @Mock private LoanRepository repository;
+    @Mock private HouseholdRepository householdRepository;
     @InjectMocks private LoanScheduleService service;
+    private static final HouseholdContext CONTEXT = new HouseholdContext(1L, 10L, HouseholdRole.OWNER);
+
+    @BeforeEach
+    void setUp() {
+        org.mockito.Mockito.lenient().when(householdRepository.getReferenceById(1L))
+                .thenReturn(new Household("Test", true));
+    }
 
     @Test
     void getLoansMapsLoansAndSortsRepaymentsByDueDate() {
         Loan loan = loan(1L, "Khoản vay", 1_000L);
         loan.addRepayment(repayment(2L, "2027-01-01", 200L, 20L));
         loan.addRepayment(repayment(1L, "2026-11-01", 100L, 10L));
-        when(repository.findAllByOrderByIdAsc()).thenReturn(List.of(loan));
+        when(repository.findAllByHouseholdIdOrderByIdAsc(1L)).thenReturn(List.of(loan));
 
-        List<LoanDTO> result = service.getLoans();
+        List<LoanDTO> result = service.getLoans(CONTEXT);
 
         assertEquals(1, result.size());
         assertEquals(List.of(1L, 2L), result.get(0).repayments().stream().map(LoanRepaymentDTO::id).toList());
@@ -44,12 +57,12 @@ class LoanScheduleServiceTest {
 
     @Test
     void replaceLoansCreatesLoansAndRepaymentsAndDeletesOmittedLoans() {
-        when(repository.findAllByOrderByIdAsc()).thenReturn(List.of(loan(9L, "Old", 500L)));
+        when(repository.findAllByHouseholdIdOrderByIdAsc(1L)).thenReturn(List.of(loan(9L, "Old", 500L)));
         when(repository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
         LoanDTO requested = new LoanDTO(null, "  New loan  ", 2_000L,
                 List.of(new LoanRepaymentDTO(null, LocalDate.of(2026, 11, 30), 300L, 30L)));
 
-        List<LoanDTO> result = service.replaceLoans(List.of(requested));
+        List<LoanDTO> result = service.replaceLoans(CONTEXT, List.of(requested));
 
         ArgumentCaptor<List<Loan>> captor = ArgumentCaptor.forClass(List.class);
         verify(repository).deleteAll(org.mockito.ArgumentMatchers.any(Iterable.class));
@@ -71,10 +84,10 @@ class LoanScheduleServiceTest {
         LoanRepayment remove = repayment(11L, "2026-12-01", 200L, 20L);
         existing.addRepayment(keep);
         existing.addRepayment(remove);
-        when(repository.findAllByOrderByIdAsc()).thenReturn(List.of(existing));
+        when(repository.findAllByHouseholdIdOrderByIdAsc(1L)).thenReturn(List.of(existing));
         when(repository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        service.replaceLoans(List.of(new LoanDTO(1L, "Updated", 900L,
+        service.replaceLoans(CONTEXT, List.of(new LoanDTO(1L, "Updated", 900L,
                 List.of(new LoanRepaymentDTO(10L, LocalDate.of(2027, 1, 1), 250L, 25L)))));
 
         assertEquals("Updated", existing.getName());
@@ -86,52 +99,52 @@ class LoanScheduleServiceTest {
 
     @Test
     void replaceLoansRejectsNullListInvalidLoanDuplicateAndUnknownIds() {
-        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(null));
-        when(repository.findAllByOrderByIdAsc()).thenReturn(List.of(loan(1L, "Existing", 100L)));
-        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(java.util.Arrays.asList((LoanDTO) null)));
-        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(List.of(new LoanDTO(null, " ", 100L, List.of()))));
-        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(List.of(new LoanDTO(null, "x".repeat(121), 100L, List.of()))));
-        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(List.of(new LoanDTO(null, "Valid", null, List.of()))));
-        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(List.of(new LoanDTO(null, "Valid", -1L, List.of()))));
-        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(List.of(
+        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(CONTEXT, null));
+        when(repository.findAllByHouseholdIdOrderByIdAsc(1L)).thenReturn(List.of(loan(1L, "Existing", 100L)));
+        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(CONTEXT, java.util.Arrays.asList((LoanDTO) null)));
+        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(CONTEXT, List.of(new LoanDTO(null, " ", 100L, List.of()))));
+        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(CONTEXT, List.of(new LoanDTO(null, "x".repeat(121), 100L, List.of()))));
+        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(CONTEXT, List.of(new LoanDTO(null, "Valid", null, List.of()))));
+        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(CONTEXT, List.of(new LoanDTO(null, "Valid", -1L, List.of()))));
+        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(CONTEXT, List.of(
                 new LoanDTO(1L, "A", 100L, List.of()), new LoanDTO(1L, "B", 100L, List.of()))));
-        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(List.of(new LoanDTO(99L, "Missing", 100L, List.of()))));
+        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(CONTEXT, List.of(new LoanDTO(99L, "Missing", 100L, List.of()))));
     }
 
     @Test
     void replaceLoansRejectsInvalidRepaymentListsEntriesAndIds() {
-        when(repository.findAllByOrderByIdAsc()).thenReturn(List.of(loan(1L, "Existing", 100L)));
-        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(List.of(new LoanDTO(null, "A", 100L, null))));
-        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(List.of(new LoanDTO(null, "A", 100L,
+        when(repository.findAllByHouseholdIdOrderByIdAsc(1L)).thenReturn(List.of(loan(1L, "Existing", 100L)));
+        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(CONTEXT, List.of(new LoanDTO(null, "A", 100L, null))));
+        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(CONTEXT, List.of(new LoanDTO(null, "A", 100L,
                 java.util.Arrays.asList((LoanRepaymentDTO) null)))));
-        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(List.of(new LoanDTO(null, "A", 100L,
+        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(CONTEXT, List.of(new LoanDTO(null, "A", 100L,
                 List.of(new LoanRepaymentDTO(null, null, 1L, 1L))))));
-        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(List.of(new LoanDTO(null, "A", 100L,
+        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(CONTEXT, List.of(new LoanDTO(null, "A", 100L,
                 List.of(new LoanRepaymentDTO(null, LocalDate.now(), null, 1L))))));
-        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(List.of(new LoanDTO(null, "A", 100L,
+        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(CONTEXT, List.of(new LoanDTO(null, "A", 100L,
                 List.of(new LoanRepaymentDTO(null, LocalDate.now(), -1L, 1L))))));
-        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(List.of(new LoanDTO(null, "A", 100L,
+        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(CONTEXT, List.of(new LoanDTO(null, "A", 100L,
                 List.of(new LoanRepaymentDTO(null, LocalDate.now(), 1L, null))))));
-        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(List.of(new LoanDTO(null, "A", 100L,
+        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(CONTEXT, List.of(new LoanDTO(null, "A", 100L,
                 List.of(new LoanRepaymentDTO(null, LocalDate.now(), 1L, -1L))))));
 
         Loan existing = loan(1L, "Existing", 100L);
         existing.addRepayment(repayment(10L, "2026-11-01", 1L, 1L));
-        when(repository.findAllByOrderByIdAsc()).thenReturn(List.of(existing));
-        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(List.of(new LoanDTO(1L, "A", 100L,
+        when(repository.findAllByHouseholdIdOrderByIdAsc(1L)).thenReturn(List.of(existing));
+        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(CONTEXT, List.of(new LoanDTO(1L, "A", 100L,
                 List.of(new LoanRepaymentDTO(10L, LocalDate.now(), 1L, 1L),
                         new LoanRepaymentDTO(10L, LocalDate.now(), 1L, 1L))))));
-        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(List.of(new LoanDTO(1L, "A", 100L,
+        assertThrows(IllegalArgumentException.class, () -> service.replaceLoans(CONTEXT, List.of(new LoanDTO(1L, "A", 100L,
                 List.of(new LoanRepaymentDTO(99L, LocalDate.now(), 1L, 1L))))));
     }
 
     @Test
     void resetToSampleReplacesExistingLoansAndClearsSampleIds() {
-        when(repository.findAll()).thenReturn(List.of(loan(1L, "Existing", 100L)));
-        when(repository.findAllByOrderByIdAsc()).thenReturn(List.of());
+        when(repository.findAllByHouseholdIdOrderByIdAsc(1L))
+                .thenReturn(List.of(loan(1L, "Existing", 100L)), List.of());
         when(repository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        service.resetToSample(List.of(new LoanDTO(77L, "Sample", 500L,
+        service.resetToSample(CONTEXT, List.of(new LoanDTO(77L, "Sample", 500L,
                 List.of(new LoanRepaymentDTO(88L, LocalDate.of(2026, 11, 1), 100L, 10L)))));
 
         verify(repository, times(2)).deleteAll(org.mockito.ArgumentMatchers.any(Iterable.class));
@@ -143,11 +156,10 @@ class LoanScheduleServiceTest {
 
     @Test
     void resetToDefaultSampleBuildsThreeMonthlyRepayments() {
-        when(repository.findAll()).thenReturn(new ArrayList<>());
-        when(repository.findAllByOrderByIdAsc()).thenReturn(List.of());
+        when(repository.findAllByHouseholdIdOrderByIdAsc(1L)).thenReturn(List.of(), List.of());
         when(repository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        service.resetToDefaultSample();
+        service.resetToDefaultSample(CONTEXT);
 
         ArgumentCaptor<List<Loan>> captor = ArgumentCaptor.forClass(List.class);
         verify(repository).saveAll(captor.capture());

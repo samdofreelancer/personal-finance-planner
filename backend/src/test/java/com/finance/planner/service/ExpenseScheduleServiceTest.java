@@ -12,9 +12,14 @@ import com.finance.planner.dto.ExpenseDTO;
 import com.finance.planner.entity.ExpenseAmountChange;
 import com.finance.planner.entity.ExpenseCategory;
 import com.finance.planner.repository.ExpenseCategoryRepository;
+import com.finance.planner.household.Household;
+import com.finance.planner.household.HouseholdContext;
+import com.finance.planner.household.HouseholdRepository;
+import com.finance.planner.household.HouseholdRole;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
@@ -26,14 +31,22 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class ExpenseScheduleServiceTest {
 
     @Mock private ExpenseCategoryRepository repository;
+    @Mock private HouseholdRepository householdRepository;
     @InjectMocks private ExpenseScheduleService service;
+    private static final HouseholdContext CONTEXT = new HouseholdContext(1L, 10L, HouseholdRole.OWNER);
+
+    @BeforeEach
+    void setUp() {
+        org.mockito.Mockito.lenient().when(householdRepository.getReferenceById(1L))
+                .thenReturn(new Household("Test", true));
+    }
 
     @Test
     void getExpensesMapsPersistedCategoriesAndEffectiveMonths() {
         ExpenseCategory category = category(" Học phí ", "2026-11", 1_500L);
-        when(repository.findAllByOrderByIdAsc()).thenReturn(List.of(category));
+        when(repository.findAllByHouseholdIdOrderByIdAsc(1L)).thenReturn(List.of(category));
 
-        List<ExpenseDTO> result = service.getExpenses();
+        List<ExpenseDTO> result = service.getExpenses(CONTEXT);
 
         assertEquals(1, result.size());
         assertEquals(" Học phí ", result.get(0).getName());
@@ -45,13 +58,13 @@ class ExpenseScheduleServiceTest {
     void saveExpensesReplacesExistingCategoriesAndNormalizesNames() {
         ExpenseDTO requested = new ExpenseDTO("  Tiền nhà  ", List.of(
                 new ExpenseChangeDTO("2026-11", 5_000L), new ExpenseChangeDTO("2027-02", 6_000L)));
-        when(repository.findAll()).thenReturn(List.of(new ExpenseCategory()));
+        when(repository.findAllByHouseholdIdOrderByIdAsc(1L)).thenReturn(List.of(new ExpenseCategory()));
         when(repository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        List<ExpenseDTO> result = service.saveExpenses(List.of(requested));
+        List<ExpenseDTO> result = service.saveExpenses(CONTEXT, List.of(requested));
 
         InOrder order = inOrder(repository);
-        order.verify(repository).findAll();
+        order.verify(repository).findAllByHouseholdIdOrderByIdAsc(1L);
         order.verify(repository).deleteAll(org.mockito.ArgumentMatchers.anyList());
         order.verify(repository).flush();
         ArgumentCaptor<List<ExpenseCategory>> captor = ArgumentCaptor.forClass(List.class);
@@ -70,10 +83,10 @@ class ExpenseScheduleServiceTest {
 
     @Test
     void seedDefaultsPersistsTheDefaultExpenseSchedules() {
-        when(repository.findAll()).thenReturn(List.of());
+        when(repository.findAllByHouseholdIdOrderByIdAsc(1L)).thenReturn(List.of());
         when(repository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        List<ExpenseDTO> result = service.seedDefaults();
+        List<ExpenseDTO> result = service.seedDefaults(CONTEXT);
 
         assertEquals(3, result.size());
         assertEquals("Sinh hoạt phí", result.get(0).getName());

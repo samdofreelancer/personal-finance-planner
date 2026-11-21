@@ -8,6 +8,9 @@ services:
 
   backend:
     container_name: finance-planner-e2e-backend
+    environment:
+      # The isolated browser suite uses plain HTTP on loopback; production keeps Secure cookies enabled.
+      SESSION_COOKIE_SECURE: "false"
     ports: !override
       - "127.0.0.1:18080:8080"
 
