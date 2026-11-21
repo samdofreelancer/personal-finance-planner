@@ -29,7 +29,7 @@ docker compose up --build
 
 The first build on a machine downloads the whole Maven dependency tree and can take several minutes; later builds reuse the cache mount. An interrupted build keeps the artifacts it already downloaded.
 
-Current compose publishes frontend on `http://localhost`, backend on `http://localhost:8080`, and PostgreSQL on `localhost:5432`. These are the **current** bindings, not the desired secure default. Until F-01 is implemented, do not expose this stack to an untrusted network; prefer a trusted local machine and firewall.
+Production Compose publishes only frontend/Nginx on `127.0.0.1:80`; remote access is provided by Tailscale Serve over the private tailnet. The backend (8080) and PostgreSQL (5432) are reachable only inside the Docker network. See [Remote access with Tailscale](11-remote-access-tailscale.md) for setup and security details. The development overlay intentionally publishes Vite (5173) and backend (8080) for local developer workflows; do not use that overlay as the remote-access stack.
 
 Stop containers but keep persisted data:
 
@@ -54,7 +54,7 @@ Docker Desktop is optional. When `docker` points at a Docker Engine running insi
   wsl-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
   ```
 
-- Published ports still reach Windows as `http://localhost`, `http://localhost:8080` and `localhost:5432`.
+- In the production Compose stack, the frontend is bound to Windows loopback at `http://127.0.0.1`; backend and PostgreSQL are not published. Tailscale Serve proxies private tailnet traffic to that loopback endpoint. The development overlay additionally publishes Vite (5173) and backend (8080) for local development only.
 - After `wsl --shutdown` the engine is offline until the distribution boots again; start it explicitly with `wsl -d Ubuntu -u root -e systemctl start docker ssh`.
 
 ## Run services independently
