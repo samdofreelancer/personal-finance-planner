@@ -31,7 +31,7 @@
       </article>
     </div>
     <div class="savings-trend" v-if="annual.length">
-      <div class="trend-heading"><div><h3>Quỹ tiết kiệm dự kiến · dư nợ còn lại</h3><span>Số dư dự kiến tại cuối mỗi năm · VND</span></div></div>
+      <div class="trend-heading"><div><h3>Quỹ tiết kiệm dự kiến · dư nợ còn lại</h3><span>Số dư dự kiến tại cuối mỗi năm · triệu VND</span></div></div>
       <div class="journey-legend"><span><i class="legend-savings"></i> Tiết kiệm lũy kế</span><span><i class="legend-debt"></i> Dư nợ còn lại</span></div>
       <svg viewBox="0 0 720 190" role="img" aria-label="Biểu đồ diễn biến tiết kiệm và dư nợ dự kiến theo năm">
         <line x1="38" y1="145" x2="690" y2="145" stroke="#e6e9df" />
@@ -51,7 +51,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { formatCurrency } from '../utils/currency.js'
+import { formatCurrency, formatCompactCurrency } from '../utils/currency.js'
 
 const props = defineProps(['assumptions', 'forecast', 'loans'])
 const money = formatCurrency
@@ -105,6 +105,6 @@ const debtTrend = computed(() => {
 const trendPoints = computed(() => trend.value.map((point) => `${point.x},${point.y}`).join(' '))
 const debtTrendPoints = computed(() => debtTrend.value.filter(Boolean).map((point) => `${point.x},${point.y}`).join(' '))
 function compact(value) {
-  return `${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(value / 1_000_000)} tr`
+  return formatCompactCurrency(value)
 }
 </script>

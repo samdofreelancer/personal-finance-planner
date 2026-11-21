@@ -15,5 +15,8 @@ test('creates and persists a loan with a dated repayment', async ({ loansPage })
   await loansPage.reload()
 
   await expect(loansPage.savedLoanNameInput).toHaveValue('E2E - Vay thử nghiệm')
+  await expect(loansPage.savedLoanPrincipalInput).toHaveValue('10.000.000')
   await expect(loansPage.savedRepaymentDateInput).toHaveValue('2026-12-15')
+  await expect(loansPage.savedRepaymentPrincipalInput).toHaveValue('500.000')
+  await expect(loansPage.savedRepaymentInterestInput).toHaveValue('50.000')
 })

@@ -2,7 +2,7 @@
   <section class="panel chart-panel">
     <div class="panel-heading chart-heading">
       <div><p class="eyebrow">TỔNG HỢP NĂM</p><h2>Dòng tiền dư mỗi năm</h2></div>
-      <span class="chart-unit">Đơn vị: triệu đồng</span>
+      <span class="chart-unit">Đơn vị: triệu VND</span>
     </div>
     <div v-if="chart.bars.length" id="annual-chart" class="chart-container">
       <svg :viewBox="`0 0 ${chart.width} ${chart.height}`" role="img" aria-labelledby="chart-title chart-desc">
@@ -31,7 +31,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { formatCurrency } from '../utils/currency.js'
+import { formatCurrency, formatCompactCurrency } from '../utils/currency.js'
 
 const props = defineProps(['forecast'])
 
@@ -93,7 +93,6 @@ const chart = computed(() => {
 const money = formatCurrency
 
 function compactMoney(value) {
-  const millions = value / 1_000_000
-  return `${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(millions)} tr`
+  return formatCompactCurrency(value)
 }
 </script>

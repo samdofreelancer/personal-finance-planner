@@ -134,20 +134,18 @@ describe('LoanScheduleForm', () => {
     const wrapper = mount(LoanScheduleForm, { props: { loans: [], status: '', error: '' } })
     await wrapper.get('button').trigger('click')
     await wrapper.get('input[id^="loan-name-"]').setValue('Vay mua nhà')
-    await wrapper.get('input[id^="loan-principal-"]').setValue('100000000')
+    await wrapper.get('input[id^="loan-principal-"]').setValue('100.000.000')
     await wrapper.get('button.add-repayment').trigger('click')
 
     const dates = wrapper.findAll('input[type="date"]')
     await dates[0].setValue('2026-11-10')
-    const principal = wrapper.findAll('input[type="number"]')
-    await principal[1].setValue('5000000')
-    await principal[2].setValue('100000')
+    await wrapper.get('input[id^="repayment-principal-"]').setValue('5.000.000')
+    await wrapper.get('input[id^="repayment-interest-"]').setValue('100.000')
     await wrapper.get('button.add-repayment').trigger('click')
     const nextDate = wrapper.findAll('input[type="date"]')[1]
     await nextDate.setValue('2026-11-25')
-    const amounts = wrapper.findAll('input[type="number"]')
-    await amounts[3].setValue('3000000')
-    await amounts[4].setValue('80000')
+    await wrapper.findAll('input[id^="repayment-principal-"]')[1].setValue('3.000.000')
+    await wrapper.findAll('input[id^="repayment-interest-"]')[1].setValue('80.000')
 
     await wrapper.get('form').trigger('submit')
 
@@ -166,9 +164,9 @@ describe('LoanScheduleForm', () => {
       id: 1, name: 'Khoản vay', openingPrincipal: 1000,
       repayments: [{ id: 2, dueDate: '2026-11-10', principalAmount: 100, interestAmount: 10 }],
     }], status: '', error: '' } })
-    await wrapper.get('input[type="number"]').setValue('-1')
+    await wrapper.get('input[id^="loan-principal-"]').setValue('')
     expect(wrapper.text()).toContain('Dư nợ gốc phải là số VND nguyên không âm.')
-    await wrapper.get('input[type="number"]').setValue('1000')
+    await wrapper.get('input[id^="loan-principal-"]').setValue('1.000')
     await wrapper.get('button[aria-label="Xóa kỳ trả 1"]').trigger('click')
     expect(wrapper.text()).toContain('Chưa có kỳ trả')
     await wrapper.get('.danger-text').trigger('click')
@@ -183,6 +181,18 @@ describe('LoanScheduleForm', () => {
     await wrapper.get('input[id^="loan-principal-"]').setValue('900')
     expect(wrapper.text()).toContain('Có thay đổi chưa lưu')
   })
+
+  it('formats all loan amount inputs with Vietnamese thousands separators', () => {
+    const wrapper = mount(LoanScheduleForm, { props: { loans: [{
+      id: 1, name: 'Vay mua nhà', openingPrincipal: 100000000,
+      repayments: [{ id: 2, dueDate: '2026-11-10', principalAmount: 5000000, interestAmount: 125000 }],
+    }], status: '', error: '' } })
+
+    expect(wrapper.get('input[id^="loan-principal-"]').element.value).toBe('100.000.000')
+    expect(wrapper.get('input[id^="repayment-principal-"]').element.value).toBe('5.000.000')
+    expect(wrapper.get('input[id^="repayment-interest-"]').element.value).toBe('125.000')
+    expect(wrapper.text()).toContain('5.125.000 ₫')
+  })
 })
 
 describe('forecast presentation components', () => {
@@ -195,6 +205,7 @@ describe('forecast presentation components', () => {
     expect(wrapper.text()).toContain('DƯ NỢ BAN ĐẦU')
     expect(wrapper.text()).toContain('Dự kiến tất toán thg 1 2027')
     expect(wrapper.text()).toContain('Quỹ tiết kiệm dự kiến')
+    expect(wrapper.text()).toContain('tr ₫')
     expect(wrapper.findAll('circle').length).toBeGreaterThanOrEqual(3)
     expect(wrapper.text()).toContain('-10.700.000 ₫')
   })
@@ -231,6 +242,7 @@ describe('forecast presentation components', () => {
     expect(wrapper.findAll('.chart-bar')).toHaveLength(3)
     expect(wrapper.text()).toContain('2026')
     expect(wrapper.text()).toContain('Dòng tiền dư mỗi năm')
+    expect(wrapper.text()).toContain('tr ₫')
     const empty = mount(AnnualChart, { props: { forecast: null } })
     expect(empty.findAll('.chart-bar')).toHaveLength(0)
     expect(empty.text()).toContain('Chưa có dữ liệu biểu đồ')

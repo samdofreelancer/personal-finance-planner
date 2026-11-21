@@ -7,7 +7,10 @@ export class LoansPage extends BasePage {
     this.saveStatus = this.panel.getByRole('status')
     this.savedLoan = this.panel.locator('.loan-card').last()
     this.savedLoanNameInput = this.savedLoan.getByLabel('Tên khoản vay')
+    this.savedLoanPrincipalInput = this.savedLoan.getByLabel('Dư nợ gốc ban đầu (VND)')
     this.savedRepaymentDateInput = this.savedLoan.locator('input[type="date"]')
+    this.savedRepaymentPrincipalInput = this.savedLoan.getByLabel('Tiền gốc (VND)')
+    this.savedRepaymentInterestInput = this.savedLoan.getByLabel('Tiền lãi (VND)')
   }
 
   async open() {

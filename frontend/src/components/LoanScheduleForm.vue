@@ -19,7 +19,7 @@
             </label>
             <label class="field loan-principal-field" :for="`loan-principal-${loan.key}`">
               <span>Dư nợ gốc ban đầu (VND)</span>
-              <input :id="`loan-principal-${loan.key}`" v-model.number="loan.openingPrincipal" type="number" min="0" step="1" required>
+              <currency-input :id="`loan-principal-${loan.key}`" v-model="loan.openingPrincipal" :name="`loan-principal-${loan.key}`" />
             </label>
             <button class="text-button danger-text" type="button" @click="removeLoan(loanIndex)">Xóa khoản vay</button>
           </div>
@@ -36,11 +36,11 @@
               </label>
               <label class="field" :for="`repayment-principal-${payment.key}`">
                 <span>Tiền gốc (VND)</span>
-                <input :id="`repayment-principal-${payment.key}`" v-model.number="payment.principalAmount" type="number" min="0" step="1" required>
+                <currency-input :id="`repayment-principal-${payment.key}`" v-model="payment.principalAmount" :name="`repayment-principal-${payment.key}`" />
               </label>
               <label class="field" :for="`repayment-interest-${payment.key}`">
                 <span>Tiền lãi (VND)</span>
-                <input :id="`repayment-interest-${payment.key}`" v-model.number="payment.interestAmount" type="number" min="0" step="1" required>
+                <currency-input :id="`repayment-interest-${payment.key}`" v-model="payment.interestAmount" :name="`repayment-interest-${payment.key}`" />
               </label>
               <div class="repayment-total"><span>Tổng kỳ</span><strong>{{ money(amount(payment.principalAmount) + amount(payment.interestAmount)) }}</strong></div>
               <button class="icon-button danger-text" type="button" :aria-label="`Xóa kỳ trả ${paymentIndex + 1}`" @click="removeRepayment(loan, paymentIndex)">×</button>
@@ -69,6 +69,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { formatCurrency } from '../utils/currency.js'
+import CurrencyInput from './CurrencyInput.vue'
 
 const props = defineProps({ loans: { type: Array, default: () => [] }, status: { type: String, default: '' }, error: { type: String, default: '' } })
 const emit = defineEmits(['save'])
