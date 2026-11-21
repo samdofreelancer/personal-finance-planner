@@ -7,13 +7,17 @@ import { fileURLToPath } from 'node:url'
 const e2eDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const repositoryRoot = resolve(e2eDirectory, '..')
 const playwrightCli = join(e2eDirectory, 'node_modules', '@playwright', 'test', 'cli.js')
+const playwrightDockerImage = process.env.PLAYWRIGHT_DOCKER_IMAGE
+const dockerE2eDirectory = process.platform === 'win32'
+  ? e2eDirectory.replace(/^([A-Za-z]):[\\/]/, (_, drive) => `/mnt/${drive.toLowerCase()}/`).replaceAll('\\', '/')
+  : e2eDirectory
 const projectName = 'personal-finance-planner-e2e'
 const frontendUrl = 'http://127.0.0.1:18088'
 const apiUrl = `${frontendUrl}/api/assumptions`
 // Stable across runs because the isolated E2E-only PostgreSQL volume persists.
 const e2eDatabasePassword = 'planner-e2e-local-only'
 
-if (!existsSync(playwrightCli)) {
+if (!playwrightDockerImage && !existsSync(playwrightCli)) {
   console.error('E2E dependencies are missing. Run `npm ci` from the e2e/ directory first.')
   process.exit(1)
 }
@@ -103,11 +107,29 @@ try {
   await waitForStack()
 
   console.log('\nRunning Playwright tests...')
-  exitCode = await run(process.execPath, [
-    playwrightCli,
-    'test',
-    ...process.argv.slice(2),
-  ], e2eDirectory)
+  if (playwrightDockerImage) {
+    // GitHub Actions uses the official image so Chromium and its OS libraries
+    // are already present. Both commands run in the image; the bind mount
+    // keeps node_modules and reports available to the host runner. Keep them
+    // as separate Docker invocations so Windows docker.cmd wrappers do not
+    // reinterpret shell operators or quoting.
+    const dockerRunPrefix = [
+      'run', '--rm', '--network', 'host',
+      '--mount', `type=bind,source=${dockerE2eDirectory},target=/work`,
+      '--workdir', '/work',
+      playwrightDockerImage,
+    ]
+    exitCode = await run('docker', [...dockerRunPrefix, 'npm', 'ci', '--no-audit', '--no-fund'], e2eDirectory)
+    if (exitCode === 0) {
+      exitCode = await run('docker', [...dockerRunPrefix, 'npx', 'playwright', 'test', ...process.argv.slice(2)], e2eDirectory)
+    }
+  } else {
+    exitCode = await run(process.execPath, [
+      playwrightCli,
+      'test',
+      ...process.argv.slice(2),
+    ], e2eDirectory)
+  }
 } catch (error) {
   console.error(`\nE2E execution failed: ${error.message}`)
   exitCode = 1

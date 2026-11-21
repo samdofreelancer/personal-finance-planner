@@ -129,21 +129,21 @@ GitHub Actions workflow `.github/workflows/ci.yml` runs backend unit tests and b
 
 Playwright exercises the real Vue UI through Nginx, Spring Boot and PostgreSQL. It is intentionally a separate test layer from Vitest component tests and H2 backend integration tests.
 
-Playwright is maintained as an independent npm package under `e2e/`. Frontend Vitest tests and their dependencies remain under `frontend/`; browser specs live in `e2e/tests/` and use Page Objects from `e2e/pages/`. Fixtures in `e2e/fixtures/` provide the page objects and seed synthetic data before each test.
+Playwright is maintained as an independent npm package under `e2e/`. Frontend Vitest tests and their dependencies remain under `frontend/`; browser specs live in `e2e/tests/` and use Page Objects from `e2e/pages/`. Fixtures in `e2e/fixtures/` provide the page objects and seed synthetic data before each test. CI runs the browser process inside the official `mcr.microsoft.com/playwright:v1.65.1-noble` image, matching the exact Playwright version in `e2e/package-lock.json`; it does not install Chromium or browser OS dependencies on the GitHub runner.
 
 Run from `e2e/`:
 
 ```powershell
 npm ci
-npx playwright install chromium   # first run on a machine
+npx playwright install chromium   # local host-run mode only; CI uses the Docker image
 npm run e2e                       # starts isolated Compose stack, runs tests, then stops containers
 ```
 
 The runner is `e2e/scripts/run-e2e.mjs`; it uses `docker-compose.e2e.yml` and the fixed Compose project `personal-finance-planner-e2e`: frontend `http://127.0.0.1:18088`, backend `http://127.0.0.1:18080`, PostgreSQL `localhost:15432`. It supplies a stable, local-only E2E database password and does not load the repository `.env`; this is required because the isolated E2E database volume persists between runs. The project has distinct container names, network and named database volume; it never attaches to `finance_planner_db_data` or the normal application containers. Each test resets only this synthetic E2E database through `POST /api/assumptions/seed`.
 
-The runner stops E2E containers with `docker compose down` and deliberately preserves the E2E-only volume for reuse. It never runs `down -v`. Do not manually change the E2E project to point at the normal planner database. The suite is sequential because each scenario seeds a shared isolated database.
+The runner stops E2E containers with `docker compose down` and deliberately preserves the E2E-only volume for reuse. It never runs `down -v`. Do not manually change the E2E project to point at the normal planner database. The suite is sequential because each scenario seeds a shared isolated database. When `PLAYWRIGHT_DOCKER_IMAGE` is set, the runner executes `npm ci` and Playwright inside that image using host networking; the E2E directory is bind-mounted so HTML reports, traces, screenshots and videos remain available to GitHub Actions. Without that variable, local runs use the host-installed npm dependencies and browser as before.
 
-Playwright writes `e2e/playwright-report/` (HTML) and `e2e/test-results/` (traces, screenshots and video on failure). GitHub Actions installs from `e2e/package-lock.json`, runs the same `npm run e2e` command in a separate job and uploads diagnostics as `playwright-e2e-report` for 14 days.
+Playwright writes `e2e/playwright-report/` (HTML) and `e2e/test-results/` (traces, screenshots and video on failure). GitHub Actions runs the same `npm run e2e` orchestration in a separate job, while the official version-pinned Docker image supplies Node, Chromium and browser OS dependencies; it uploads diagnostics as `playwright-e2e-report` for 14 days.
 
 The browser specs are split by business journey: dashboard rendering and the 50-month/5-year forecast, user-defined expense schedules and effective-month persistence, loan/repayment persistence, and CSV download. Specs contain scenario intent and assertions; Page Objects encapsulate UI locators and interactions. This does not replace business-rule tests or claim cross-browser/visual-regression coverage.
 

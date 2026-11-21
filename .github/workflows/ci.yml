@@ -113,6 +113,8 @@ jobs:
   e2e:
     name: Browser E2E (Playwright + isolated PostgreSQL)
     runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_DOCKER_IMAGE: mcr.microsoft.com/playwright:v1.65.1-noble
     defaults:
       run:
         working-directory: e2e
@@ -124,14 +126,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: e2e/package-lock.json
-
-      - name: Install E2E dependencies
-        run: npm ci
-
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
 
       - name: Run isolated browser E2E suite
         run: npm run e2e
