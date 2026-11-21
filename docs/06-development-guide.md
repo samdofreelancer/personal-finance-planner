@@ -101,10 +101,14 @@ mvn verify
 Backend unit tests currently cover:
 
 - `AssumptionServiceTest`: assumption service behavior.
-- `ForecastServiceTest`: 50-month/annual aggregation, per-loan principal caps, repayments outside the forecast window, user-defined expense effective-month boundaries, salary raises and January multiplier, rounding, cash flow and negative savings.
-- `ValidationServiceTest`: valid assumptions, expense names/schedules/duplicate effective months and amounts, zero/negative/missing monetary boundaries, multiplier lower/upper bounds and raise bounds.
+- `ForecastServiceTest`: horizon aggregation, per-loan principal caps, repayments outside the forecast window, user-defined expense and income effective-month boundaries, January multiplier, rounding, cash flow and negative savings.
+- `IncomeScheduleServiceTest`: latest effective income lookup independent of input order and fallback after a future entry is removed.
+- `ValidationServiceTest`: income baseline/month/amount validation, expense names/schedules/duplicate effective months and amounts, zero/negative/missing monetary boundaries and multiplier bounds.
 
 Backend integration tests currently cover:
+
+- `IncomeScheduleMigrationIT`: V6 legacy income conversion, rounding, preservation of unrelated assumptions and removal of retired schema objects.
+- `PlannerApiIT`: income schedule save/reload, retention of future entries after horizon shortening and atomic rejection of a schedule without its baseline.
 
 - `PlannerApiIT`: loan schedule API behavior, multiple loans, multi-entry monthly aggregation, validation, update/delete identity preservation, CSV parity and reset sample data.
 - `ExpenseMigrationIT`: V1-to-V4 fixture migration preserves every legacy expense amount and removes the retired fixed expense columns.

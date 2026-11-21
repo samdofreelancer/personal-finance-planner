@@ -2,10 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { exportCsv, getAssumptions, getLoans, getForecast, saveAssumptions, saveLoans, seedDefaults } from '../src/services/api.js'
 
 const assumptions = {
-  baseSalary: 42000000,
+  incomeChanges: [{ effectiveMonth: '2026-11', amount: 42000000 }],
   januaryMultiplier: 2,
   startingSavings: 30000000,
-  raises: { 2027: 0.08, 2028: 0.09 },
   expenses: [{ name: 'Học phí', changes: [{ effectiveMonth: '2026-11', amount: 4000000 }] }],
 }
 
@@ -13,7 +12,7 @@ afterEach(() => vi.unstubAllGlobals())
 
 describe('API service', () => {
   it('loads assumptions as JSON', async () => {
-    const payload = { baseSalary: 42000000 }
+    const payload = { incomeChanges: [{ effectiveMonth: '2026-11', amount: 42000000 }] }
     const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => payload })
     vi.stubGlobal('fetch', fetch)
 

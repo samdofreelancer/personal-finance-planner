@@ -10,13 +10,12 @@ import com.finance.planner.dto.ForecastMonthDTO;
 import com.finance.planner.dto.ForecastResponse;
 import com.finance.planner.dto.ExpenseDTO;
 import com.finance.planner.dto.ExpenseChangeDTO;
+import com.finance.planner.dto.IncomeChangeDTO;
 import com.finance.planner.dto.LoanDTO;
 import com.finance.planner.dto.LoanRepaymentDTO;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.HashMap;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -28,9 +27,9 @@ class ForecastServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ForecastService();
+        service = new ForecastService(new IncomeScheduleService());
         assumptions = new AssumptionDTO();
-        assumptions.setBaseSalary(1_000L);
+        assumptions.setIncomeChanges(List.of(new IncomeChangeDTO("2026-11", 1_000L)));
         assumptions.setJanuaryMultiplier(new BigDecimal("2.0"));
         assumptions.setExpenses(List.of(
                 new ExpenseDTO("Sinh hoạt phí", List.of(new ExpenseChangeDTO("2026-11", 100L))),
@@ -42,9 +41,6 @@ class ForecastServiceTest {
                         new ExpenseChangeDTO("2026-11", 40L),
                         new ExpenseChangeDTO("2027-02", 50L)))));
         assumptions.setStartingSavings(500L);
-        Map<Integer, BigDecimal> raises = new HashMap<>();
-        for (int year = 2027; year <= 2030; year++) raises.put(year, BigDecimal.ZERO);
-        assumptions.setRaises(raises);
         loans = List.of(new LoanDTO(1L, "Khoản vay mẫu", 1_000L, List.of(
                 new LoanRepaymentDTO(1L, LocalDate.of(2026, 11, 30), 300L, 100L),
                 new LoanRepaymentDTO(2L, LocalDate.of(2026, 12, 31), 350L, 50L),
@@ -63,6 +59,62 @@ class ForecastServiceTest {
         assertEquals(12, result.getMonths().get(49).getMonth());
         assertTrue(result.getAnnual().get(0).isPartial());
         assertFalse(result.getAnnual().get(1).isPartial());
+    }
+
+    @Test
+    void supportsOneYearHorizonIncludingThePartialStartingYear() {
+        assumptions.setForecastYears(1);
+
+        ForecastResponse result = service.buildForecast(assumptions, loans);
+
+        assertEquals(14, result.getMonths().size());
+        assertEquals(2, result.getAnnual().size());
+        assertEquals(2027, result.getMonths().getLast().getYear());
+        assertEquals(12, result.getMonths().getLast().getMonth());
+    }
+
+    @Test
+    void supportsSixYearHorizonAndAppliesScheduledIncomeFromItsEffectiveMonth() {
+        assumptions.setForecastYears(6);
+        assumptions.setJanuaryMultiplier(BigDecimal.ONE);
+        assumptions.setIncomeChanges(List.of(
+                new IncomeChangeDTO("2026-11", 1_000L),
+                new IncomeChangeDTO("2031-04", 1_100L)));
+
+        ForecastResponse result = service.buildForecast(assumptions, loans);
+
+        assertEquals(74, result.getMonths().size());
+        assertEquals(7, result.getAnnual().size());
+        assertEquals(2032, result.getMonths().getLast().getYear());
+        assertEquals(1_000L, result.getMonths().get(52).getSalary()); // Mar 2031
+        assertEquals(1_100L, result.getMonths().get(53).getSalary()); // Apr 2031
+    }
+
+    @Test
+    void producesTheExpectedMonthAndAnnualCountsForEverySupportedHorizon() {
+        for (int years = 1; years <= 6; years++) {
+            assumptions.setForecastYears(years);
+            ForecastResponse result = service.buildForecast(assumptions, loans);
+
+            assertEquals(years * 12 + 2, result.getMonths().size());
+            assertEquals(years + 1, result.getAnnual().size());
+            assertEquals(2026 + years, result.getAnnual().getLast().getYear());
+        }
+    }
+
+    @Test
+    void handlesUnsavedLoansWithoutCollidingWithPersistedLoanIds() {
+        List<LoanDTO> mixedLoans = List.of(
+                new LoanDTO(null, "Khoản vay mới", 500L, List.of(
+                        new LoanRepaymentDTO(null, LocalDate.of(2026, 11, 30), 200L, 10L))),
+                new LoanDTO(1L, "Khoản vay đã lưu", 300L, List.of(
+                        new LoanRepaymentDTO(null, LocalDate.of(2026, 11, 30), 100L, 5L))));
+
+        ForecastMonthDTO november = service.buildForecast(assumptions, mixedLoans).getMonths().getFirst();
+
+        assertEquals(800L, november.getOpeningPrincipal());
+        assertEquals(300L, november.getPrincipalPaid());
+        assertEquals(15L, november.getInterestPaid());
     }
 
     @Test
@@ -174,16 +226,46 @@ class ForecastServiceTest {
     }
 
     @Test
-    void appliesRaisesFromAprilAndJanuaryMultiplierOnlyInJanuary() {
-        assumptions.setBaseSalary(1_001L);
+    void appliesJanuaryMultiplierToTheEffectiveIncomeAmount() {
         assumptions.setJanuaryMultiplier(new BigDecimal("1.5"));
-        assumptions.getRaises().put(2027, new BigDecimal("0.10"));
+        assumptions.setIncomeChanges(List.of(
+                new IncomeChangeDTO("2026-11", 1_001L),
+                new IncomeChangeDTO("2027-04", 1_101L)));
 
         var months = service.buildForecast(assumptions, loans).getMonths();
 
         assertEquals(1_001L, months.get(4).getSalary()); // Mar 2027
-        assertEquals(1_101L, months.get(5).getSalary()); // Apr 2027, 10% raise
+        assertEquals(1_101L, months.get(5).getSalary()); // Apr 2027, scheduled amount
         assertEquals(1_502L, months.get(2).getSalary()); // Jan 2027, HALF_UP
+    }
+
+    @Test
+    void appliesIncomeChangeStartingInItsEffectiveMonth() {
+        assumptions.setJanuaryMultiplier(BigDecimal.ONE);
+        assumptions.setIncomeChanges(List.of(
+                new IncomeChangeDTO("2026-11", 50_000_000L),
+                new IncomeChangeDTO("2027-04", 60_000_000L),
+                new IncomeChangeDTO("2028-01", 65_000_000L)));
+
+        var months = service.buildForecast(assumptions, loans).getMonths();
+
+        assertEquals(50_000_000L, months.get(4).getSalary()); // Mar 2027
+        assertEquals(60_000_000L, months.get(5).getSalary()); // Apr 2027
+        assertEquals(60_000_000L, months.get(13).getSalary()); // Dec 2027
+        assertEquals(65_000_000L, months.get(14).getSalary()); // Jan 2028
+    }
+
+    @Test
+    void keepsFutureIncomeChangesOutsideHorizonWithoutChangingCurrentMonths() {
+        assumptions.setForecastYears(1);
+        assumptions.setJanuaryMultiplier(BigDecimal.ONE);
+        assumptions.setIncomeChanges(List.of(
+                new IncomeChangeDTO("2026-11", 50_000_000L),
+                new IncomeChangeDTO("2032-04", 90_000_000L)));
+
+        var months = service.buildForecast(assumptions, loans).getMonths();
+
+        assertTrue(months.stream().allMatch(month -> month.getSalary() == 50_000_000L));
     }
 
     @Test

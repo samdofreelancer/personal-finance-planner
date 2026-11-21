@@ -72,7 +72,7 @@ export async function exportCsv(dto) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = 'ke-hoach-tai-chinh-2026-2030.csv'
+  a.download = `ke-hoach-tai-chinh-2026-${2026 + Number(dto.forecastYears || 4)}.csv`
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)

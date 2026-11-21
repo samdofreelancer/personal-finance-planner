@@ -6,9 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.finance.planner.dto.AssumptionDTO;
 import com.finance.planner.dto.ExpenseDTO;
 import com.finance.planner.dto.ExpenseChangeDTO;
+import com.finance.planner.dto.IncomeChangeDTO;
 import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -21,18 +20,24 @@ class ValidationServiceTest {
     void setUp() {
         service = new ValidationService();
         assumptions = new AssumptionDTO();
-        assumptions.setBaseSalary(42_000_000L);
+        assumptions.setIncomeChanges(java.util.List.of(new IncomeChangeDTO("2026-11", 42_000_000L)));
         assumptions.setJanuaryMultiplier(new BigDecimal("2.0"));
         assumptions.setExpenses(java.util.List.of(new ExpenseDTO("Sinh hoạt", java.util.List.of(
                 new ExpenseChangeDTO("2026-11", 4_000_000L)))));
         assumptions.setStartingSavings(5_000_000L);
-        Map<Integer, BigDecimal> raises = new HashMap<>();
-        for (int year = 2027; year <= 2030; year++) raises.put(year, new BigDecimal("0.08"));
-        assumptions.setRaises(raises);
     }
 
     @Test
     void acceptsValidAssumptions() {
+        assertDoesNotThrow(() -> service.validate(assumptions));
+    }
+
+    @Test
+    void acceptsTheMinimumHorizonAndMaximumExpenseCategoryNameLength() {
+        assumptions.setForecastYears(1);
+        assumptions.setExpenses(java.util.List.of(new ExpenseDTO("x".repeat(120), java.util.List.of(
+                new ExpenseChangeDTO("2026-11", 0L)))));
+
         assertDoesNotThrow(() -> service.validate(assumptions));
     }
 
@@ -45,7 +50,7 @@ class ValidationServiceTest {
 
     @Test
     void acceptsZeroForAllNonNegativeMonetaryInputs() {
-        assumptions.setBaseSalary(0L);
+        assumptions.setIncomeChanges(java.util.List.of(new IncomeChangeDTO("2026-11", 0L)));
         assumptions.setExpenses(java.util.List.of(new ExpenseDTO("Sinh hoạt", java.util.List.of(
                 new ExpenseChangeDTO("2026-11", 0L)))));
         assumptions.setStartingSavings(0L);
@@ -55,7 +60,7 @@ class ValidationServiceTest {
 
     @Test
     void rejectsMissingRequiredMonetaryValues() {
-        assumptions.setBaseSalary(null);
+        assumptions.setIncomeChanges(null);
         assertThrows(IllegalArgumentException.class, () -> service.validate(assumptions));
     }
 
@@ -80,28 +85,54 @@ class ValidationServiceTest {
     }
 
     @Test
-    void acceptsRaiseAtZeroAndOneHundredPercentBoundaries() {
-        assumptions.getRaises().put(2027, BigDecimal.ZERO);
-        assumptions.getRaises().put(2028, BigDecimal.ONE);
+    void acceptsIncomeScheduleWithBaselineAndFutureChanges() {
+        assumptions.setIncomeChanges(java.util.List.of(
+                new IncomeChangeDTO("2026-11", 42_000_000L),
+                new IncomeChangeDTO("2027-04", 50_000_000L),
+                new IncomeChangeDTO("2032-01", 55_000_000L)));
         assertDoesNotThrow(() -> service.validate(assumptions));
     }
 
     @Test
-    void rejectsMissingRaiseYear() {
-        assumptions.getRaises().remove(2029);
+    void rejectsMissingNovember2026Baseline() {
+        assumptions.setIncomeChanges(java.util.List.of(new IncomeChangeDTO("2026-12", 42_000_000L)));
         assertThrows(IllegalArgumentException.class, () -> service.validate(assumptions));
     }
 
     @Test
-    void rejectsMissingRaisesMapWithoutThrowingNullPointerException() {
-        assumptions.setRaises(null);
+    void rejectsDuplicateOrPreBaselineEffectiveMonths() {
+        assumptions.setIncomeChanges(java.util.List.of(
+                new IncomeChangeDTO("2026-11", 42_000_000L),
+                new IncomeChangeDTO("2026-11", 43_000_000L)));
+        assertThrows(IllegalArgumentException.class, () -> service.validate(assumptions));
+
+        assumptions.setIncomeChanges(java.util.List.of(
+                new IncomeChangeDTO("2026-10", 42_000_000L),
+                new IncomeChangeDTO("2026-11", 43_000_000L)));
         assertThrows(IllegalArgumentException.class, () -> service.validate(assumptions));
     }
 
     @Test
-    void rejectsRaiseOutsideZeroToOneHundredPercent() {
-        assumptions.getRaises().put(2030, new BigDecimal("1.01"));
+    void rejectsNegativeOrMissingIncomeAmountsAndInvalidMonths() {
+        assumptions.setIncomeChanges(java.util.List.of(new IncomeChangeDTO("2026-11", -1L)));
         assertThrows(IllegalArgumentException.class, () -> service.validate(assumptions));
+
+        assumptions.setIncomeChanges(java.util.List.of(new IncomeChangeDTO("2026-11", null)));
+        assertThrows(IllegalArgumentException.class, () -> service.validate(assumptions));
+
+        assumptions.setIncomeChanges(java.util.List.of(new IncomeChangeDTO("2026-13", 42_000_000L)));
+        assertThrows(IllegalArgumentException.class, () -> service.validate(assumptions));
+    }
+
+    @Test
+    void validatesForecastHorizonIndependentlyFromIncomeSchedule() {
+        assumptions.setForecastYears(6);
+        assertDoesNotThrow(() -> service.validate(assumptions));
+
+        assumptions.setForecastYears(7);
+        assertThrows(IllegalArgumentException.class, () -> service.validate(assumptions));
+
+        assumptions.setForecastYears(4);
     }
 
     @Test

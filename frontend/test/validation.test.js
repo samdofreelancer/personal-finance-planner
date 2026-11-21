@@ -3,10 +3,13 @@ import { MONEY_FIELDS, validateAssumptions } from '../src/utils/validation.js'
 
 function validInput() {
   return {
-    baseSalary: 42000000,
     januaryMultiplier: 2,
     startingSavings: 30000000,
-    raises: { 2027: 0.08, 2028: 0.08, 2029: 0.08, 2030: 0.08 },
+    forecastYears: 4,
+    incomeChanges: [
+      { effectiveMonth: '2026-11', amount: 42000000 },
+      { effectiveMonth: '2027-04', amount: 50000000 },
+    ],
     expenses: [{ name: 'Sinh hoạt phí', changes: [{ effectiveMonth: '2026-11', amount: 4250000 }] }],
   }
 }
@@ -38,18 +41,46 @@ describe('validateAssumptions', () => {
     expect(validateAssumptions(input)).toEqual([])
   })
 
-  it.each([[2027, -0.01], [2028, 1.01], [2029, Number.NaN], [2030, undefined]])(
-    'rejects an invalid raise for %i', (year, value) => {
+  it.each([0, 7, 1.5, undefined])('rejects invalid forecast horizon %s', (years) => {
+    const input = validInput()
+    input.forecastYears = years
+    expect(validateAssumptions(input)).toContain('Thời gian dự phóng phải từ 1 đến 6 năm.')
+  })
+
+  it('requires a baseline income change and accepts changes beyond the selected horizon', () => {
+    const input = validInput()
+    input.forecastYears = 6
+    expect(validateAssumptions(input)).toEqual([])
+    input.incomeChanges = [{ effectiveMonth: '2026-12', amount: 42000000 }]
+    expect(validateAssumptions(input)).toContain('Lịch thu nhập phải có mốc cơ sở 11/2026.')
+  })
+
+  it('rejects duplicate, invalid and pre-baseline income months', () => {
+    const duplicate = validInput()
+    duplicate.incomeChanges.push({ effectiveMonth: '2026-11', amount: 50000000 })
+    expect(validateAssumptions(duplicate)).toContain('Lịch thu nhập bị trùng tháng hiệu lực.')
+
+    const invalidMonth = validInput()
+    invalidMonth.incomeChanges[1].effectiveMonth = '2026-13'
+    expect(validateAssumptions(invalidMonth)).toContain('Tháng hiệu lực thu nhập không hợp lệ.')
+
+    const beforeBaseline = validInput()
+    beforeBaseline.incomeChanges[1].effectiveMonth = '2026-10'
+    expect(validateAssumptions(beforeBaseline)).toContain('Tháng hiệu lực thu nhập không được trước 11/2026.')
+  })
+
+  it.each([[-1], [1.5], [Number.MAX_SAFE_INTEGER + 1], [null]])(
+    'rejects an invalid scheduled income amount %s', (value) => {
       const input = validInput()
-      input.raises[year] = value
-      expect(validateAssumptions(input)).toContain(`Mức tăng lương năm ${year} phải từ 0% đến 100%.`)
+      input.incomeChanges[0].amount = value
+      expect(validateAssumptions(input)).toContain('Số tiền thu nhập phải là VND nguyên không âm.')
     },
   )
 
-  it('handles a missing raises map', () => {
-    const missingRaises = validInput()
-    missingRaises.raises = null
-    expect(validateAssumptions(missingRaises)).toHaveLength(4)
+  it('handles a missing income schedule', () => {
+    const missingSchedule = validInput()
+    missingSchedule.incomeChanges = null
+    expect(validateAssumptions(missingSchedule)).toContain('Lịch thu nhập không được để trống.')
   })
 
   it('rejects duplicate category names and duplicate effective months', () => {

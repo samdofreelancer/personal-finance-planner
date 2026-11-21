@@ -23,6 +23,21 @@ class ExpenseMigrationIT {
                         """);
             }
             ScriptUtils.executeSqlScript(connection, new ClassPathResource("db/migration/V4__create_flexible_expense_schedules.sql"));
+            ScriptUtils.executeSqlScript(connection, new ClassPathResource("db/migration/V5__configurable_forecast_horizon_and_annual_raises.sql"));
+        }
+
+        try (var connection = DriverManager.getConnection(url, "sa", "");
+             var statement = connection.createStatement();
+             var rows = statement.executeQuery("SELECT raise_year, raise_rate FROM salary_raise_rates ORDER BY raise_year")) {
+            Map<Integer, java.math.BigDecimal> raises = new java.util.LinkedHashMap<>();
+            while (rows.next()) raises.put(rows.getInt("raise_year"), rows.getBigDecimal("raise_rate"));
+            assertEquals(Map.of(
+                    2027, new java.math.BigDecimal("0.0800"),
+                    2028, new java.math.BigDecimal("0.0800"),
+                    2029, new java.math.BigDecimal("0.0800"),
+                    2030, new java.math.BigDecimal("0.0800"),
+                    2031, new java.math.BigDecimal("0.0000"),
+                    2032, new java.math.BigDecimal("0.0000")), raises);
         }
 
         try (var connection = DriverManager.getConnection(url, "sa", "");

@@ -9,6 +9,7 @@ import com.finance.planner.dto.LoanRepaymentDTO;
 import com.finance.planner.dto.ExpenseDTO;
 import com.finance.planner.dto.ExpenseChangeDTO;
 import com.finance.planner.dto.ExpenseBreakdownDTO;
+import org.springframework.beans.factory.annotation.Autowired;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.YearMonth;
@@ -21,6 +22,13 @@ import org.springframework.stereotype.Service;
 @Service
 public class ForecastService {
     private record ScheduledRepayment(long loanKey, LoanRepaymentDTO repayment) {}
+
+    private final IncomeScheduleService incomeScheduleService;
+
+    @Autowired
+    public ForecastService(IncomeScheduleService incomeScheduleService) {
+        this.incomeScheduleService = incomeScheduleService;
+    }
 
     public ForecastResponse buildForecast(AssumptionDTO a, List<LoanDTO> loans) {
         List<ForecastMonthDTO> months = new ArrayList<>();
@@ -38,15 +46,17 @@ public class ForecastService {
         }
         long cumulativeSavings = a.getStartingSavings();
 
-        for (int i = 0; i < 50; i++) {
+        int forecastYears = a.getForecastYears() == null ? 4 : a.getForecastYears();
+        int endYear = 2026 + forecastYears;
+        for (int i = 0; i < forecastYears * 12 + 2; i++) {
             java.time.LocalDate date = YearMonth.of(2026, 11).plusMonths(i).atDay(1);
             int year = date.getYear();
             int month = date.getMonthValue();
             YearMonth period = YearMonth.from(date);
 
-            long salary = round(a.getBaseSalary()
-                    * applyRaises(a, year, month)
-                    * (month == 1 ? a.getJanuaryMultiplier().doubleValue() : 1.0));
+            BigDecimal salaryAmount = BigDecimal.valueOf(incomeScheduleService.amountAt(a.getIncomeChanges(), period));
+            if (month == 1) salaryAmount = salaryAmount.multiply(a.getJanuaryMultiplier());
+            long salary = salaryAmount.setScale(0, RoundingMode.HALF_UP).longValueExact();
 
             List<ExpenseBreakdownDTO> expenseBreakdown = expenseBreakdown(a, period);
             long recurringExpenses = expenseBreakdown.stream().mapToLong(ExpenseBreakdownDTO::amount).sum();
@@ -79,8 +89,9 @@ public class ForecastService {
         }
 
         List<ForecastAnnualDTO> annual = new ArrayList<>();
-        for (int y : new int[]{2026, 2027, 2028, 2029, 2030}) {
-            List<ForecastMonthDTO> ym = months.stream().filter(m -> m.getYear() == y).toList();
+        for (int y = 2026; y <= endYear; y++) {
+            int annualYear = y;
+            List<ForecastMonthDTO> ym = months.stream().filter(m -> m.getYear() == annualYear).toList();
             boolean partial = y == 2026;
             long totalSalary = ym.stream().mapToLong(ForecastMonthDTO::getSalary).sum();
             long totalExpenses = ym.stream().mapToLong(ForecastMonthDTO::getTotalExpenses).sum();
@@ -91,17 +102,6 @@ public class ForecastService {
         }
 
         return new ForecastResponse(months, annual);
-    }
-
-    private double applyRaises(AssumptionDTO a, int year, int month) {
-        double factor = 1.0;
-        for (int y : new int[]{2027, 2028, 2029, 2030}) {
-            BigDecimal r = a.getRaises().get(y);
-            if (year > y || (year == y && month >= 4)) {
-                factor *= (1.0 + r.doubleValue());
-            }
-        }
-        return factor;
     }
 
     private List<ExpenseBreakdownDTO> expenseBreakdown(AssumptionDTO assumptions, YearMonth period) {
@@ -117,7 +117,4 @@ public class ForecastService {
         return result;
     }
 
-    private long round(double value) {
-        return BigDecimal.valueOf(value).setScale(0, RoundingMode.HALF_UP).longValue();
-    }
 }

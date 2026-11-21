@@ -1,5 +1,5 @@
 export const MONEY_FIELDS = [
-  'baseSalary', 'startingSavings',
+  'startingSavings',
 ]
 
 export function validateAssumptions(input) {
@@ -14,11 +14,32 @@ export function validateAssumptions(input) {
       input.januaryMultiplier <= 0 || input.januaryMultiplier > 20) {
     errors.push('Hệ số lương tháng 1 phải lớn hơn 0 và không vượt quá 20.')
   }
-  for (const year of [2027, 2028, 2029, 2030]) {
-    const value = input.raises?.[year]
-    if (!Number.isFinite(value) || value < 0 || value > 1) {
-      errors.push(`Mức tăng lương năm ${year} phải từ 0% đến 100%.`)
+  const forecastYears = input.forecastYears
+  if (!Number.isInteger(forecastYears) || forecastYears < 1 || forecastYears > 6) {
+    errors.push('Thời gian dự phóng phải từ 1 đến 6 năm.')
+  }
+  if (!Array.isArray(input.incomeChanges) || input.incomeChanges.length === 0) {
+    errors.push('Lịch thu nhập không được để trống.')
+  } else {
+    const months = new Set()
+    let hasBaseline = false
+    for (const change of input.incomeChanges) {
+      const month = change?.effectiveMonth
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month || '')) {
+        errors.push('Tháng hiệu lực thu nhập không hợp lệ.')
+      } else if (month < '2026-11') {
+        errors.push('Tháng hiệu lực thu nhập không được trước 11/2026.')
+      } else if (months.has(month)) {
+        errors.push('Lịch thu nhập bị trùng tháng hiệu lực.')
+      } else {
+        months.add(month)
+        if (month === '2026-11') hasBaseline = true
+      }
+      if (!Number.isSafeInteger(change?.amount) || change.amount < 0) {
+        errors.push('Số tiền thu nhập phải là VND nguyên không âm.')
+      }
     }
+    if (!hasBaseline) errors.push('Lịch thu nhập phải có mốc cơ sở 11/2026.')
   }
   const expenses = input.expenses
   if (!Array.isArray(expenses)) {

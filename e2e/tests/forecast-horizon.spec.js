@@ -14,7 +14,7 @@ test('changing the forecast horizon updates every dashboard section and persists
   await expect(horizon.locator('option')).toHaveCount(6)
   await expect(horizon).toHaveValue('4')
   const selectFontSize = await horizon.evaluate((element) => getComputedStyle(element).fontSize)
-  const inputFontSize = await page.locator('#baseSalary').evaluate((element) => getComputedStyle(element).fontSize)
+  const inputFontSize = await page.getByLabel('Số tiền thu nhập, mốc 1').evaluate((element) => getComputedStyle(element).fontSize)
   expect(selectFontSize).toBe(inputFontSize)
   await horizon.selectOption('2')
   await expect.poll(() => requestedHorizons.at(-1)).toBe(2)

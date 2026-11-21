@@ -54,7 +54,7 @@
       <div class="outlook-result" aria-live="polite">
         <span class="outlook-result-label">TIẾT KIỆM DỰ KIẾN CUỐI KỲ</span>
         <strong :class="metrics.savingsEnd < 0 ? 'negative' : ''">{{ money(metrics.savingsEnd) }}</strong>
-        <span class="outlook-result-note">{{ provisional ? 'Kết quả tạm tính · cần xác minh' : 'Dự kiến đến tháng 12/2030' }}</span>
+        <span class="outlook-result-note">{{ provisional ? 'Kết quả tạm tính · cần xác minh' : `Dự kiến đến tháng 12/${forecastEndYear}` }}</span>
         <span class="outlook-result-disclaimer">Không phải số dư tài khoản thực tế</span>
       </div>
     </section>
@@ -67,12 +67,13 @@
     </section>
 
     <section class="overview-section" aria-label="Triển vọng tài chính">
-      <div class="section-intro"><div><p class="eyebrow">YOUR FINANCIAL JOURNEY</p><h2>Hành trình tài chính dự kiến</h2><p class="section-description">Theo dõi quỹ tiết kiệm tăng lên và dư nợ giảm xuống theo thời gian.</p></div><span class="section-meta">Mô phỏng · 2026–2030</span></div>
+      <div class="section-intro"><div><p class="eyebrow">YOUR FINANCIAL JOURNEY</p><h2>Hành trình tài chính dự kiến</h2><p class="section-description">Theo dõi quỹ tiết kiệm tăng lên và dư nợ giảm xuống theo thời gian.</p></div><span class="section-meta">Mô phỏng · 2026–{{ forecastEndYear }}</span></div>
       <financial-position :assumptions="dto" :loans="loans" :forecast="forecast" />
-      <div class="section-intro indicator-intro"><div><p class="eyebrow">KEY INDICATORS</p><h2>Các chỉ số đáng chú ý</h2></div><span class="section-meta">Dự báo năm 2030</span></div>
+      <div class="section-intro indicator-intro"><div><p class="eyebrow">KEY INDICATORS</p><h2>Các chỉ số đáng chú ý</h2></div><span class="section-meta">Dự báo năm {{ forecastEndYear }}</span></div>
     <metric-cards
       :metrics="metrics"
       :provisional="provisional"
+      :year="forecastEndYear"
     />
     </section>
 
@@ -122,15 +123,16 @@ import MonthlyTable from './components/MonthlyTable.vue'
 import { formatCurrency } from './utils/currency.js'
 
 const dto = reactive({
-  baseSalary: 42000000, januaryMultiplier: 2,
+  incomeChanges: [{ effectiveMonth: '2026-11', amount: 42000000 }],
+  januaryMultiplier: 2,
   startingSavings: 30000000,
-  raises: { 2027: 0.08, 2028: 0.08, 2029: 0.08, 2030: 0.08 }
+  forecastYears: 4,
 })
 
 const forecast = ref(null)
 const expenses = ref([])
 const loans = ref([])
-const metrics = ref({ netCashFlow2030: 0, income2030: 0, expenses2030: 0, savingsEnd: 0 })
+const metrics = ref({ netCashFlow: 0, income: 0, expenses: 0, savingsEnd: 0 })
 const errorMessage = ref('')
 const saveStatus = ref('Đang tải...')
 const loanSaveStatus = ref('')
@@ -160,6 +162,7 @@ const forecastYears = computed(() => {
   const last = months.at(-1).year
   return first === last ? String(first) : `${first}–${last}`
 })
+const forecastEndYear = computed(() => forecast.value?.annual?.at(-1)?.year ?? 2030)
 
 function syncActiveSection() {
   const section = window.location.hash.slice(1)
@@ -219,14 +222,11 @@ onBeforeUnmount(() => {
 
 function applyDto(data) {
   Object.assign(dto, {
-    baseSalary: data.baseSalary,
+    incomeChanges: JSON.parse(JSON.stringify(data.incomeChanges || [])),
     januaryMultiplier: Number(data.januaryMultiplier),
     startingSavings: data.startingSavings,
+    forecastYears: Number(data.forecastYears ?? 4),
   })
-  dto.raises = {}
-  for (const year of [2027, 2028, 2029, 2030]) {
-    dto.raises[year] = Number(data.raises?.[year] ?? 0.1)
-  }
   expenses.value = JSON.parse(JSON.stringify(data.expenses || []))
 }
 
@@ -240,14 +240,14 @@ async function loadForecast(source = snapshot()) {
 
 function applyForecast(res) {
   forecast.value = res
-  const y2030 = res.annual.find((a) => a.year === 2030)
+  const finalYear = res.annual.at(-1)
   metrics.value = {
-    netCashFlow2030: y2030 ? y2030.netCashFlow : 0,
-    income2030: y2030 ? y2030.salary : 0,
-    expenses2030: y2030 ? y2030.expenses : 0,
-    savingsEnd: y2030 ? y2030.endingSavings : 0,
+    netCashFlow: finalYear ? finalYear.netCashFlow : 0,
+    income: finalYear ? finalYear.salary : 0,
+    expenses: finalYear ? finalYear.expenses : 0,
+    savingsEnd: finalYear ? finalYear.endingSavings : 0,
   }
-  provisional.value = y2030 ? (y2030.provisional || y2030.endingSavingsProvisional) : false
+  provisional.value = finalYear ? (finalYear.provisional || finalYear.endingSavingsProvisional) : false
 }
 
 function onFormInput(updated) {

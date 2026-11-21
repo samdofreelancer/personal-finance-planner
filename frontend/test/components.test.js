@@ -11,9 +11,14 @@ import MonthlyTable from '../src/components/MonthlyTable.vue'
 
 function assumptions() {
   return {
-    baseSalary: 42000000, januaryMultiplier: 2,
+    januaryMultiplier: 2,
     startingSavings: 5000000,
-    raises: { 2027: 0.08, 2028: 0.09, 2029: 0.1, 2030: 0.11 },
+    forecastYears: 4,
+    incomeChanges: [
+      { effectiveMonth: '2026-11', amount: 42000000 },
+      { effectiveMonth: '2027-04', amount: 50000000 },
+      { effectiveMonth: '2031-04', amount: 60000000 },
+    ],
   }
 }
 
@@ -70,16 +75,16 @@ describe('CurrencyInput', () => {
 })
 
 describe('AssumptionsForm', () => {
-  it('emits reset, input and save payloads with percentage raises converted to fractions and savings separate', async () => {
+  it('renders and emits an editable effective-month income schedule', async () => {
     const dto = assumptions()
     const wrapper = mount(AssumptionsForm, { props: { dto, expenses: expenses(), error: 'Lỗi', status: 'Đã lưu' } })
     expect(wrapper.text()).toContain('Lỗi')
     expect(wrapper.text()).toContain('Đã lưu')
-    expect(wrapper.get('input[name="raise2027"]').element.value).toBe('8')
+    expect(wrapper.findAll('.income-change-row')).toHaveLength(3)
 
-    await wrapper.get('input[name="raise2027"]').setValue('12.5')
+    await wrapper.get('input[aria-label="Số tiền thu nhập, mốc 1"]').setValue('50.000.000')
     await wrapper.get('form').trigger('input')
-    expect(wrapper.emitted('input').at(-1)[0].raises[2027]).toBe(0.125)
+    expect(wrapper.emitted('input').at(-1)[0].incomeChanges[0].amount).toBe(50000000)
 
     expect(wrapper.text()).toContain('Tiết kiệm')
     expect(wrapper.get('label[for="startingSavings"]').exists()).toBe(true)
@@ -90,25 +95,41 @@ describe('AssumptionsForm', () => {
     expect(wrapper.emitted('reset')).toHaveLength(1)
   })
 
-  it('normalizes blank and invalid raise values to zero and blank text', async () => {
+  it('adds and removes future income changes but keeps the required baseline', async () => {
     const dto = assumptions()
-    dto.raises[2028] = 0
     const wrapper = mount(AssumptionsForm, { props: { dto, expenses: expenses(), error: '', status: '' } })
-    expect(wrapper.get('input[name="raise2028"]').element.value).toBe('')
-    await wrapper.get('input[name="raise2029"]').setValue('')
-    await wrapper.get('form').trigger('input')
-    expect(wrapper.emitted('input').at(-1)[0].raises[2029]).toBe(0)
+    expect(wrapper.get('.income-change-remove').attributes('disabled')).toBeDefined()
+    await wrapper.get('.income-add-change').trigger('click')
+    expect(wrapper.findAll('.income-change-row')).toHaveLength(4)
+    await wrapper.findAll('.income-change-remove').at(-1).trigger('click')
+    expect(wrapper.findAll('.income-change-row')).toHaveLength(3)
+    expect(wrapper.get('input[aria-label="Tháng hiệu lực thu nhập, mốc 1"]').element.value).toBe('2026-11')
   })
 
-  it('keeps percentage text synchronized when external raise assumptions change', async () => {
-    const dto = assumptions()
-    const wrapper = mount(AssumptionsForm, { props: { dto, expenses: expenses(), error: '', status: '' } })
-    await wrapper.setProps({ dto: { ...dto, raises: { ...dto.raises, 2030: 0.2 } } })
-    expect(wrapper.get('input[name="raise2030"]').element.value).toBe('20')
+  it('allows correcting or removing a future entry that temporarily duplicates the baseline month', async () => {
+    const wrapper = mount(AssumptionsForm, { props: { dto: assumptions(), expenses: expenses(), error: '', status: '' } })
+    await wrapper.get('input[aria-label="Tháng hiệu lực thu nhập, mốc 2"]').setValue('2026-11')
 
-    await wrapper.get('input[name="raise2030"]').setValue('15')
-    await wrapper.get('form').trigger('input')
-    expect(wrapper.emitted('input').at(-1)[0].raises[2030]).toBe(0.15)
+    const removeButtons = wrapper.findAll('.income-change-remove')
+    expect(removeButtons[0].attributes('disabled')).toBeDefined()
+    expect(removeButtons[1].attributes('disabled')).toBeUndefined()
+    await removeButtons[1].trigger('click')
+    expect(wrapper.findAll('.income-change-row')).toHaveLength(2)
+  })
+
+  it('preserves income changes beyond the selected forecast horizon', async () => {
+    const dto = { ...assumptions(), forecastYears: 6 }
+    const wrapper = mount(AssumptionsForm, { props: { dto, expenses: expenses(), error: '', status: '' } })
+    await wrapper.get('select[name="forecastYears"]').setValue('2')
+    expect(wrapper.emitted('input').at(-1)[0].forecastYears).toBe(2)
+    expect(wrapper.emitted('input').at(-1)[0].incomeChanges).toEqual(dto.incomeChanges)
+  })
+
+  it('emits the newly selected horizon immediately on the select change event', async () => {
+    const wrapper = mount(AssumptionsForm, { props: { dto: assumptions(), expenses: expenses(), error: '', status: '' } })
+    await wrapper.get('select[name="forecastYears"]').setValue('2')
+    expect(wrapper.emitted('input').at(-1)[0].forecastYears).toBe(2)
+    expect(wrapper.emitted('input').at(-1)[0].incomeChanges).toHaveLength(3)
   })
 
   it('edits dynamic expense schedules without mutating the expense prop', async () => {
@@ -222,8 +243,9 @@ describe('forecast presentation components', () => {
 
   it('renders annual income, expenses and signed net cash flow', () => {
     const wrapper = mount(MetricCards, { props: {
-      metrics: { netCashFlow2030: -1000, income2030: 42000000, expenses2030: 42001000 },
+      metrics: { netCashFlow: -1000, income: 42000000, expenses: 42001000 },
       provisional: true,
+      year: 2030,
     } })
     expect(wrapper.get('#metric-net').classes()).toContain('negative')
     expect(wrapper.get('#metric-income').text()).toContain('42.000.000')
@@ -231,8 +253,9 @@ describe('forecast presentation components', () => {
     expect(wrapper.get('#metric-net-foot').text()).toContain('Tạm tính')
 
     const missing = mount(MetricCards, { props: {
-      metrics: { netCashFlow2030: 0, income2030: 0, expenses2030: 0 },
+      metrics: { netCashFlow: 0, income: 0, expenses: 0 },
       provisional: false,
+      year: 2030,
     } })
     expect(missing.get('#metric-net-foot').text()).toContain('Thu nhập trừ tổng chi phí')
   })

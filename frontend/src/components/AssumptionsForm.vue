@@ -11,21 +11,32 @@
       <div class="input-groups">
         <fieldset class="input-group">
           <legend><span class="legend-icon income-icon" aria-hidden="true">↗</span> Thu nhập</legend>
-          <label class="field" for="baseSalary">
-            <span>Lương tháng cơ sở năm 2026</span>
-            <span class="input-wrap"><currency-input id="baseSalary" v-model="formDto.baseSalary" name="baseSalary" /><span>₫ / tháng</span></span>
-          </label>
+          <p class="field-hint">Nhập mức thu nhập tháng và tháng bắt đầu áp dụng. Mỗi tháng dự phóng dùng mức gần nhất có hiệu lực; không tự động tăng theo tỷ lệ.</p>
+          <article v-for="(change, changeIndex) in sortedIncomeChanges" :key="changeIndex" class="income-change-row">
+            <label class="field">
+              <span>Áp dụng từ</span>
+              <span class="input-wrap"><input v-model="change.effectiveMonth" type="month" :disabled="change.isBaseline" :aria-label="`Tháng hiệu lực thu nhập, mốc ${changeIndex + 1}`"></span>
+            </label>
+            <label class="field">
+              <span>Thu nhập / tháng</span>
+              <span class="input-wrap"><currency-input v-model="change.amount" :name="`income-change-${changeIndex}`" :aria-label="`Số tiền thu nhập, mốc ${changeIndex + 1}`" /><span>₫</span></span>
+            </label>
+            <button class="text-button income-change-remove" type="button" :disabled="change.isBaseline" :aria-label="`Xóa mốc thu nhập ${changeIndex + 1}`" @click="removeIncomeChange(change)">Xóa mốc</button>
+          </article>
+          <button class="text-button income-add-change" type="button" @click="addIncomeChange">+ Thêm mốc thu nhập</button>
           <label class="field" for="januaryMultiplier">
             <span>Hệ số lương tháng 1</span>
             <span class="input-wrap input-wrap-short"><input id="januaryMultiplier" v-model.number="formDto.januaryMultiplier" name="januaryMultiplier" type="number" min="0" max="20" step="0.1" required><span>×</span></span>
           </label>
-          <p class="field-hint">Các đợt tăng lương tháng 4 được áp dụng cộng dồn.</p>
-          <div class="raise-grid">
-            <label v-for="year in years" :key="year" class="field" :for="'raise' + year">
-              <span>Tăng từ 04/{{ year }}</span>
-              <span class="input-wrap"><input :id="'raise' + year" :value="raiseText[year]" :name="'raise' + year" type="number" min="0" max="100" step="0.1" required @input="onRaiseInput(year, $event)"><span>%</span></span>
-            </label>
-          </div>
+          <label class="field" for="forecastYears">
+            <span>Thời gian dự phóng</span>
+            <span class="input-wrap input-wrap-short">
+              <select id="forecastYears" :value="formDto.forecastYears" name="forecastYears" @input.stop="onHorizonChange">
+                <option v-for="year in 6" :key="year" :value="year">{{ year }} năm</option>
+              </select>
+            </span>
+          </label>
+          <p class="field-hint">Dự phóng bắt đầu từ 11/2026 và kết thúc vào tháng 12 sau số năm đã chọn. Các mốc thu nhập sau kỳ dự phóng vẫn được lưu để dùng khi mở rộng thời gian.</p>
         </fieldset>
 
         <fieldset class="input-group expense-schedules-group">
@@ -74,36 +85,29 @@
 </template>
 
 <script setup>
-import { reactive, watch } from 'vue'
+import { computed, reactive, watch } from 'vue'
 import CurrencyInput from './CurrencyInput.vue'
 
 const props = defineProps(['dto', 'expenses', 'error', 'status'])
 const emit = defineEmits(['input', 'expenses-input', 'reset', 'save'])
-const years = [2027, 2028, 2029, 2030]
 const formDto = reactive({})
-const raiseText = reactive({})
+const incomeDraft = reactive([])
 const expenseDraft = reactive([])
-
-function fractionToText(value) {
-  const n = Number(value)
-  return Number.isFinite(n) ? String(Math.round(n * 1000000) / 10000) : ''
-}
-
-function sameFraction(text, fraction) {
-  if (text === '' || text == null) return !Number(fraction)
-  return Math.abs(Number(text) / 100 - Number(fraction)) < 1e-12
-}
-
-function syncRaiseText() {
-  for (const year of years) {
-    const fraction = formDto.raises?.[year]
-    if (!sameFraction(raiseText[year], fraction)) raiseText[year] = fractionToText(fraction)
-  }
-}
+const sortedIncomeChanges = computed(() => [...incomeDraft].sort((a, b) => {
+  if (a.isBaseline) return -1
+  if (b.isBaseline) return 1
+  return String(a.effectiveMonth || '').localeCompare(String(b.effectiveMonth || ''))
+}))
 
 function syncFormDto() {
-  Object.assign(formDto, props.dto, { raises: { ...props.dto.raises } })
-  syncRaiseText()
+  Object.assign(formDto, props.dto)
+  const changes = JSON.parse(JSON.stringify(props.dto.incomeChanges || []))
+  let baselineAssigned = false
+  for (const change of changes) {
+    change.isBaseline = change.effectiveMonth === '2026-11' && !baselineAssigned
+    if (change.isBaseline) baselineAssigned = true
+  }
+  incomeDraft.splice(0, incomeDraft.length, ...changes)
 }
 
 watch(() => props.dto, syncFormDto, { deep: true, immediate: true })
@@ -112,20 +116,41 @@ watch(() => props.expenses, (value) => {
 }, { deep: true, immediate: true })
 
 function buildDto() {
-  const copy = { ...formDto, raises: {} }
-  for (const year of years) {
-    copy.raises[year] = raiseText[year] === '' ? 0 : Number(raiseText[year]) / 100
+  return {
+    ...formDto,
+    incomeChanges: sortedIncomeChanges.value.map(({ effectiveMonth, amount }) => ({ effectiveMonth, amount })),
   }
-  return copy
-}
-
-function onRaiseInput(year, event) {
-  raiseText[year] = event.target.value
 }
 
 function onInput() {
   emit('input', buildDto())
   emit('expenses-input', buildExpenses())
+}
+
+function onHorizonChange(event) {
+  // Handle the select before the form's bubbling input listener. This keeps
+  // the emitted preview payload aligned with the value shown in the control.
+  formDto.forecastYears = Number(event.target.value)
+  onInput()
+}
+
+function addIncomeChange() {
+  const latest = sortedIncomeChanges.value.at(-1) || { effectiveMonth: '2026-11', amount: 0 }
+  const [year, month] = latest.effectiveMonth.split('-').map(Number)
+  const next = new Date(year, month, 1)
+  incomeDraft.push({
+    effectiveMonth: `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`,
+    amount: latest.amount,
+    isBaseline: false,
+  })
+  onInput()
+}
+
+function removeIncomeChange(change) {
+  if (change.isBaseline) return
+  const index = incomeDraft.indexOf(change)
+  if (index >= 0) incomeDraft.splice(index, 1)
+  onInput()
 }
 
 function buildExpenses() {

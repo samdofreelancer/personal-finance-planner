@@ -1,4 +1,4 @@
-# Feature Specification: Personal Finance Planner (2026–2030)
+# Feature Specification: Personal Finance Planner (Configurable Forecast)
 
 **Status:** Redesigning — Three-tier architecture  
 **Stack:** Spring Boot (Java 21) backend + PostgreSQL database + Vue.js frontend  
@@ -6,7 +6,7 @@
 
 ## 1. Purpose
 
-Personal financial forecast for a configurable planning period. User edits income, raises, expenses, loan details, and starting savings; sees monthly and annual cash-flow outcomes and savings progress. Repository defaults are synthetic demonstration values.
+Personal financial forecast for a configurable planning period. User edits effective-month income amounts, expenses, loan details, and starting savings; sees monthly and annual cash-flow outcomes and savings progress. Repository defaults are synthetic demonstration values.
 
 ## 2. Users and scope
 
@@ -18,13 +18,13 @@ Personal financial forecast for a configurable planning period. User edits incom
 ## 3. User stories
 
 1. Edit financial assumptions via Vue; forecast recalculates via Spring Boot REST API.
-2. Change each April raise independently (0%–100%).
+2. Configure explicit monthly income amounts and their effective months; no percentage growth is assumed.
 3. Change January salary multiplier independently.
 4. Maintain multiple loans and manually add, edit and remove dated repayment entries for each loan.
 5. Create, rename and remove arbitrary recurring expense categories.
 6. Define one or more monthly amount changes for each expense category, each effective from a selected month.
 7. View monthly net cash flow and cumulative savings/shortfall.
-8. Compare annual net cash flow 2026–2030 in chart and table.
+8. Compare annual net cash flow across the configured forecast horizon (default 2026–2030) in chart and table.
 9. Distinguish the partial year (2026) from full forecast years.
 10. Reset to defaults; export CSV.
 
@@ -32,9 +32,8 @@ Personal financial forecast for a configurable planning period. User edits incom
 
 | Assumption | Value |
 |---|---:|
-| Forecast period | Nov 2026–Dec 2030 |
-| Base monthly salary | 42,000,000 |
-| Annual raises | 8% each, editable |
+| Default forecast period | Nov 2026–Dec 2030 (4-year setting) |
+| Default income schedule | 11/2026: 42,000,000; 04/2027: 45,360,000; 04/2028: 48,988,800; 04/2029: 52,907,904; 04/2030–04/2032: 57,140,536/month |
 | January salary multiplier | 2.0×, editable |
 | Initial living expense seed | 4,250,000/month |
 | Initial child fund seed, first period | 2,500,000/month |
@@ -87,7 +86,7 @@ The sample expense categories are editable seed data, not a fixed list of suppor
 
 ## 7. Acceptance criteria
 
-1. 50 monthly rows + 5 annual rows (2026–2030).
+1. The default 4-year horizon produces 50 monthly rows + 5 annual rows (2026–2030); configurable horizons are specified in `specs/004-forecast-horizon/spec.md`.
 2. Assumptions and loan schedules persist to PostgreSQL; reload restores both.
 3. Multiple loans and arbitrary dated repayment entries can be created, updated and deleted.
 4. Multiple entries in one month aggregate principal, interest and total payment correctly.
@@ -104,6 +103,9 @@ The sample expense categories are editable seed data, not a fixed list of suppor
 15. Expense changes take effect at the beginning of their selected month and persist across reloads.
 16. Existing living, child and rent values are migrated to equivalent expense categories and effective-month schedules without changing forecast totals.
 17. Monthly forecast and CSV show the aggregate recurring expense amount and its category breakdown.
+18. Income schedule requires a 11/2026 baseline and supports multiple unique future effective months; each month uses the latest effective amount.
+19. January multiplier is applied to the effective monthly income amount; no automatic percentage raise or income extrapolation is performed.
+20. Income changes persist in PostgreSQL and remain available when the forecast horizon is shortened.
 
 ## 8. Out of scope
 

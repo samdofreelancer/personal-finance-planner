@@ -13,11 +13,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finance.planner.dto.AssumptionDTO;
 import com.finance.planner.dto.ExpenseDTO;
 import com.finance.planner.dto.ExpenseChangeDTO;
+import com.finance.planner.dto.IncomeChangeDTO;
 import com.finance.planner.repository.AssumptionRepository;
 import com.finance.planner.service.ExpenseScheduleService;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -53,13 +53,14 @@ class PlannerApiIT {
 
         mockMvc.perform(post("/api/assumptions/seed"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.baseSalary").value(42_000_000))
-                .andExpect(jsonPath("$.raises.2027").value(0.08));
+                .andExpect(jsonPath("$.incomeChanges", hasSize(7)))
+                .andExpect(jsonPath("$.incomeChanges[0].effectiveMonth").value("2026-11"))
+                .andExpect(jsonPath("$.incomeChanges[0].amount").value(42_000_000));
 
         mockMvc.perform(get("/api/assumptions"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.expenses[0].changes[0].amount").value(4_250_000))
-                .andExpect(jsonPath("$.raises.2030").value(0.08));
+                .andExpect(jsonPath("$.incomeChanges", hasSize(7)));
 
         mockMvc.perform(get("/api/loans"))
                 .andExpect(status().isOk())
@@ -78,31 +79,44 @@ class PlannerApiIT {
                 .andExpect(status().isOk());
 
         AssumptionDTO updated = validAssumptions();
-        updated.setBaseSalary(55_000_000L);
+        updated.setIncomeChanges(List.of(
+                new IncomeChangeDTO("2026-11", 55_000_000L),
+                new IncomeChangeDTO("2027-04", 57_750_000L),
+                new IncomeChangeDTO("2028-04", 61_215_000L),
+                new IncomeChangeDTO("2029-04", 65_500_000L),
+                new IncomeChangeDTO("2030-04", 70_700_000L),
+                new IncomeChangeDTO("2031-04", 72_100_000L),
+                new IncomeChangeDTO("2032-04", 74_300_000L)));
+        updated.setForecastYears(6);
         updated.setExpenses(List.of(
                 new ExpenseDTO("Sinh hoạt phí", List.of(new ExpenseChangeDTO("2026-11", 6_000_000L))),
                 new ExpenseDTO("Tiền nhà", List.of(
                         new ExpenseChangeDTO("2026-11", 3_750_000L),
                         new ExpenseChangeDTO("2027-02", 7_000_000L)))));
-        updated.setRaises(Map.of(
-                2027, new BigDecimal("0.05"),
-                2028, new BigDecimal("0.06"),
-                2029, new BigDecimal("0.07"),
-                2030, new BigDecimal("0.08")));
 
         mockMvc.perform(put("/api/assumptions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsBytes(updated)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.baseSalary").value(55_000_000))
-                .andExpect(jsonPath("$.raises.2029").value(0.07));
+                .andExpect(jsonPath("$.incomeChanges", hasSize(7)))
+                .andExpect(jsonPath("$.forecastYears").value(6))
+                .andExpect(jsonPath("$.incomeChanges[2].amount").value(61_215_000));
 
         mockMvc.perform(get("/api/assumptions"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.baseSalary").value(55_000_000))
+                .andExpect(jsonPath("$.incomeChanges[0].amount").value(55_000_000))
                 .andExpect(jsonPath("$.expenses[0].changes[0].amount").value(6_000_000))
                 .andExpect(jsonPath("$.expenses[1].changes[1].amount").value(7_000_000))
-                .andExpect(jsonPath("$.raises.2028").value(0.06));
+                .andExpect(jsonPath("$.incomeChanges[5].effectiveMonth").value("2031-04"))
+                .andExpect(jsonPath("$.incomeChanges[6].amount").value(74_300_000));
+
+        updated.setForecastYears(2);
+        mockMvc.perform(put("/api/assumptions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsBytes(updated)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.forecastYears").value(2))
+                .andExpect(jsonPath("$.incomeChanges", hasSize(7)));
 
         org.junit.jupiter.api.Assertions.assertEquals(1, assumptionRepository.count());
     }
@@ -128,6 +142,43 @@ class PlannerApiIT {
     }
 
     @Test
+    void rejectsIncomeScheduleWithoutBaselineAndKeepsPersistedScheduleUnchanged() throws Exception {
+        mockMvc.perform(post("/api/assumptions/seed")).andExpect(status().isOk());
+
+        AssumptionDTO invalid = validAssumptions();
+        invalid.setIncomeChanges(List.of(new IncomeChangeDTO("2026-12", 99_000_000L)));
+
+        mockMvc.perform(put("/api/assumptions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsBytes(invalid)))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/assumptions"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.incomeChanges", hasSize(7)))
+                .andExpect(jsonPath("$.incomeChanges[0].effectiveMonth").value("2026-11"))
+                .andExpect(jsonPath("$.incomeChanges[0].amount").value(42_000_000));
+    }
+
+    @Test
+    void rejectsFractionalVndIncomeAmountsInsteadOfTruncatingThem() throws Exception {
+        String payload = """
+                {
+                  "incomeChanges": [{"effectiveMonth":"2026-11","amount":1.5}],
+                  "januaryMultiplier": 2.0,
+                  "startingSavings": 30000000,
+                  "forecastYears": 4,
+                  "expenses": []
+                }
+                """;
+
+        mockMvc.perform(put("/api/assumptions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void forecastEndpointReturnsFiftyMonthsAndAnnualSummaries() throws Exception {
         mockMvc.perform(post("/api/forecast").contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsBytes(validAssumptions())))
@@ -136,6 +187,19 @@ class PlannerApiIT {
                 .andExpect(jsonPath("$.months[0].year").value(2026))
                 .andExpect(jsonPath("$.months[0].month").value(11))
                 .andExpect(jsonPath("$.annual", hasSize(5)));
+    }
+
+    @Test
+    void forecastEndpointUsesTheRequestedHorizon() throws Exception {
+        AssumptionDTO assumptions = validAssumptions();
+        assumptions.setForecastYears(1);
+        mockMvc.perform(post("/api/forecast").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsBytes(assumptions)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.months", hasSize(14)))
+                .andExpect(jsonPath("$.annual", hasSize(2)))
+                .andExpect(jsonPath("$.months[13].year").value(2027))
+                .andExpect(jsonPath("$.months[13].month").value(12));
     }
 
     @Test
@@ -160,10 +224,9 @@ class PlannerApiIT {
     void persistsUserDefinedExpenseCategoriesAndForecastsEffectiveMonthlyAmounts() throws Exception {
         String assumptions = """
                 {
-                  "baseSalary": 1000,
+                  "incomeChanges": [{"effectiveMonth":"2026-11","amount":1000}],
                   "januaryMultiplier": 2.0,
                   "startingSavings": 0,
-                  "raises": {"2027":0,"2028":0,"2029":0,"2030":0},
                   "expenses": [
                     {"name":"Học phí","changes":[
                       {"effectiveMonth":"2026-11","amount":100},
@@ -199,8 +262,7 @@ class PlannerApiIT {
     @Test
     void rejectsInvalidExpenseScheduleWithoutOverwritingExistingCategories() throws Exception {
         String valid = """
-                {"baseSalary":1,"januaryMultiplier":1,"startingSavings":0,
-                 "raises":{"2027":0,"2028":0,"2029":0,"2030":0},
+                {"incomeChanges":[{"effectiveMonth":"2026-11","amount":1}],"januaryMultiplier":1,"startingSavings":0,
                  "expenses":[{"name":"Học phí","changes":[{"effectiveMonth":"2026-11","amount":100}]}]}
                 """;
         mockMvc.perform(put("/api/assumptions").contentType(MediaType.APPLICATION_JSON).content(valid))
@@ -297,12 +359,10 @@ class PlannerApiIT {
                 .andExpect(status().isOk());
 
         AssumptionDTO forecastInput = validAssumptions();
-        forecastInput.setBaseSalary(1_000L);
+        forecastInput.setIncomeChanges(List.of(new IncomeChangeDTO("2026-11", 1_000L)));
         forecastInput.setStartingSavings(0L);
         forecastInput.setExpenses(List.of(new ExpenseDTO("Sinh hoạt", List.of(
                 new ExpenseChangeDTO("2026-11", 100L)))));
-        forecastInput.setRaises(Map.of(2027, BigDecimal.ZERO, 2028, BigDecimal.ZERO,
-                2029, BigDecimal.ZERO, 2030, BigDecimal.ZERO));
         mockMvc.perform(post("/api/forecast").contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsBytes(forecastInput)))
                 .andExpect(status().isOk())
@@ -316,15 +376,11 @@ class PlannerApiIT {
 
     private AssumptionDTO validAssumptions() {
         AssumptionDTO dto = new AssumptionDTO();
-        dto.setBaseSalary(42_000_000L);
+        dto.setIncomeChanges(List.of(new IncomeChangeDTO("2026-11", 42_000_000L)));
         dto.setJanuaryMultiplier(new BigDecimal("2.0"));
         dto.setExpenses(ExpenseScheduleService.defaultExpenses());
         dto.setStartingSavings(30_000_000L);
-        dto.setRaises(Map.of(
-                2027, new BigDecimal("0.08"),
-                2028, new BigDecimal("0.08"),
-                2029, new BigDecimal("0.08"),
-                2030, new BigDecimal("0.08")));
+        dto.setForecastYears(4);
         return dto;
     }
 }

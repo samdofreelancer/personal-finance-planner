@@ -7,14 +7,18 @@ flowchart LR
   API --> LC["LoanController"]
   API --> FC["ForecastController"]
   AC --> AS["AssumptionService"]
+  AS --> IS["IncomeSchedulePersistenceService"]
   AS --> ES["ExpenseScheduleService"]
   LC --> LS["LoanScheduleService"]
   FC --> VS["ValidationService"]
   FC --> FS["ForecastService"]
+  FS --> IMS["IncomeScheduleService<br/>latest effective month"]
   AS --> REPO["AssumptionRepository<br/>Spring Data JPA"]
+  IS --> IREPO["IncomeAmountChangeRepository"]
   ES --> EREPO["ExpenseCategoryRepository<br/>categories + amount changes"]
   LS --> LREPO["LoanRepository<br/>Loan + repayment entities"]
-  REPO --> DB[("PostgreSQL 16<br/>assumptions + expenses + loans + repayments")]
+  REPO --> DB[("PostgreSQL 16<br/>assumptions + income changes + expenses + loans + repayments")]
+  IREPO --> DB
   EREPO --> DB
   LREPO --> DB
   LS --> FS
@@ -22,7 +26,7 @@ flowchart LR
   OUT --> FE
   FC --> CSV["CSV export"]
   CSV --> B
-  FE --> FORM["Assumptions form<br/>income + user-defined expenses + savings"]
+  FE --> FORM["Assumptions form<br/>effective-month income + user-defined expenses + savings"]
   FE --> LFORM["Loan schedule form<br/>multiple loans + dated entries"]
   FORM -->|"PUT assumptions"| AC
   LFORM -->|"PUT loan schedules"| LC

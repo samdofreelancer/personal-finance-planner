@@ -23,6 +23,23 @@ export class AssumptionsPage extends BasePage {
     await expense.getByLabel(`Số tiền khoản ${name}, mốc 2`).fill(nextAmount)
   }
 
+  async setIncomeSchedule(changes) {
+    for (let index = 0; index < changes.length; index += 1) {
+      if (index >= await this.page.locator('.income-change-row').count()) {
+        await this.page.getByRole('button', { name: '+ Thêm mốc thu nhập' }).click()
+      }
+      const row = this.page.locator('.income-change-row').nth(index)
+      if (index > 0) {
+        await row.getByLabel(`Tháng hiệu lực thu nhập, mốc ${index + 1}`).fill(changes[index].effectiveMonth)
+      }
+      await row.getByLabel(`Số tiền thu nhập, mốc ${index + 1}`).fill(String(changes[index].amount))
+    }
+  }
+
+  incomeChangeRow(index) {
+    return this.page.locator('.income-change-row').nth(index)
+  }
+
   get expenseNameInput() {
     return this.page.locator('.expense-editor').last().getByLabel(/^Tên khoản chi/)
   }

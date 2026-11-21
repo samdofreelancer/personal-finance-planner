@@ -25,9 +25,10 @@ vi.mock('../src/services/api.js', () => ({
 
 function validAssumptions() {
   return {
-    baseSalary: 42000000, januaryMultiplier: 2,
+    januaryMultiplier: 2,
     startingSavings: 30000000,
-    raises: { 2027: 0.08, 2028: 0.08, 2029: 0.08, 2030: 0.08 },
+    forecastYears: 4,
+    incomeChanges: [{ effectiveMonth: '2026-11', amount: 42000000 }],
     expenses: [
       { name: 'Sinh hoạt phí', changes: [{ effectiveMonth: '2026-11', amount: 4250000 }] },
       { name: 'Quỹ nuôi con', changes: [
@@ -107,16 +108,16 @@ describe('App', () => {
     expect(getForecast).not.toHaveBeenCalled()
   })
 
-  it('uses fallback raise defaults without treating a manually scheduled loan as provisional', async () => {
+  it('loads explicit income changes without applying automatic raise defaults', async () => {
     const data = validAssumptions()
-    delete data.raises[2028]
+    data.incomeChanges.push({ effectiveMonth: '2027-04', amount: 50000000 })
     getAssumptions.mockResolvedValue(data)
     getForecast.mockResolvedValue(forecastResult())
     const wrapper = mount(App)
     await flushPromises()
 
     expect(wrapper.find('#alert-area .alert').exists()).toBe(false)
-    expect(wrapper.get('input[name="raise2028"]').element.value).toBe('10')
+    expect(wrapper.get('input[aria-label="Số tiền thu nhập, mốc 2"]').element.value).toBe('50.000.000')
     expect(wrapper.get('#metric-net-foot').text()).not.toContain('Tạm tính')
   })
 
@@ -143,9 +144,9 @@ describe('App', () => {
   it('rejects invalid saves locally and persists valid saves before refreshing forecast', async () => {
     const wrapper = await mountLoadedApp()
     const form = wrapper.findComponent(AssumptionsForm)
-    form.vm.$emit('save', { ...validAssumptions(), baseSalary: -1 })
+    form.vm.$emit('save', { ...validAssumptions(), incomeChanges: [{ effectiveMonth: '2026-11', amount: -1 }] })
     await flushPromises()
-    expect(wrapper.text()).toContain('baseSalary phải là số VND nguyên không âm.')
+    expect(wrapper.text()).toContain('Số tiền thu nhập phải là VND nguyên không âm.')
     expect(saveAssumptions).not.toHaveBeenCalled()
 
     form.vm.$emit('save', validAssumptions())

@@ -24,7 +24,7 @@ body {
   line-height: 1.5;
 }
 
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 button { cursor: pointer; }
 
 .topbar {
@@ -96,14 +96,13 @@ h2 { margin: 0; color: var(--navy); font-size: 19px; font-weight: 700; letter-sp
 .input-wrap { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 37px; padding: 0 10px; border: 1px solid #e2e8ee; border-radius: 6px; background: #fff; color: #8997a5; font-size: 10px; }
 .input-wrap:focus-within { border-color: #6ea1d8; box-shadow: 0 0 0 3px #eaf3fc; }
 .input-wrap input { width: 100%; min-width: 0; padding: 8px 0; border: 0; outline: 0; color: #203a54; background: transparent; font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.input-wrap select { width: 100%; min-width: 0; padding: 8px 20px 8px 0; appearance: none; border: 0; outline: 0; color: #203a54; background-color: transparent; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='m2.5 4.5 3.5 3 3.5-3' fill='none' stroke='%2353685d' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right center; font-size: 13px; font-weight: 650; cursor: pointer; }
 .input-wrap input[inputmode="numeric"] { text-align: right; }
 .input-wrap-short { max-width: 150px; }
 .input-wrap input::-webkit-inner-spin-button, .input-wrap input::-webkit-outer-spin-button { margin-left: 6px; }
 .field-hint { margin: 10px 0 0; color: #8b97a5; font-size: 10px; line-height: 1.55; }
 .confirm-field { display: flex; align-items: flex-start; gap: 8px; margin-top: 11px; color: #526579; font-size: 11px; }
 .confirm-field input { width: 15px; height: 15px; margin: 1px 0 0; accent-color: var(--teal); }
-.raise-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 10px; }
-.raise-grid .field { margin-top: 10px; }
 .form-error { min-height: 0; margin-top: 10px; color: var(--red); font-size: 12px; }
 .form-error:not(:empty) { padding: 9px 11px; border-radius: 6px; background: #fff1f1; }
 .form-footer { display: flex; justify-content: space-between; margin-top: 9px; padding-top: 11px; border-top: 1px solid #edf0f3; }
@@ -497,11 +496,12 @@ tbody th[scope="row"] { padding: 10px 11px; border-bottom: 1px solid #edf0f3; co
 .expense-name-field { min-width: 0; margin-top: 0; }
 .expense-name-field input { width: 100%; min-width: 0; padding: 8px 0; border: 0; outline: 0; color: #203a54; background: transparent; font-size: 13px; font-weight: 650; }
 .expense-remove, .expense-change-remove { color: #a14b43; white-space: nowrap; }
-.expense-change-row { display: grid; grid-template-columns: minmax(130px, .8fr) minmax(150px, 1fr) auto; align-items: end; gap: 10px; padding-top: 9px; }
-.expense-change-row .field { min-width: 0; }
-.expense-change-row input[type="month"] { width: 100%; min-width: 0; padding: 8px 0; border: 0; outline: 0; color: #203a54; background: transparent; font-size: 12px; }
-.expense-change-remove { align-self: end; min-height: 37px; }
-.expense-add-change { margin-top: 8px; }
+.expense-change-row, .income-change-row { display: grid; grid-template-columns: minmax(130px, .8fr) minmax(150px, 1fr) auto; align-items: end; gap: 10px; padding-top: 9px; }
+.expense-change-row .field, .income-change-row .field { min-width: 0; }
+.expense-change-row input[type="month"], .income-change-row input[type="month"] { width: 100%; min-width: 0; padding: 8px 0; border: 0; outline: 0; color: #203a54; background: transparent; font-size: 12px; }
+.expense-change-remove, .income-change-remove { align-self: end; min-height: 37px; color: #a14b43; white-space: nowrap; }
+.expense-add-change, .income-add-change { margin-top: 8px; }
+.income-change-row + .income-change-row { border-top: 1px solid #edf0e9; }
 .expense-add { margin-top: 13px; }
 .expense-breakdown-hint { display: block; max-width: 180px; overflow: hidden; color: #637568; font-size: 9px; text-overflow: ellipsis; }
 @media (max-width: 900px) {
@@ -514,8 +514,8 @@ tbody th[scope="row"] { padding: 10px 11px; border-bottom: 1px solid #edf0f3; co
 }
 @media (max-width: 600px) {
   .expense-editor { padding: 11px 9px; }
-  .expense-change-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 7px; }
-  .expense-change-remove { grid-column: 2; justify-self: end; min-height: 25px; }
+  .expense-change-row, .income-change-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 7px; }
+  .expense-change-remove, .income-change-remove { grid-column: 2; justify-self: end; min-height: 25px; }
   .loan-schedule-panel { padding: 15px 12px; }
   .loan-card { padding: 13px 10px; }
   .loan-card-heading { grid-template-columns: minmax(0, 1fr); gap: 9px; }

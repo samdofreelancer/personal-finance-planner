@@ -183,7 +183,7 @@ As a product owner and maintainer, I want each review finding mapped to requirem
 ### F-04 — Backend test coverage and single calculation source
 
 - **FR-013**: Backend MUST have automated unit tests for forecast calculation rules.
-- **FR-014**: Backend tests MUST cover baseline values, debt payoff, provisional interest, partial-year aggregation, negative savings/shortfall, percentage raises, bonus multiplier, and rounding/boundary behavior applicable to current rules.
+- **FR-014**: Backend tests MUST cover baseline values, debt payoff, provisional interest, partial-year aggregation, negative savings/shortfall, effective-month income changes, January multiplier, and rounding/boundary behavior applicable to current rules.
 - **FR-015**: Java backend MUST be the authoritative production forecast calculation path.
 - **FR-016**: The application MUST NOT retain a second forecast calculation implementation; Java is the single source of forecast behavior.
 

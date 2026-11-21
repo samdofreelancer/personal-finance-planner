@@ -71,7 +71,7 @@ public class ForecastController {
         byte[] bytes = csv.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
         ByteArrayResource resource = new ByteArrayResource(bytes);
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=ke-hoach-tai-chinh-2026-2030.csv")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=ke-hoach-tai-chinh-2026-" + (2026 + assumptions.getForecastYears()) + ".csv")
                 .contentType(MediaType.parseMediaType("text/csv;charset=utf-8"))
                 .contentLength(bytes.length)
                 .body(resource);

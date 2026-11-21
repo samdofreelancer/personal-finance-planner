@@ -16,7 +16,7 @@ Do not silently broaden this product into a bank aggregator, accounting system, 
 - Backend: Spring Boot 3.3.5, Java 21, REST API and Spring Data JPA.
 - Database: PostgreSQL 16; one household `assumptions` record plus normalized `loans` and `loan_repayments` tables, evolved by Flyway.
 - Local orchestration: Docker Compose (`frontend`, `backend`, `db`).
-- Forecast horizon: November 2026 through December 2030 (50 months).
+- Forecast horizon: November 2026 through December of the selected end year (default December 2030; selectable 1–6 complete years after the partial 2026 starting year).
 - Backend Java is the single implementation of forecast calculations.
 - No authentication, household tenancy, bank integration or cloud deployment is implemented.
 
@@ -49,7 +49,7 @@ Before changing code:
 - Distinguish persisted assumptions from transient forecast/simulation inputs.
 - Seed values are demo defaults, never the user's real financial profile.
 - Money behavior must be deterministic: document currency units, precision, rounding mode, timing and boundary conditions.
-- Preserve per-loan repayment dates/amounts, expense-change and salary-raise timing unless an accepted requirement explicitly changes them.
+- Preserve per-loan repayment dates/amounts, expense-change timing and effective-month income schedule semantics unless an accepted requirement explicitly changes them.
 - CSV exports contain household financial information; treat them as sensitive output.
 - Assumptions and loan schedules have explicit save actions; do not describe the current UI as autosaving.
 

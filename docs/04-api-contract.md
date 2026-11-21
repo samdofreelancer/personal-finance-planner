@@ -18,17 +18,19 @@ Base path: `/api`. In Docker/local production-like use, the browser calls Nginx 
 
 The frontend sends a complete assumptions snapshot as JSON to `POST /api/forecast` and `POST /api/export/csv`. The backend validates that snapshot and calculates salary and expense assumptions directly from it. Both operations load persisted loan schedules through `LoanScheduleService`; they do not load saved assumptions for preview calculations.
 
-`PUT /api/assumptions` persists income, raise, savings and the complete expense-category collection in one transaction. Loan schedules are managed separately through `PUT /api/loans`; unsaved loan edits are not included in the forecast.
+`PUT /api/assumptions` persists the complete income schedule, January multiplier, horizon, savings and expense-category collection in one transaction. Loan schedules are managed separately through `PUT /api/loans`; unsaved loan edits are not included in the forecast.
 
 ## Assumptions DTO fields
 
 | Field | Type | Meaning |
 |---|---|---|
-| `baseSalary` | integer | Base monthly salary in VND |
+| `incomeChanges` | array | Required schedule entries with `effectiveMonth` (`YYYY-MM`) and `amount` (non-negative whole VND); must include `2026-11` |
 | `januaryMultiplier` | decimal | January salary multiplier |
 | `startingSavings` | integer | Starting savings in VND |
-| `raises` | object | Annual raise rates keyed by 2027, 2028, 2029, 2030 |
+| `forecastYears` | integer | Number of complete calendar years after partial 2026; 1–6, default 4 |
 | `expenses` | array | User-defined categories with `name` and `changes[]`; each change has `effectiveMonth` (`YYYY-MM`) and `amount` (whole VND) |
+
+Income changes may be configured beyond the active forecast horizon and are retained when the horizon is shortened. For each forecast month, the latest effective amount is used. `januaryMultiplier` is applied after selecting that month's effective amount.
 
 ## Loan schedule DTOs
 
@@ -39,8 +41,8 @@ The frontend sends a complete assumptions snapshot as JSON to `POST /api/forecas
 
 ## Forecast response
 
-- `months`: 50 monthly rows. Each row includes salary, `recurringExpenses`, `expenseBreakdown[]` (`name`, `amount`), aggregated loan principal/interest/payment, total expenses, net cash flow, cumulative savings and provisional flags.
-- `annual`: 5 annual rows. Each row includes year, partial-year flag, salary total, expense total, net cash flow, ending savings and provisional flags.
+- `months`: `12 * forecastYears + 2` monthly rows (50 by default), from Nov 2026 through Dec of the selected end year. Each row includes salary, `recurringExpenses`, `expenseBreakdown[]` (`name`, `amount`), aggregated loan principal/interest/payment, total expenses, net cash flow, cumulative savings and provisional flags.
+- `annual`: `forecastYears + 1` annual rows (5 by default), from 2026 through the selected end year. Each row includes year, partial-year flag, salary total, expense total, net cash flow, ending savings and provisional flags.
 - Exact serialized field names are defined by `ForecastMonthDTO`, `ForecastAnnualDTO` and `ForecastResponse`; update this document when those DTOs change.
 
 ## Error behavior
