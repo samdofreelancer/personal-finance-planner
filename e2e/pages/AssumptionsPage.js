@@ -8,7 +8,7 @@ export class AssumptionsPage extends BasePage {
   }
 
   async open() {
-    await this.page.getByRole('link', { name: /Giả định tài chính/ }).click()
+    await this.page.getByRole('link', { name: /Giả định/ }).click()
     await this.saveStatus.waitFor({ state: 'visible' })
   }
 

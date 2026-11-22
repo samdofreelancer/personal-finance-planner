@@ -24,7 +24,7 @@
               <span>Thu nhập / tháng</span>
               <span class="input-wrap"><currency-input v-model="change.amount" :name="`income-change-${changeIndex}`" :aria-label="`Số tiền thu nhập, mốc ${changeIndex + 1}`" /><span>₫</span></span>
             </label>
-            <button class="text-button income-change-remove" type="button" :disabled="change.isBaseline" :aria-label="`Xóa mốc thu nhập ${changeIndex + 1}`" @click="removeIncomeChange(change)">Xóa mốc</button>
+            <button class="text-button income-change-remove" type="button" :disabled="incomeDraft.length <= 1 || change.isBaseline" :aria-label="`Xóa mốc thu nhập ${changeIndex + 1}`" @click="removeIncomeChange(change)">Xóa mốc</button>
           </article>
           <button class="text-button income-add-change" type="button" @click="addIncomeChange">+ Thêm mốc thu nhập</button>
           <label class="field" for="januaryMultiplier">

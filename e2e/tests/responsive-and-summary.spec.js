@@ -14,6 +14,9 @@ test('keeps mobile navigation and header actions compact without wrapping', asyn
       navWhiteSpace: getComputedStyle(nav.querySelector('.nav-link')).whiteSpace,
       actionWhiteSpaces: actions.map((button) => getComputedStyle(button).whiteSpace),
       breadcrumbPrefixHidden: getComputedStyle(breadcrumbPrefix).display === 'none',
+      mobileNavLabels: [...document.querySelectorAll('.nav-label-mobile')].map((node) => getComputedStyle(node).display !== 'none' ? node.textContent.trim() : ''),
+      householdAriaLabel: document.querySelector('#household-settings-button').getAttribute('aria-label'),
+      householdTitle: document.querySelector('#household-settings-button').getAttribute('title'),
       documentWidth: document.documentElement.scrollWidth,
       viewportWidth: window.innerWidth,
     }
@@ -23,6 +26,9 @@ test('keeps mobile navigation and header actions compact without wrapping', asyn
   expect(layout.navWhiteSpace).toBe('nowrap')
   expect(layout.actionWhiteSpaces.every((value) => value === 'nowrap')).toBe(true)
   expect(layout.breadcrumbPrefixHidden).toBe(true)
+  expect(layout.mobileNavLabels).toEqual(['Tổng quan', 'Giả định', 'Khoản vay', 'Theo năm', 'Theo tháng'])
+  expect(layout.householdAriaLabel).toBe('Không gian hộ gia đình')
+  expect(layout.householdTitle).toBe('Không gian hộ gia đình')
   expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth)
   await expect(page.locator('#monthly-table tfoot tr')).toContainText('Tổng cộng kỳ')
   await expect(page.locator('#monthly-table thead th').first()).toHaveCSS('position', 'sticky')

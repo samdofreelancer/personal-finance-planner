@@ -11,11 +11,11 @@
       </a>
       <p class="nav-caption">WORKSPACE</p>
       <nav class="side-nav">
-        <a class="nav-link" :class="{ active: activeSection === 'overview' }" href="#overview" :aria-current="activeSection === 'overview' ? 'page' : undefined"><span class="nav-icon">▦</span> Tổng quan</a>
-        <a class="nav-link" :class="{ active: activeSection === 'assumptions' }" href="#assumptions" :aria-current="activeSection === 'assumptions' ? 'page' : undefined"><span class="nav-icon">⚙</span> Giả định tài chính</a>
-        <a class="nav-link" :class="{ active: activeSection === 'loans' }" href="#loans" :aria-current="activeSection === 'loans' ? 'page' : undefined"><span class="nav-icon">⌁</span> Khoản vay</a>
-        <a class="nav-link" :class="{ active: activeSection === 'annual-report' }" href="#annual-report" :aria-current="activeSection === 'annual-report' ? 'page' : undefined"><span class="nav-icon">▥</span> Tổng hợp theo năm</a>
-        <a class="nav-link" :class="{ active: activeSection === 'monthly-forecast' }" href="#monthly-forecast" :aria-current="activeSection === 'monthly-forecast' ? 'page' : undefined"><span class="nav-icon">▤</span> Dự báo theo tháng</a>
+        <a class="nav-link" :class="{ active: activeSection === 'overview' }" href="#overview" :aria-current="activeSection === 'overview' ? 'page' : undefined"><span class="nav-icon">▦</span><span class="nav-label-desktop">Tổng quan</span><span class="nav-label-mobile">Tổng quan</span></a>
+        <a class="nav-link" :class="{ active: activeSection === 'assumptions' }" href="#assumptions" :aria-current="activeSection === 'assumptions' ? 'page' : undefined"><span class="nav-icon">⚙</span><span class="nav-label-desktop">Giả định tài chính</span><span class="nav-label-mobile">Giả định</span></a>
+        <a class="nav-link" :class="{ active: activeSection === 'loans' }" href="#loans" :aria-current="activeSection === 'loans' ? 'page' : undefined"><span class="nav-icon">⌁</span><span class="nav-label-desktop">Khoản vay</span><span class="nav-label-mobile">Khoản vay</span></a>
+        <a class="nav-link" :class="{ active: activeSection === 'annual-report' }" href="#annual-report" :aria-current="activeSection === 'annual-report' ? 'page' : undefined"><span class="nav-icon">▥</span><span class="nav-label-desktop">Tổng hợp theo năm</span><span class="nav-label-mobile">Theo năm</span></a>
+        <a class="nav-link" :class="{ active: activeSection === 'monthly-forecast' }" href="#monthly-forecast" :aria-current="activeSection === 'monthly-forecast' ? 'page' : undefined"><span class="nav-icon">▤</span><span class="nav-label-desktop">Dự báo theo tháng</span><span class="nav-label-mobile">Theo tháng</span></a>
       </nav>
       <div class="sidebar-bottom">
         <span class="local-indicator"><span></span> Dữ liệu lưu trên máy chủ</span>
@@ -29,7 +29,7 @@
         <div class="topbar-actions">
           <span class="local-badge"><span aria-hidden="true"></span> Dữ liệu lưu trên máy chủ</span>
           <span class="user-badge"><strong>{{ user.email }}</strong><small>{{ user.role === 'OWNER' ? 'Chủ hộ' : 'Thành viên' }}</small></span>
-          <button id="household-settings-button" class="button button-secondary" type="button" @click="$emit('open-household-settings')"><span class="desktop-action-label">Hộ gia đình</span><span class="mobile-action-label">Hộ</span></button>
+          <button id="household-settings-button" class="button button-secondary" type="button" aria-label="Không gian hộ gia đình" title="Không gian hộ gia đình" @click="$emit('open-household-settings')"><span class="desktop-action-label">Hộ gia đình</span><span class="mobile-action-label">Hộ</span></button>
           <button id="logout-button" class="button button-secondary" type="button" @click="$emit('logout')"><span class="desktop-action-label">Đăng xuất</span><span class="mobile-action-label">Thoát</span></button>
           <button id="export-button" class="button button-secondary" type="button" :disabled="hasValidationError" @click="exportCsv"><span class="desktop-action-label">↓ Xuất CSV</span><span class="mobile-action-label">CSV</span></button>
         </div>

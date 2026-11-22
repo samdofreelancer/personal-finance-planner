@@ -122,6 +122,15 @@ describe('AssumptionsForm', () => {
     expect(wrapper.get('input[aria-label="Tháng hiệu lực thu nhập, mốc 1"]').element.value).toBe('2026-11')
   })
 
+  it('disables income removal when only the required baseline remains', () => {
+    const wrapper = mount(AssumptionsForm, { props: {
+      dto: { ...assumptions(), incomeChanges: [{ effectiveMonth: '2026-11', amount: 0 }] },
+      expenses: expenses(), error: '', status: '',
+    } })
+    expect(wrapper.findAll('.income-change-row')).toHaveLength(1)
+    expect(wrapper.get('.income-change-remove').element.disabled).toBe(true)
+  })
+
   it('shows effective months in MM/YYYY while keeping the native month picker input', () => {
     const wrapper = mount(AssumptionsForm, { props: { dto: assumptions(), expenses: expenses(), error: '', status: '' } })
     const incomeMonth = wrapper.get('input[aria-label="Tháng hiệu lực thu nhập, mốc 2"]')
@@ -299,6 +308,25 @@ describe('forecast presentation components', () => {
     const empty = mount(AnnualChart, { props: { forecast: null } })
     expect(empty.findAll('.chart-bar')).toHaveLength(0)
     expect(empty.text()).toContain('Chưa có dữ liệu biểu đồ')
+  })
+
+  it('renders annual chart and monthly baseline tables when all forecast values are zero', () => {
+    const zeroForecast = {
+      annual: [
+        { year: 2026, partial: true, salary: 0, expenses: 0, netCashFlow: 0, endingSavings: 0 },
+        { year: 2027, partial: false, salary: 0, expenses: 0, netCashFlow: 0, endingSavings: 0 },
+      ],
+      months: [
+        { label: 'thg 11 2026', year: 2026, month: 11, salary: 0, recurringExpenses: 0, openingPrincipal: 0, principalPaid: 0, interestPaid: 0, loanPayment: 0, totalExpenses: 0, netCashFlow: 0, cumulativeSavings: 0 },
+        { label: 'thg 12 2026', year: 2026, month: 12, salary: 0, recurringExpenses: 0, openingPrincipal: 0, principalPaid: 0, interestPaid: 0, loanPayment: 0, totalExpenses: 0, netCashFlow: 0, cumulativeSavings: 0 },
+      ],
+    }
+    const chart = mount(AnnualChart, { props: { forecast: zeroForecast } })
+    const monthly = mount(MonthlyTable, { props: { forecast: zeroForecast } })
+    expect(chart.find('#annual-chart svg').exists()).toBe(true)
+    expect(chart.findAll('.chart-bar')).toHaveLength(2)
+    expect(monthly.findAll('#monthly-table tbody tr')).toHaveLength(2)
+    expect(monthly.find('#monthly-table tfoot tr').text()).toContain('Tổng cộng kỳ')
   })
 
   it('renders annual rows with partial-year and provisional labels', () => {

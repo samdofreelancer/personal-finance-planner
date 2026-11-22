@@ -585,6 +585,7 @@ tbody th[scope="row"] { padding: 10px 11px; border-bottom: 1px solid #edf0f3; co
 
 /* Planwise responsive polish: compact mobile navigation, readable tables and explicit save states. */
 .mobile-action-label { display: none; }
+.nav-label-mobile { display: none; }
 .assumptions-heading-actions { display: flex; align-items: center; gap: 14px; }
 .sample-data-button { white-space: nowrap; }
 .multiplier-hint { max-width: 310px; }
@@ -609,6 +610,8 @@ tbody th[scope="row"] { padding: 10px 11px; border-bottom: 1px solid #edf0f3; co
   .side-nav { display: flex; width: 100%; gap: 5px; overflow-x: auto; padding: 0 0 3px; white-space: nowrap; scrollbar-width: none; }
   .side-nav::-webkit-scrollbar { display: none; }
   .nav-link { flex: 0 0 auto; min-width: max-content; min-height: 38px; padding: 0 10px; white-space: nowrap; }
+  .nav-label-desktop { display: none; }
+  .nav-label-mobile { display: inline; }
   .nav-link.active { box-shadow: inset 0 -3px #39856c; }
   .topbar { display: flex; min-width: 0; gap: 8px; padding-right: 9px; padding-left: 9px; }
   .breadcrumb { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

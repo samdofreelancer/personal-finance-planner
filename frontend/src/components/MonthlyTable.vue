@@ -4,7 +4,7 @@
       <div><p class="eyebrow">CHI TIẾT</p><h2>Dự báo theo tháng</h2></div>
           <span class="row-count">{{ months.length }} tháng</span>
     </div>
-    <div v-if="hasData" class="table-scroll">
+    <div v-if="months.length" class="table-scroll">
       <table id="monthly-table">
         <caption class="sr-only">Dự báo thu nhập, chi phí, khoản vay, dòng tiền ròng và tiết kiệm từng tháng</caption>
         <thead>
@@ -50,10 +50,6 @@ import { formatCurrency } from '../utils/currency.js'
 
 const props = defineProps(['forecast'])
 const months = computed(() => props.forecast?.months || [])
-const hasData = computed(() => months.value.some((month) =>
-  ['salary', 'recurringExpenses', 'openingPrincipal', 'principalPaid', 'interestPaid', 'loanPayment', 'totalExpenses', 'netCashFlow', 'cumulativeSavings']
-    .some((key) => Number(month[key] || 0) !== 0),
-))
 const sum = (key) => months.value.reduce((total, month) => total + Number(month[key] || 0), 0)
 const totals = computed(() => ({
   salary: sum('salary'),
