@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-11-21-household-authentication-design.md`
 
+> **Supersession note (2026-11-22):** This plan records the original implementation of authentication and invitation-based household sharing. Its first-account-only registration/bootstrap assumptions are no longer current. `specs/006-self-service-registration/spec.md` is the active requirement: self-registration is always open and creates a new blank household; invitation registration still joins the inviter's household.
+
 ## Global Constraints
 
 - Keep the existing Spring Boot 3.3.5 / Java 21, Vue 3, PostgreSQL, Flyway, Maven, and Playwright stack; do not add a new identity service.

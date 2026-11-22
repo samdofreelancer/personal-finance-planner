@@ -2,10 +2,6 @@ import { apiRequest, requestJson, throwApiError } from './api.js'
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' }
 
-export async function getBootstrapStatus() {
-  return requestJson('/api/auth/bootstrap', {}, 'Không kiểm tra được trạng thái đăng ký')
-}
-
 export async function getCurrentUser() {
   const response = await apiRequest('/api/auth/me', {}, { notifyUnauthorized: false })
   if (response.status === 401) return null
@@ -13,7 +9,7 @@ export async function getCurrentUser() {
   return response.json()
 }
 
-export async function registerInitial({ email, password }) {
+export async function registerAccount({ email, password }) {
   return requestJson('/api/auth/register', {
     method: 'POST',
     headers: JSON_HEADERS,

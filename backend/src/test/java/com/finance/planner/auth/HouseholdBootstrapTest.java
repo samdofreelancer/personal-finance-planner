@@ -57,23 +57,25 @@ class HouseholdBootstrapTest {
     }
 
     @Test
-    void concurrentInitialRegistrationsCreateExactlyOneOwnerAndMembership() throws Exception {
+    void concurrentSelfRegistrationsEachCreateAnIndependentOwnerHousehold() throws Exception {
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(2);
 
         try {
-            Future<Boolean> first = executor.submit(() -> attemptInitialRegistration(
+            Future<Boolean> first = executor.submit(() -> attemptSelfRegistration(
                     "first@example.com", ready, start));
-            Future<Boolean> second = executor.submit(() -> attemptInitialRegistration(
+            Future<Boolean> second = executor.submit(() -> attemptSelfRegistration(
                     "second@example.com", ready, start));
 
             ready.await();
             start.countDown();
 
-            assertNotEquals(first.get(), second.get(), "Exactly one concurrent registration must win");
-            assertEquals(1, userRepository.count());
-            assertEquals(1, householdMemberRepository.count());
+            assertEquals(true, first.get());
+            assertEquals(true, second.get());
+            assertEquals(2, userRepository.count());
+            assertEquals(2, householdMemberRepository.count());
+            assertEquals(3, householdRepository.count(), "The pre-existing household and two new households remain separate");
         } finally {
             executor.shutdownNow();
         }
@@ -142,16 +144,12 @@ class HouseholdBootstrapTest {
         }
     }
 
-    private boolean attemptInitialRegistration(String email, CountDownLatch ready, CountDownLatch start)
+    private boolean attemptSelfRegistration(String email, CountDownLatch ready, CountDownLatch start)
             throws Exception {
         ready.countDown();
         start.await();
-        try {
-            authService.registerInitial(new RegisterRequest(email, "correct-horse-battery-staple"));
-            return true;
-        } catch (IllegalStateException expectedForTheLosingRequest) {
-            return false;
-        }
+        authService.register(new RegisterRequest(email, "correct-horse-battery-staple"));
+        return true;
     }
 
     private boolean attemptInvitationRegistration(String email, String token, CountDownLatch ready,

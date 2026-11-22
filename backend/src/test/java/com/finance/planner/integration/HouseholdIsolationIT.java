@@ -10,16 +10,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.finance.planner.auth.RegisterRequest;
-import com.finance.planner.auth.User;
 import com.finance.planner.auth.UserRepository;
 import com.finance.planner.household.BootstrapLock;
 import com.finance.planner.household.BootstrapLockRepository;
 import com.finance.planner.household.Household;
 import com.finance.planner.household.HouseholdInvitationRepository;
-import com.finance.planner.household.HouseholdMember;
 import com.finance.planner.household.HouseholdMemberRepository;
 import com.finance.planner.household.HouseholdRepository;
-import com.finance.planner.household.HouseholdRole;
 import com.finance.planner.repository.AssumptionRepository;
 import com.finance.planner.repository.ExpenseCategoryRepository;
 import com.finance.planner.repository.LoanRepository;
@@ -34,7 +31,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -53,7 +49,6 @@ class HouseholdIsolationIT {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
-    @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private UserRepository userRepository;
     @Autowired private HouseholdRepository householdRepository;
     @Autowired private HouseholdMemberRepository householdMemberRepository;
@@ -80,9 +75,24 @@ class HouseholdIsolationIT {
     }
 
     @Test
+    void newlyRegisteredHouseholdStartsWithEmptyFinancialInputsAndNoSampleLoans() throws Exception {
+        MockHttpSession session = registerSelfRegisteredOwner("new-user@example.com");
+
+        mockMvc.perform(get("/api/assumptions").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.incomeChanges", org.hamcrest.Matchers.hasSize(1)))
+                .andExpect(jsonPath("$.incomeChanges[0].amount").value(0))
+                .andExpect(jsonPath("$.startingSavings").value(0))
+                .andExpect(jsonPath("$.expenses", org.hamcrest.Matchers.hasSize(0)));
+        mockMvc.perform(get("/api/loans").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(0)));
+    }
+
+    @Test
     void assumptionsExpensesLoansForecastAndCsvAreIsolatedByHousehold() throws Exception {
-        MockHttpSession firstSession = registerInitialOwner("owner-one@example.com");
-        MockHttpSession secondSession = createAndLoginSecondHouseholdOwner();
+        MockHttpSession firstSession = registerSelfRegisteredOwner("owner-one@example.com");
+        MockHttpSession secondSession = registerSelfRegisteredOwner("owner-two@example.com");
 
         saveAssumptions(firstSession, 1_000L, "Food One", 100L);
         saveAssumptions(secondSession, 2_000L, "Food Two", 200L);
@@ -136,8 +146,8 @@ class HouseholdIsolationIT {
 
     @Test
     void foreignLoanIdsAreRejectedAndSeedResetDoesNotTouchAnotherHousehold() throws Exception {
-        MockHttpSession firstSession = registerInitialOwner("owner-one@example.com");
-        MockHttpSession secondSession = createAndLoginSecondHouseholdOwner();
+        MockHttpSession firstSession = registerSelfRegisteredOwner("owner-one@example.com");
+        MockHttpSession secondSession = registerSelfRegisteredOwner("owner-two@example.com");
         MvcResult firstLoanResult = saveLoans(firstSession, "Loan One", 1_000L, 100L, 10L);
         MvcResult secondLoanResult = saveLoans(secondSession, "Loan Two", 2_000L, 200L, 20L);
         long firstLoanId = objectMapper.readTree(firstLoanResult.getResponse().getContentAsString()).get(0).get("id").asLong();
@@ -174,7 +184,7 @@ class HouseholdIsolationIT {
                 .andExpect(jsonPath("$[0].name").value("Loan Two"));
     }
 
-    private MockHttpSession registerInitialOwner(String email) throws Exception {
+    private MockHttpSession registerSelfRegisteredOwner(String email) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/register").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new RegisterRequest(
@@ -182,24 +192,6 @@ class HouseholdIsolationIT {
                 .andExpect(status().isCreated())
                 .andReturn();
         MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);
-        assertNotNull(session);
-        return session;
-    }
-
-    private MockHttpSession createAndLoginSecondHouseholdOwner() throws Exception {
-        Household household = householdRepository.save(new Household("Household Two", false));
-        User user = userRepository.save(new User("owner-two@example.com",
-                passwordEncoder.encode("correct-horse-battery-staple")));
-        householdMemberRepository.save(new HouseholdMember(household, user, HouseholdRole.OWNER));
-
-        MvcResult login = mockMvc.perform(post("/api/auth/login").with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"email":"owner-two@example.com","password":"correct-horse-battery-staple"}
-                                """))
-                .andExpect(status().isOk())
-                .andReturn();
-        MockHttpSession session = (MockHttpSession) login.getRequest().getSession(false);
         assertNotNull(session);
         return session;
     }

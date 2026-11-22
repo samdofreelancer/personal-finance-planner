@@ -35,12 +35,13 @@ public class AssumptionService {
         if (entity == null) {
             entity = new Assumption();
             entity.setHousehold(householdRepository.getReferenceById(context.householdId()));
-            updateEntityFromDTO(entity, defaultAssumptions());
+            AssumptionDTO initial = emptyHouseholdAssumptions();
+            updateEntityFromDTO(entity, initial);
             entity.setCreatedAt(LocalDateTime.now());
             entity.setUpdatedAt(LocalDateTime.now());
             entity = repository.save(entity);
-            incomeSchedulePersistenceService.saveIncomeChanges(entity, defaultAssumptions().getIncomeChanges());
-            expenseScheduleService.seedDefaults(context);
+            incomeSchedulePersistenceService.saveIncomeChanges(entity, initial.getIncomeChanges());
+            expenseScheduleService.saveExpenses(context, initial.getExpenses());
         }
         return toDTO(entity, context);
     }
@@ -88,6 +89,16 @@ public class AssumptionService {
         dto.setJanuaryMultiplier(new BigDecimal("2.0"));
         dto.setExpenses(ExpenseScheduleService.defaultExpenses());
         dto.setStartingSavings(30_000_000L);
+        dto.setForecastYears(4);
+        return dto;
+    }
+
+    private AssumptionDTO emptyHouseholdAssumptions() {
+        AssumptionDTO dto = new AssumptionDTO();
+        dto.setIncomeChanges(List.of(new IncomeChangeDTO("2026-11", 0L)));
+        dto.setJanuaryMultiplier(new BigDecimal("2.0"));
+        dto.setExpenses(List.of());
+        dto.setStartingSavings(0L);
         dto.setForecastYears(4);
         return dto;
     }

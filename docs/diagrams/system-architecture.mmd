@@ -3,6 +3,9 @@ flowchart LR
   B --> FE["Vue 3 SPA<br/>Vite build"]
   FE --> N["Nginx"]
   N -->|"/api proxy"| API["Spring Boot 3<br/>Java 21 REST API"]
+  FE --> AUTHUI["AuthView<br/>register / login"]
+  API --> AUTH["AuthController + AuthService"]
+  AUTH --> IDDB["users + households<br/>memberships + invitations"]
   API --> AC["AssumptionController"]
   API --> LC["LoanController"]
   API --> FC["ForecastController"]
@@ -18,6 +21,7 @@ flowchart LR
   ES --> EREPO["ExpenseCategoryRepository<br/>categories + amount changes"]
   LS --> LREPO["LoanRepository<br/>Loan + repayment entities"]
   REPO --> DB[("PostgreSQL 16<br/>assumptions + income changes + expenses + loans + repayments")]
+  IDDB --> DB
   IREPO --> DB
   EREPO --> DB
   LREPO --> DB

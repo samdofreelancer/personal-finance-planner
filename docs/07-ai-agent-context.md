@@ -6,7 +6,7 @@ This file gives coding agents a compact, reliable mental model of the repository
 
 ## Product identity
 
-This repository contains **Personal Finance Planner** (UI branding: Planwise): a local-first planning tool for one household. It lets the household edit financial assumptions, inspect a month-by-month forecast, compare annual summaries and export forecast data as CSV.
+This repository contains **Personal Finance Planner** (UI branding: Planwise): a local-first planning tool for independent household workspaces. Each self-registered account owns a separate household; invited members can collaborate inside that household. Users edit financial assumptions, inspect a month-by-month forecast, compare annual summaries and export forecast data as CSV.
 
 Do not silently broaden this product into a bank aggregator, accounting system, investment advisor, multi-tenant SaaS or the separate Financial GPS domain model. Those would require explicit product decisions and specifications.
 
@@ -14,11 +14,12 @@ Do not silently broaden this product into a bank aggregator, accounting system, 
 
 - Frontend: Vue 3 + Vite; production assets are served by Nginx.
 - Backend: Spring Boot 3.3.5, Java 21, REST API and Spring Data JPA.
-- Database: PostgreSQL 16; one household `assumptions` record plus normalized `loans` and `loan_repayments` tables, evolved by Flyway.
+- Database: PostgreSQL 16; household-scoped `assumptions`, `expense_categories`, `loans` and dependent schedules, evolved by Flyway.
 - Local orchestration: Docker Compose (`frontend`, `backend`, `db`).
 - Forecast horizon: November 2026 through December of the selected end year (default December 2030; selectable 1–6 complete years after the partial 2026 starting year).
 - Backend Java is the single implementation of forecast calculations.
-- No authentication, household tenancy, bank integration or cloud deployment is implemented.
+- Authentication uses server-side sessions. Self-registration is always enabled and creates a new household; invitations join an existing household. Financial data is scoped by the authenticated household context.
+- No bank integration or cloud deployment is implemented.
 
 ## Source-of-truth hierarchy
 
@@ -47,7 +48,7 @@ Before changing code:
 
 - Forecast inputs may be supplied by the frontend as request parameters. Verify the controller and service path before assuming saved database values are used.
 - Distinguish persisted assumptions from transient forecast/simulation inputs.
-- Seed values are demo defaults, never the user's real financial profile.
+- New self-registered households start with blank financial inputs. Explicit reset-to-sample values are demo defaults, never the user's real financial profile.
 - Money behavior must be deterministic: document currency units, precision, rounding mode, timing and boundary conditions.
 - Preserve per-loan repayment dates/amounts, expense-change timing and effective-month income schedule semantics unless an accepted requirement explicitly changes them.
 - CSV exports contain household financial information; treat them as sensitive output.

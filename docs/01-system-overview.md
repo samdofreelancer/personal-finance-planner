@@ -18,9 +18,11 @@ Personal Finance Planner (UI brand: **Planwise**) là ứng dụng local-first g
 
 ## Users and operating model
 
-- Một household / một bộ assumptions dùng chung.
+- Mỗi tài khoản tự đăng ký tạo một household riêng và trở thành OWNER của household đó.
+- Người dùng có thể mời thành viên khác tham gia cùng household; thành viên được mời chia sẻ kế hoạch tài chính của household đó.
+- Assumptions, income/expense schedules, loans và repayments được phân vùng theo household; tài khoản đăng ký độc lập không được kế thừa dữ liệu của tài khoản khác.
+- Household mới bắt đầu bằng dữ liệu tài chính trống (thu nhập baseline 0, tiết kiệm 0, không có danh mục chi phí/khoản vay mẫu). Người dùng tự cấu hình từ đầu; chức năng reset mẫu vẫn có thể chủ động dùng sau đó.
 - Local deployment qua Docker Compose là cách chạy được khuyến nghị.
-- Chưa có authentication, user account, household tenancy hay cloud deployment.
 - Dữ liệu giả định tài chính là dữ liệu nhạy cảm; mặc định vận hành cần hạn chế network exposure.
 
 ## In scope
@@ -33,7 +35,7 @@ Personal Finance Planner (UI brand: **Planwise**) là ứng dụng local-first g
 ## Out of scope (current product baseline)
 
 - Kết nối ngân hàng, thanh toán, đầu tư, thuế hoặc tư vấn tài chính.
-- Nhiều người dùng/hộ gia đình, đăng nhập và phân quyền.
+- Bank integration, phân quyền phức tạp hoặc nhiều household trong cùng một tài khoản.
 - Scenario management, so sánh nhiều kịch bản hoặc lưu lịch sử scenario.
 - Cloud hosting hoặc public internet exposure.
 

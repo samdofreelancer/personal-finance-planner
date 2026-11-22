@@ -24,25 +24,27 @@ class AssumptionServiceTest {
     @Mock HouseholdRepository householdRepository;
     @InjectMocks AssumptionService service;
 
-    @Test void getAssumptionsSeedsHouseholdDefaultsAndIncomeSchedule() {
+    @Test void getAssumptionsInitializesANewHouseholdWithBlankFinancialInputs() {
         HouseholdContext context = new HouseholdContext(1L, 10L, HouseholdRole.OWNER);
         Household household = new Household("Test", true);
         when(householdRepository.findForUpdateById(1L)).thenReturn(Optional.of(household));
         when(householdRepository.getReferenceById(1L)).thenReturn(household);
         when(repository.findTopByHouseholdIdOrderByIdAsc(1L)).thenReturn(null);
         when(repository.save(any(Assumption.class))).thenAnswer(invocation -> { Assumption a=invocation.getArgument(0); a.setId(5L); return a; });
-        when(incomeSchedulePersistenceService.getIncomeChanges(any())).thenReturn(List.of(new IncomeChangeDTO("2026-11",42_000_000L)));
-        when(expenseScheduleService.getExpenses(context)).thenReturn(ExpenseScheduleService.defaultExpenses());
+        when(incomeSchedulePersistenceService.getIncomeChanges(any())).thenReturn(List.of(new IncomeChangeDTO("2026-11",0L)));
+        when(expenseScheduleService.getExpenses(context)).thenReturn(List.of());
 
         var result = service.getAssumptions(context);
 
         ArgumentCaptor<Assumption> saved = ArgumentCaptor.forClass(Assumption.class);
         verify(repository).save(saved.capture());
         verify(incomeSchedulePersistenceService).saveIncomeChanges(eq(saved.getValue()), anyList());
-        verify(expenseScheduleService).seedDefaults(context);
+        verify(expenseScheduleService).saveExpenses(context, List.of());
         assertEquals(household, saved.getValue().getHousehold());
         assertEquals(4, result.getForecastYears());
-        assertEquals(42_000_000L, result.getIncomeChanges().getFirst().amount());
+        assertEquals(0L, result.getIncomeChanges().getFirst().amount());
+        assertEquals(0L, result.getStartingSavings());
+        assertTrue(result.getExpenses().isEmpty());
         assertNotNull(saved.getValue().getCreatedAt());
     }
 }

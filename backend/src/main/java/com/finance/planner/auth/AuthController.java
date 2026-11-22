@@ -41,7 +41,7 @@ public class AuthController {
 
     @GetMapping("/bootstrap")
     public BootstrapStatusResponse bootstrap() {
-        return new BootstrapStatusResponse(authService.isInitialRegistrationAvailable());
+        return new BootstrapStatusResponse(authService.isRegistrationAvailable());
     }
 
     @PostMapping("/register")
@@ -51,7 +51,7 @@ public class AuthController {
         RegisterRequest command = new RegisterRequest(request.email(), request.password());
         AuthResponse response = StringUtils.hasText(request.invitationToken())
                 ? authService.registerWithInvitation(command, request.invitationToken())
-                : authService.registerInitial(command);
+                : authService.register(command);
         establishSession(toPrincipal(response), servletRequest, servletResponse);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

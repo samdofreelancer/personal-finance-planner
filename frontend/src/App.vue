@@ -2,7 +2,6 @@
   <div v-if="isCheckingSession" class="auth-loading" role="status">Đang kiểm tra phiên đăng nhập...</div>
   <AuthView
     v-else-if="!user"
-    :registration-available="registrationAvailable"
     :invitation-token="invitationToken"
     @authenticated="handleAuthenticated"
   />
@@ -24,31 +23,19 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 import AuthView from './components/AuthView.vue'
 import HouseholdSettings from './components/HouseholdSettings.vue'
 import PlannerView from './PlannerView.vue'
-import { getBootstrapStatus, getCurrentUser, logout } from './services/auth.js'
+import { getCurrentUser, logout } from './services/auth.js'
 
 const user = ref(null)
-const registrationAvailable = ref(false)
 const isCheckingSession = ref(true)
 const showHouseholdSettings = ref(false)
 const invitationToken = new URLSearchParams(window.location.search).get('invite') || null
-
-async function loadBootstrap() {
-  try {
-    const status = await getBootstrapStatus()
-    registrationAvailable.value = Boolean(status.registrationAvailable)
-  } catch {
-    registrationAvailable.value = false
-  }
-}
 
 async function restoreSession() {
   isCheckingSession.value = true
   try {
     user.value = await getCurrentUser()
-    if (!user.value) await loadBootstrap()
   } catch {
     user.value = null
-    await loadBootstrap()
   } finally {
     isCheckingSession.value = false
   }
@@ -70,14 +57,12 @@ async function handleLogout() {
   } finally {
     user.value = null
     showHouseholdSettings.value = false
-    await loadBootstrap()
   }
 }
 
 function handleUnauthorized() {
   user.value = null
   showHouseholdSettings.value = false
-  void loadBootstrap()
 }
 
 onMounted(() => {

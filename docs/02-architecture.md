@@ -18,6 +18,7 @@ Không có microservice boundary. Không tạo service/domain boundaries chỉ �
 ### Frontend (`frontend/src`)
 
 - `App.vue`: application shell, điều hướng tới dashboard/assumptions/loans/annual/monthly và điều phối load, state, preview, explicit save, reset, export.
+- `AuthView.vue` / `services/auth.js`: đăng ký tài khoản, đăng nhập, đăng xuất và tham gia household qua invitation.
 - `assets/style.css`: design tokens, sidebar/topbar layout và responsive presentation cho desktop/mobile.
 - `components/AssumptionsForm.vue`: nhập lịch thu nhập theo tháng hiệu lực, tiết kiệm ban đầu và danh sách khoản chi tùy chỉnh; phát sự kiện thay đổi/lưu/reset.
 - `components/LoanScheduleForm.vue`: draft khoản vay và kỳ trả; thêm/sửa/xóa và lưu collection vào DB.
@@ -28,6 +29,7 @@ Không có microservice boundary. Không tạo service/domain boundaries chỉ �
 ### Backend (`backend/src/main/java/com/finance/planner`)
 
 - `controller`: REST boundary (`AssumptionController`, `LoanController`, `ForecastController`) và API exception mapping.
+- `auth` / `household`: session authentication, account registration, household ownership/membership và invitation lifecycle.
 - `service`: `AssumptionService` quản lý assumptions; `IncomeScheduleService` tra cứu mức thu nhập hiệu lực; `IncomeSchedulePersistenceService` lưu/đọc lịch thu nhập; `ExpenseScheduleService` lưu/đọc danh mục và mốc chi phí; `LoanScheduleService` quản lý aggregate khoản vay/lịch trả; `ValidationService` kiểm tra assumptions; `ForecastService` tính toán forecast.
 - `dto`: request/response contracts.
 - `entity`: JPA persistence model `Assumption`, `IncomeAmountChange`, `ExpenseCategory`, `ExpenseAmountChange`, `Loan`, `LoanRepayment`.
@@ -109,6 +111,7 @@ Review finding source of truth: [`specs/001-review-findings-remediation/spec.md`
 
 - Spring Security uses server-side sessions, HttpOnly cookies and CSRF tokens for unsafe requests.
 - `App.vue` restores the current session and routes unauthenticated users to `AuthView`; authenticated users use `PlannerView`.
-- The first registrant becomes household OWNER. Subsequent registrations require a valid, single-use invitation; MEMBER accounts share the household financial plan.
+- Every self-registration creates a new household and an OWNER membership, regardless of how many accounts already exist. A valid single-use invitation instead creates a MEMBER in the inviter's household.
+- A newly created household is initialized lazily on first assumptions read with an empty financial profile (zero income baseline/savings, no expense categories and no loans). Reset-to-sample is a separate explicit action scoped to that household.
 - All financial aggregate reads and writes are scoped by the authenticated `HouseholdContext`; client-supplied household IDs are not authorization inputs.
 - Household invitations are owner-managed and persist only a hash of the one-time raw token.

@@ -2,13 +2,13 @@
 
 ## Persistence boundary (current)
 
-The current persistence model has one household assumptions row plus normalized expense category/change and loan/repayment tables. Forecast rows are calculated responses and are not persisted.
+Each household has one assumptions row plus normalized expense category/change and loan/repayment tables. Forecast rows are calculated responses and are not persisted.
 
 ### `assumptions`
 
 | Column group | Fields | Notes |
 |---|---|---|
-| Identity | `id` | Generated primary key; service reads the first row ordered by id |
+| Identity | `id`, `household_id` | Generated primary key; unique household owner; service queries by authenticated household |
 | Income | `january_multiplier` | January multiplier; monthly income amounts live in `income_amount_changes` |
 | Savings | `starting_savings` | Initial cumulative savings balance |
 | Forecast | `forecast_years` | Integer from 1–6; default 4 |
@@ -42,7 +42,7 @@ One category has one or more amount changes. Forecast uses the latest change at 
 | `effective_month` | First day of the effective calendar month; unique per assumption |
 | `amount` | Non-negative whole VND monthly income amount |
 
-The schedule must include a `2026-11` baseline. Forecast uses the latest amount at or before each month. Entries outside the selected horizon remain persisted. The model belongs to the repository's single household assumptions record; this product currently has no user/tenant ownership relation.
+The schedule must include a `2026-11` baseline. Forecast uses the latest amount at or before each month. Entries outside the selected horizon remain persisted. The schedule belongs to the household's assumptions aggregate.
 
 ### `loans`
 
@@ -65,12 +65,27 @@ The schedule must include a `2026-11` baseline. Forecast uses the latest amount 
 
 One loan has many repayment entries. Multiple entries on the same date or in the same month are valid and are aggregated by forecast month.
 
-## Ownership and cardinality
+## Identity and ownership
 
-- Current product behavior assumes one household and one logical assumptions record.
-- The database entity has a generated `id`, but there is no user/household ownership relation.
-- `AssumptionService` selects the first row; there is no scenario or multi-profile identity.
-- Do not add multi-household or scenario identity without an approved product requirement (deferred F-06/F-08).
+### `users`
+
+- One row per normalized unique email; stores only the password hash and audit timestamps.
+
+### `households`
+
+- One row per independent financial workspace; self-registration creates a new row with `initial_household = false`.
+- The pre-authentication household created by migration V7 retains all pre-existing financial data and is not reused for new registrations.
+
+### `household_members`
+
+- Each user has exactly one household membership (`user_id` unique); role is `OWNER` or `MEMBER`.
+- Self-registered users are OWNER of their newly created household. Invitation registrations are MEMBER of the invitation's household.
+
+### Financial aggregate ownership
+
+- `assumptions.household_id` is unique; `loans.household_id` and `expense_categories.household_id` scope their aggregates. Income changes cascade from assumptions; repayments cascade from loans; expense amount changes cascade from categories.
+- Every read/write uses the authenticated `HouseholdContext`; a client-provided household ID is not an authorization input.
+- New household initialization is lazy and blank: income baseline `2026-11 = 0`, savings `0`, empty expense categories and no loans. The separate reset action writes synthetic sample data only to the active household.
 
 ## Forecast data
 

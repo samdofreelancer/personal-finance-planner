@@ -1,12 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createInvitation,
-  getBootstrapStatus,
   getCurrentUser,
   listInvitations,
   login,
   logout,
-  registerInitial,
+  registerAccount,
   registerWithInvitation,
   revokeInvitation,
 } from '../src/services/auth.js'
@@ -21,13 +20,6 @@ beforeEach(() => vi.clearAllMocks())
 afterEach(() => vi.unstubAllGlobals())
 
 describe('authentication service', () => {
-  it('loads the public bootstrap status', async () => {
-    requestJson.mockResolvedValue({ registrationAvailable: true })
-
-    await expect(getBootstrapStatus()).resolves.toEqual({ registrationAvailable: true })
-    expect(requestJson).toHaveBeenCalledWith('/api/auth/bootstrap', {}, 'Không kiểm tra được trạng thái đăng ký')
-  })
-
   it('returns null for an unauthenticated session without raising a global auth event', async () => {
     apiRequest.mockResolvedValue({ status: 401, ok: false })
 
@@ -42,11 +34,11 @@ describe('authentication service', () => {
     await expect(getCurrentUser()).resolves.toEqual(user)
   })
 
-  it('registers the first household owner', async () => {
+  it('registers a new independent household owner', async () => {
     const user = { userId: 1, role: 'OWNER' }
     requestJson.mockResolvedValue(user)
 
-    await expect(registerInitial({ email: 'owner@example.com', password: 'correct-horse-battery-staple' }))
+    await expect(registerAccount({ email: 'owner@example.com', password: 'correct-horse-battery-staple' }))
       .resolves.toEqual(user)
     expect(requestJson).toHaveBeenCalledWith('/api/auth/register', expect.objectContaining({
       method: 'POST',

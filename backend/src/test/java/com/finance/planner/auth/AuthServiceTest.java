@@ -1,6 +1,7 @@
 package com.finance.planner.auth;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -10,8 +11,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.finance.planner.household.BootstrapLock;
-import com.finance.planner.household.BootstrapLockRepository;
 import com.finance.planner.household.Household;
 import com.finance.planner.household.HouseholdInvitation;
 import com.finance.planner.household.HouseholdInvitationRepository;
@@ -28,7 +27,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -42,7 +40,6 @@ class AuthServiceTest {
     @Mock private HouseholdRepository householdRepository;
     @Mock private HouseholdMemberRepository householdMemberRepository;
     @Mock private HouseholdInvitationRepository invitationRepository;
-    @Mock private BootstrapLockRepository bootstrapLockRepository;
 
     private PasswordEncoder passwordEncoder;
     private AuthService authService;
@@ -52,18 +49,20 @@ class AuthServiceTest {
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder(4);
         authService = new AuthService(userRepository, householdRepository, householdMemberRepository,
-                invitationRepository, bootstrapLockRepository, passwordEncoder,
+                invitationRepository, passwordEncoder,
                 Clock.fixed(Instant.parse("2026-11-21T00:00:00Z"), ZoneOffset.UTC));
         initialHousehold = new Household("Gia đình", true);
         initialHousehold.setId(1L);
     }
 
     @Test
-    void initialRegistrationNormalizesEmailHashesPasswordAndCreatesOwnerMembership() {
-        when(bootstrapLockRepository.findForUpdateById(1L)).thenReturn(Optional.of(new BootstrapLock(1L)));
-        when(userRepository.count()).thenReturn(0L);
+    void selfRegistrationNormalizesEmailHashesPasswordAndCreatesAnIndependentOwnerHousehold() {
         when(userRepository.existsByEmail("owner@example.com")).thenReturn(false);
-        when(householdRepository.findFirstByInitialHouseholdTrue()).thenReturn(Optional.of(initialHousehold));
+        when(householdRepository.save(any(Household.class))).thenAnswer(invocation -> {
+            Household household = invocation.getArgument(0);
+            household.setId(2L);
+            return household;
+        });
         when(householdMemberRepository.save(any(HouseholdMember.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
@@ -72,7 +71,7 @@ class AuthServiceTest {
             return user;
         });
 
-        AuthResponse response = authService.registerInitial(new RegisterRequest("  OWNER@Example.com ", "correct-horse-battery-staple"));
+        AuthResponse response = authService.register(new RegisterRequest("  OWNER@Example.com ", "correct-horse-battery-staple"));
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(userCaptor.capture());
@@ -84,7 +83,9 @@ class AuthServiceTest {
         ArgumentCaptor<HouseholdMember> memberCaptor = ArgumentCaptor.forClass(HouseholdMember.class);
         verify(householdMemberRepository).save(memberCaptor.capture());
         assertEquals(HouseholdRole.OWNER, memberCaptor.getValue().getRole());
-        assertEquals(1L, memberCaptor.getValue().getHousehold().getId());
+        assertEquals(2L, memberCaptor.getValue().getHousehold().getId());
+        assertEquals("Gia đình mới", memberCaptor.getValue().getHousehold().getName());
+        assertFalse(memberCaptor.getValue().getHousehold().isInitialHousehold());
         assertEquals("owner@example.com", response.email());
         assertEquals(HouseholdRole.OWNER, response.role());
     }
@@ -115,12 +116,28 @@ class AuthServiceTest {
     }
 
     @Test
-    void rejectsInitialRegistrationAfterBootstrapHasBeenClaimed() {
-        when(bootstrapLockRepository.findForUpdateById(1L)).thenReturn(Optional.of(new BootstrapLock(1L)));
-        when(userRepository.count()).thenReturn(1L);
+    void everySelfRegistrationCreatesItsOwnHouseholdEvenWhenOtherUsersExist() {
+        when(userRepository.existsByEmail(any(String.class))).thenReturn(false);
+        when(householdRepository.save(any(Household.class))).thenAnswer(new org.mockito.stubbing.Answer<Household>() {
+            private long nextId = 2L;
+            @Override public Household answer(org.mockito.invocation.InvocationOnMock invocation) {
+                Household household = invocation.getArgument(0);
+                household.setId(nextId++);
+                return household;
+            }
+        });
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setId(10L);
+            return user;
+        });
+        when(householdMemberRepository.save(any(HouseholdMember.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertThrows(IllegalStateException.class, () -> authService.registerInitial(
-                new RegisterRequest("another@example.com", "correct-horse-battery-staple")));
+        AuthResponse first = authService.register(new RegisterRequest("first@example.com", "correct-horse-battery-staple"));
+        AuthResponse second = authService.register(new RegisterRequest("second@example.com", "correct-horse-battery-staple"));
+
+        assertNotEquals(first.householdId(), second.householdId());
+        assertEquals(HouseholdRole.OWNER, second.role());
     }
 
     @Test
@@ -170,11 +187,8 @@ class AuthServiceTest {
     }
 
     @Test
-    void rejectsWeakPasswordBeforePersistingAnInitialAccount() {
-        when(bootstrapLockRepository.findForUpdateById(1L)).thenReturn(Optional.of(new BootstrapLock(1L)));
-        when(userRepository.count()).thenReturn(0L);
-
-        assertThrows(IllegalArgumentException.class, () -> authService.registerInitial(
+    void rejectsWeakPasswordBeforePersistingAnAccount() {
+        assertThrows(IllegalArgumentException.class, () -> authService.register(
                 new RegisterRequest("owner@example.com", "short")));
 
         verifyNoInteractions(householdMemberRepository);
@@ -182,11 +196,9 @@ class AuthServiceTest {
 
     @Test
     void rejectsAnExistingEmailAfterNormalization() {
-        when(bootstrapLockRepository.findForUpdateById(1L)).thenReturn(Optional.of(new BootstrapLock(1L)));
-        when(userRepository.count()).thenReturn(0L);
         when(userRepository.existsByEmail("owner@example.com")).thenReturn(true);
 
-        assertThrows(IllegalArgumentException.class, () -> authService.registerInitial(
+        assertThrows(IllegalArgumentException.class, () -> authService.register(
                 new RegisterRequest(" OWNER@EXAMPLE.COM ", "correct-horse-battery-staple")));
 
         verify(userRepository).existsByEmail("owner@example.com");

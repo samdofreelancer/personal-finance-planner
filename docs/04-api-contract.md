@@ -6,7 +6,12 @@ Base path: `/api`. In Docker/local production-like use, the browser calls Nginx 
 
 | Method | Path | Input | Persistence side effect | Response |
 |---|---|---|---|---|
-| GET | `/api/assumptions` | None | Creates persisted defaults only when no assumptions row exists (fresh installs are initialized by Flyway) | `AssumptionDTO` |
+| GET | `/api/auth/bootstrap` | None | None | `{"registrationAvailable":true}`; retained for older clients, registration is always open |
+| POST | `/api/auth/register` | `{email,password}` or `{email,password,invitationToken}` | Creates user + new household + OWNER membership, or consumes invitation + creates MEMBER membership | `AuthResponse` and authenticated session (`201`) |
+| POST | `/api/auth/login` | `{email,password}` | Creates authenticated session | `AuthResponse` (`200`) |
+| POST | `/api/auth/logout` | CSRF token + session cookie | Invalidates session | `204` |
+| GET | `/api/auth/me` | Session cookie | None | Current `AuthResponse` |
+| GET | `/api/assumptions` | Authenticated household session | Creates a blank financial profile only when the household has no assumptions row yet | `AssumptionDTO` |
 | PUT | `/api/assumptions` | JSON `AssumptionDTO` | Saves/replaces the single assumptions row | `AssumptionDTO` |
 | POST | `/api/assumptions/seed` | None | Resets assumptions and replaces loan schedules with the synthetic sample schedule | `AssumptionDTO` |
 | GET | `/api/loans` | None | None | `LoanDTO[]` with nested repayment entries |
@@ -19,6 +24,14 @@ Base path: `/api`. In Docker/local production-like use, the browser calls Nginx 
 The frontend sends a complete assumptions snapshot as JSON to `POST /api/forecast` and `POST /api/export/csv`. The backend validates that snapshot and calculates salary and expense assumptions directly from it. Both operations load persisted loan schedules through `LoanScheduleService`; they do not load saved assumptions for preview calculations.
 
 `PUT /api/assumptions` persists the complete income schedule, January multiplier, horizon, savings and expense-category collection in one transaction. Loan schedules are managed separately through `PUT /api/loans`; unsaved loan edits are not included in the forecast.
+
+## Registration and household ownership
+
+- Self-registration without `invitationToken` is always enabled. Each successful request creates a new household and assigns the registering user the `OWNER` role; it never attaches that user to the legacy/initial household.
+- Registration with a valid `invitationToken` joins the invitation's household as `MEMBER`; the one-time token is consumed.
+- The public bootstrap endpoint always reports `registrationAvailable: true`; it does not disclose account counts or user details.
+- A new household's first `GET /api/assumptions` creates a blank profile: one `2026-11` income baseline of `0`, `startingSavings: 0`, no expense categories and no loan schedules. Forecast horizon defaults to 4 years and January multiplier to 2.0. The existing reset endpoint remains the explicit action to load synthetic sample data.
+- Existing household records are not copied, reset or reassigned by later registrations.
 
 ## Assumptions DTO fields
 

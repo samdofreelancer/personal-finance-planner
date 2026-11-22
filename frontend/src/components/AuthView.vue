@@ -9,10 +9,6 @@
       <div v-if="invitationToken" class="auth-invitation-note" role="status">
         Bạn đang tham gia household bằng lời mời riêng. Tài khoản của bạn vẫn có mật khẩu và phiên đăng nhập riêng.
       </div>
-      <div v-else-if="!registrationAvailable && mode === 'login'" class="auth-invitation-note">
-        Đăng ký chỉ khả dụng qua lời mời
-      </div>
-
       <form class="auth-form" novalidate @submit.prevent="submit">
         <label class="auth-field" for="auth-email">
           <span>Email</span>
@@ -33,7 +29,7 @@
         </button>
       </form>
 
-      <button v-if="registrationAllowed" class="auth-mode-toggle" type="button" :disabled="isSubmitting" @click="toggleMode">
+      <button class="auth-mode-toggle" type="button" :disabled="isSubmitting" @click="toggleMode">
         {{ isRegistering ? 'Đã có tài khoản? Đăng nhập' : 'Chưa có tài khoản? Tạo tài khoản' }}
       </button>
       <p class="auth-security-note"><span aria-hidden="true">●</span> Dữ liệu được lưu riêng trong household của bạn.</p>
@@ -43,17 +39,15 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { login, registerInitial, registerWithInvitation } from '../services/auth.js'
+import { login, registerAccount, registerWithInvitation } from '../services/auth.js'
 
 const props = defineProps({
-  registrationAvailable: { type: Boolean, default: false },
   invitationToken: { type: String, default: null },
 })
 
 const emit = defineEmits(['authenticated'])
 
-const registrationAllowed = computed(() => props.registrationAvailable || Boolean(props.invitationToken))
-const mode = ref(registrationAllowed.value ? 'register' : 'login')
+const mode = ref(props.invitationToken ? 'register' : 'login')
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
@@ -62,7 +56,7 @@ const isSubmitting = ref(false)
 const isRegistering = computed(() => mode.value === 'register')
 const title = computed(() => {
   if (!isRegistering.value) return 'Chào mừng trở lại'
-  return props.invitationToken ? 'Tham gia household' : 'Tạo tài khoản chủ hộ'
+  return props.invitationToken ? 'Tham gia household' : 'Tạo tài khoản'
 })
 const description = computed(() => isRegistering.value
   ? 'Tạo thông tin đăng nhập riêng để quản lý kế hoạch tài chính gia đình.'
@@ -92,7 +86,7 @@ async function submit() {
     if (isRegistering.value && props.invitationToken) {
       user = await registerWithInvitation({ ...credentials, invitationToken: props.invitationToken })
     } else if (isRegistering.value) {
-      user = await registerInitial(credentials)
+      user = await registerAccount(credentials)
     } else {
       user = await login(credentials)
     }

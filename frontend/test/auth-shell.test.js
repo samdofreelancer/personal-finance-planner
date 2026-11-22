@@ -2,17 +2,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { defineComponent } from 'vue'
 import App from '../src/App.vue'
-import { getBootstrapStatus, getCurrentUser, logout } from '../src/services/auth.js'
+import { getCurrentUser, logout } from '../src/services/auth.js'
 
 vi.mock('../src/services/auth.js', () => ({
-  getBootstrapStatus: vi.fn(),
   getCurrentUser: vi.fn(),
   logout: vi.fn(),
 }))
 
 const AuthViewStub = defineComponent({
   name: 'AuthView',
-  props: ['registrationAvailable', 'invitationToken'],
+  props: ['invitationToken'],
   emits: ['authenticated'],
   template: '<div data-testid="auth-view"><button id="authenticate" @click="$emit(\'authenticated\', { userId: 1, email: \'owner@example.com\', role: \'OWNER\' })">Authenticate</button></div>',
 })
@@ -44,7 +43,6 @@ function mountApp() {
 beforeEach(() => {
   vi.clearAllMocks()
   getCurrentUser.mockResolvedValue(null)
-  getBootstrapStatus.mockResolvedValue({ registrationAvailable: false })
   logout.mockResolvedValue(null)
 })
 
@@ -55,12 +53,10 @@ afterEach(() => {
 
 describe('App authentication shell', () => {
   it('shows the login/register screen when no server session exists', async () => {
-    getBootstrapStatus.mockResolvedValue({ registrationAvailable: true })
     const wrapper = mountApp()
     await flushPromises()
 
     expect(getCurrentUser).toHaveBeenCalledOnce()
-    expect(getBootstrapStatus).toHaveBeenCalledOnce()
     expect(wrapper.find('[data-testid="auth-view"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="planner-view"]').exists()).toBe(false)
   })
@@ -71,7 +67,6 @@ describe('App authentication shell', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-testid="planner-view"]').exists()).toBe(true)
-    expect(getBootstrapStatus).not.toHaveBeenCalled()
   })
 
   it('switches to the planner after authentication succeeds', async () => {
@@ -111,6 +106,5 @@ describe('App authentication shell', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-testid="auth-view"]').exists()).toBe(true)
-    expect(getBootstrapStatus).toHaveBeenCalledOnce()
   })
 })

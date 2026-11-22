@@ -129,9 +129,9 @@ const props = defineProps({ user: { type: Object, default: () => ({ email: "", r
 defineEmits(['logout', 'open-household-settings'])
 
 const dto = reactive({
-  incomeChanges: [{ effectiveMonth: '2026-11', amount: 42000000 }],
+  incomeChanges: [{ effectiveMonth: '2026-11', amount: 0 }],
   januaryMultiplier: 2,
-  startingSavings: 30000000,
+  startingSavings: 0,
   forecastYears: 4,
 })
 

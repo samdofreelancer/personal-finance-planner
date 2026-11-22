@@ -73,23 +73,26 @@ class AuthControllerIT {
     }
 
     @Test
-    void bootstrapIsPublicAndOnlyReportsWhetherInitialRegistrationIsAvailable() throws Exception {
+    void bootstrapKeepsSelfRegistrationAvailableAfterMultipleAccountsExist() throws Exception {
         mockMvc.perform(get("/api/auth/bootstrap"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.registrationAvailable").value(true));
 
-        registerInitial("owner@example.com");
+        MvcResult first = registerInitial("owner@example.com");
 
         mockMvc.perform(get("/api/auth/bootstrap"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.registrationAvailable").value(false))
+                .andExpect(jsonPath("$.registrationAvailable").value(true))
                 .andExpect(jsonPath("$.users").doesNotExist());
 
-        mockMvc.perform(post("/api/auth/register").with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new RegisterRequest(
-                                "second-owner@example.com", "correct-horse-battery-staple"))))
-                .andExpect(status().isConflict());
+        MvcResult second = registerInitial("second-owner@example.com");
+        JsonNode firstUser = objectMapper.readTree(first.getResponse().getContentAsString());
+        JsonNode secondUser = objectMapper.readTree(second.getResponse().getContentAsString());
+        long legacyHouseholdId = householdRepository.findFirstByInitialHouseholdTrue().orElseThrow().getId();
+        org.junit.jupiter.api.Assertions.assertNotEquals(firstUser.get("householdId").asLong(), secondUser.get("householdId").asLong());
+        assertNotEquals(legacyHouseholdId, firstUser.get("householdId").asLong());
+        assertNotEquals(legacyHouseholdId, secondUser.get("householdId").asLong());
+        org.junit.jupiter.api.Assertions.assertEquals(3, householdRepository.count());
     }
 
     @Test

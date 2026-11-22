@@ -1,6 +1,5 @@
 package com.finance.planner.auth;
 
-import com.finance.planner.household.BootstrapLockRepository;
 import com.finance.planner.household.Household;
 import com.finance.planner.household.HouseholdInvitation;
 import com.finance.planner.household.HouseholdInvitationRepository;
@@ -29,7 +28,6 @@ public class AuthService {
     private final HouseholdRepository householdRepository;
     private final HouseholdMemberRepository householdMemberRepository;
     private final HouseholdInvitationRepository invitationRepository;
-    private final BootstrapLockRepository bootstrapLockRepository;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
     private final String dummyPasswordHash;
@@ -37,32 +35,22 @@ public class AuthService {
     public AuthService(UserRepository userRepository, HouseholdRepository householdRepository,
                        HouseholdMemberRepository householdMemberRepository,
                        HouseholdInvitationRepository invitationRepository,
-                       BootstrapLockRepository bootstrapLockRepository,
                        PasswordEncoder passwordEncoder, Clock clock) {
         this.userRepository = userRepository;
         this.householdRepository = householdRepository;
         this.householdMemberRepository = householdMemberRepository;
         this.invitationRepository = invitationRepository;
-        this.bootstrapLockRepository = bootstrapLockRepository;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
         this.dummyPasswordHash = passwordEncoder.encode("not-a-real-user-password");
     }
 
     @Transactional
-    public AuthResponse registerInitial(RegisterRequest request) {
-        bootstrapLockRepository.findForUpdateById(1L)
-                .orElseThrow(() -> new IllegalStateException("Initial registration is not available"));
-
-        if (userRepository.count() > 0) {
-            throw new IllegalStateException("Initial registration is closed; an invitation is required");
-        }
-
+    public AuthResponse register(RegisterRequest request) {
         String email = normalizeEmail(request.email());
         validatePassword(request.password());
         ensureEmailAvailable(email);
-        Household household = householdRepository.findFirstByInitialHouseholdTrue()
-                .orElseThrow(() -> new IllegalStateException("Initial household has not been provisioned"));
+        Household household = householdRepository.save(new Household("Gia đình mới", false));
 
         User user = userRepository.save(new User(email, passwordEncoder.encode(request.password())));
         HouseholdMember membership = householdMemberRepository.save(
@@ -113,8 +101,8 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public boolean isInitialRegistrationAvailable() {
-        return userRepository.count() == 0;
+    public boolean isRegistrationAvailable() {
+        return true;
     }
 
     static String normalizeEmail(String email) {

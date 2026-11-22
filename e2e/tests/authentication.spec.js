@@ -65,4 +65,5 @@ test('authenticated user can log out and return to the login screen', async ({ a
   await page.getByRole('button', { name: 'Đăng xuất' }).click()
   await expect(page.getByRole('heading', { name: 'Chào mừng trở lại' })).toBeVisible()
   await expect(page.getByLabel('Email')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Chưa có tài khoản? Tạo tài khoản' })).toBeVisible()
 })

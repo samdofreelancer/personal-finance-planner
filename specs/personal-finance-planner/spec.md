@@ -1,16 +1,17 @@
 # Feature Specification: Personal Finance Planner (Configurable Forecast)
 
-**Status:** Redesigning — Three-tier architecture  
+**Status:** Active baseline — authenticated, household-scoped planner
 **Stack:** Spring Boot (Java 21) backend + PostgreSQL database + Vue.js frontend  
 **Communication:** REST API (frontend → backend)
 
 ## 1. Purpose
 
-Personal financial forecast for a configurable planning period. User edits effective-month income amounts, expenses, loan details, and starting savings; sees monthly and annual cash-flow outcomes and savings progress. Repository defaults are synthetic demonstration values.
+Personal financial forecast for a configurable planning period. User edits effective-month income amounts, expenses, loan details, and starting savings; sees monthly and annual cash-flow outcomes and savings progress. Reset-to-sample values are synthetic demonstration data. New households start with blank financial inputs and configure their own data.
 
 ## 2. Users and scope
 
-- Single household user; no sign-in.
+- Each self-registered account owns an independent household workspace; invited members can collaborate in that household. See `specs/006-self-service-registration/spec.md`.
+- Login and self-registration are always available. Self-registration creates a new OWNER household; invitation registration joins an existing household as MEMBER.
 - Local deployment: Spring Boot backend + PostgreSQL + Vue.js frontend.
 - Income assumptions, recurring expense schedules and loan schedules persist in PostgreSQL; forecast rows are calculated on demand.
 - No bank sync, cloud, payments, or financial advice.
@@ -62,6 +63,11 @@ The sample expense categories are editable seed data, not a fixed list of suppor
 
 | Method | Endpoint | Request | Response |
 |--------|----------|---------|----------|
+| GET | `/api/auth/bootstrap` | — | `registrationAvailable: true` |
+| POST | `/api/auth/register` | `{ email, password }` or `{ email, password, invitationToken }` | `AuthResponse` + authenticated session |
+| POST | `/api/auth/login` | `{ email, password }` | `AuthResponse` + authenticated session |
+| POST | `/api/auth/logout` | Session + CSRF token | `204 No Content` |
+| GET | `/api/auth/me` | Session | Current `AuthResponse` |
 | GET | `/api/assumptions` | — | `AssumptionDTO` |
 | PUT | `/api/assumptions` | `AssumptionDTO` | `AssumptionDTO` |
 | GET | `/api/loans` | — | `LoanDTO[]` |
@@ -106,7 +112,10 @@ The sample expense categories are editable seed data, not a fixed list of suppor
 18. Income schedule requires a 11/2026 baseline and supports multiple unique future effective months; each month uses the latest effective amount.
 19. January multiplier is applied to the effective monthly income amount; no automatic percentage raise or income extrapolation is performed.
 20. Income changes persist in PostgreSQL and remain available when the forecast horizon is shortened.
+21. Every successful self-registration creates a distinct household, regardless of how many users already exist.
+22. A new household starts with zero income baseline and savings, no expense categories and no loan schedules; reset-to-sample remains an explicit action.
+23. Existing household financial data is not copied, reassigned or overwritten by later registrations.
 
 ## 8. Out of scope
 
-- Bank sync, multi-user, cloud, investment/tax/inflation modeling, online deployment.
+- Bank sync, multiple household memberships per user, cloud, investment/tax/inflation modeling, online deployment.

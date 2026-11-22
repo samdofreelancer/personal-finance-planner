@@ -1,17 +1,17 @@
 # Household Authentication and Shared Finance Design
 
-**Status:** Approved by user on 2026-11-21
+**Status:** Partially superseded on 2026-11-22. Invitation/shared-household behavior remains valid; registration and first-use workspace behavior are superseded by `specs/006-self-service-registration/spec.md`.
 **Date:** 2026-11-21
 
 ## Intent
 
-Add Login and Register to the existing local Personal Finance Planner so that each person has an individual account while a household shares one financial plan. The first account claims the existing financial dataset; the household owner can invite another person without requiring an email/SMTP service. The primary reason is to let family members securely access and maintain the same household plan from separate accounts.
+Add Login and Register to the existing local Personal Finance Planner. Every self-registered account owns an independent household financial plan. A household owner can still invite another person to collaborate on that same plan without requiring an email/SMTP service.
 
 ## Goals
 
 - Individual registration, login, logout, and session lifecycle.
 - Shared household data with distinct user identities and household membership.
-- First registrant becomes the household `OWNER`; invited registrants join as `MEMBER`.
+- Every self-registered user becomes `OWNER` of a newly created household; invited registrants join the invitation's household as `MEMBER`.
 - Owner can create a single-use invitation code/link with an expiry; the invitee can register with it.
 - Enforce household isolation on every persisted financial read/write, including assumptions, expense categories/schedules, loans/repayments, reset/seed, and any future household-owned data.
 - Preserve the existing financial dataset and forecast results through migration.
@@ -45,19 +45,19 @@ The same household/member model, but invitations are delivered through a configu
 
 Each user owns an independent dataset and can optionally copy data.
 
-**Trade-off:** Simpler isolation but does not meet the agreed shared-household requirement; it creates duplicate family plans and conflicting updates.
+**Trade-off:** Supports independent plans but cannot replace invitation-based collaboration when family members intentionally share one plan.
 
-**Decision:** Use A. Do not implement B or C in this release.
+**Updated decision (2026-11-22):** Use a hybrid of A and C. Self-registration creates a separate workspace; invitation registration joins the existing household. Email delivery (B) remains out of scope.
 
 ## Product behavior
 
 ### Registration and onboarding
 
-1. While no user exists, the registration flow allows creation of the initial account and household. The new user becomes `OWNER`.
-2. The initial household adopts the existing unowned financial data; the migration/onboarding must not reset, reseed, or rewrite financial values.
-3. Once the first account exists, public registration without a valid invitation is rejected. Later accounts must provide a valid, unexpired, unused invitation.
-4. A valid invitation is consumed atomically with user creation and membership creation. A code cannot be reused, even if two registration requests race.
-5. v1 allows one household membership per user. An invited user cannot create a second household through ordinary registration.
+1. Self-registration is always available, regardless of existing account count. Each request without an invitation creates a new household and an `OWNER` membership.
+2. The legacy household created by migration V7 retains its existing financial records and existing membership; later self-registrations must never claim, copy, reset or reassign that data.
+3. A valid invitation is consumed atomically with user creation and membership creation. The invitee becomes `MEMBER` of the inviter's household; a code cannot be reused, even if two registration requests race.
+4. Each user has one household membership. A self-registered account never joins another account's household unless it registers with that household's invitation.
+5. A new household's first assumptions read initializes a blank profile (income baseline `2026-11 = 0`, savings `0`, no expenses and no loans). Loading synthetic samples remains an explicit reset action.
 
 ### Login and sessions
 
@@ -86,7 +86,7 @@ Each user owns an independent dataset and can optionally copy data.
 - `household_invitations`: household, token hash, expiry, creation/revocation/consumption metadata; never store the raw token.
 - Existing financial tables become household-owned: `assumptions`, `loans`, and `expense_categories` (and their dependent `loan_repayments` and `expense_amount_changes` through their parent relationships). Use database constraints and indexes to support household-scoped access and prevent cross-household references.
 
-The first-account bootstrap must be concurrency-safe: two simultaneous first-registration attempts must not both claim/create the initial household. Use a database-enforced invariant or equivalent transaction/locking strategy, not a frontend-only check.
+Independent registrations must be transactional. Concurrent requests with distinct normalized emails must both succeed and create distinct households; duplicate emails remain prevented by the database unique constraint. Invitation consumption remains protected by a row lock.
 
 ## Authorization and API boundaries
 
@@ -100,7 +100,7 @@ The first-account bootstrap must be concurrency-safe: two simultaneous first-reg
 ## Migration and compatibility
 
 - Add forward-only Flyway migrations; never edit already-applied migrations.
-- Preserve every existing financial row and its relationships. Create the initial household and associate all current financial data with it as part of the migration. The first registered user becomes its owner.
+- Preserve every existing financial row and its relationships. Migration V7 associates existing financial data with the legacy household. New self-registrations create separate households and do not claim that legacy household.
 - Preserve current forecast totals and existing seed/reset semantics, but ensure all seeds are scoped to the caller's household.
 - A fresh database must still initialize predictably. Any synthetic sample data belongs to the first household only and must not be silently copied into later households.
 - Existing clients that call financial APIs without authentication will receive `401` after auth is enabled; update the frontend and E2E setup in the same release.
@@ -109,7 +109,7 @@ The first-account bootstrap must be concurrency-safe: two simultaneous first-reg
 ## Frontend experience
 
 - Add a clear unauthenticated Login/Register experience and authenticated application shell.
-- Initial setup presents household creation only when no account exists. After bootstrap, registration requires an invitation code.
+- Login and self-registration are always available. Invitation links register members into the inviter's household; ordinary registration creates a new independent household.
 - Owner UI exposes create/copy/revoke invitation functionality and clearly shows the one-time code/link and expiry. Do not display the raw token again after creation if it cannot be recovered from its hash.
 - Provide logout and a minimal current-account/role indicator.
 - Keep existing dashboard, assumptions, expenses, loans, forecast, and export workflows intact after login.
@@ -118,9 +118,9 @@ The first-account bootstrap must be concurrency-safe: two simultaneous first-reg
 
 ## Testing and acceptance criteria
 
-1. First registration creates exactly one user, one household, and an `OWNER` membership.
-2. The initial household receives the existing dataset without changed financial values or forecast totals.
-3. After bootstrap, registration without an invite is rejected.
+1. Every self-registration creates exactly one user, one new household and an `OWNER` membership, including when other accounts already exist.
+2. New household first-use assumptions and loans are blank; the owner can configure their own income, expenses, savings and loans.
+3. Existing household records and memberships remain unchanged by new self-registrations.
 4. Owner can generate an invitation; a valid code registers a second user into the same household as `MEMBER`.
 5. Expired, revoked, invalid, and consumed invitations are rejected; concurrent attempts cannot consume the same invitation twice.
 6. Passwords are hashed; login succeeds with valid credentials and fails safely with invalid credentials.

@@ -4,8 +4,8 @@ These principles are the default constraints for all changes. A change that need
 
 ## 1. Product integrity
 
-- Build for the documented single-household, local-first planning use case.
-- Do not add multi-user, bank-sync, cloud, investment-advice or unrelated Financial GPS capabilities without an accepted specification.
+- Build for independent household workspaces in the local-first planning product. One account belongs to one household; household collaboration is invitation-based.
+- Do not add bank-sync, cloud, investment-advice or unrelated Financial GPS capabilities without an accepted specification.
 - Keep demo assumptions visibly distinct from real user-entered data.
 
 ## 2. Financial correctness is a safety property
