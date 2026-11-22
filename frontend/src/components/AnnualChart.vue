@@ -1,10 +1,10 @@
 <template>
   <section class="panel chart-panel">
     <div class="panel-heading chart-heading">
-      <div><p class="eyebrow">TỔNG HỢP NĂM</p><h2>Dòng tiền dư mỗi năm</h2></div>
+      <div><p class="eyebrow">TỔNG HỢP NĂM</p><h2>Dòng tiền ròng theo năm</h2></div>
       <span class="chart-unit">Đơn vị: triệu VND</span>
     </div>
-    <div v-if="chart.bars.length" id="annual-chart" class="chart-container">
+    <div v-if="chart.bars.length && chart.hasData" id="annual-chart" class="chart-container">
       <svg :viewBox="`0 0 ${chart.width} ${chart.height}`" role="img" aria-labelledby="chart-title chart-desc">
         <title id="chart-title">Dòng tiền ròng theo năm, từ 2026 đến {{ chart.endYear }}</title>
         <desc id="chart-desc">{{ chart.description }}</desc>
@@ -25,7 +25,7 @@
       <strong>Chưa có dữ liệu biểu đồ</strong>
       <span>Dữ liệu dòng tiền theo năm sẽ xuất hiện sau khi tải được dự báo.</span>
     </div>
-    <div class="chart-footnote">Dòng tiền ròng = tổng thu nhập − tổng chi phí. Năm 2026 chỉ gồm tháng 11 và 12.</div>
+    <div class="chart-footnote">Biểu đồ thể hiện dòng tiền ròng theo năm (đơn vị: triệu VND). Năm 2026 chỉ gồm tháng 11 và 12.</div>
   </section>
 </template>
 
@@ -87,7 +87,7 @@ const chart = computed(() => {
   const description = annual
     .map((row) => `${row.year}${row.partial ? ' (hai tháng)' : ''}: ${money(row.netCashFlow)}${row.provisional ? ' (tạm tính)' : ''}`)
     .join('; ')
-  return { width, height, left, right, top, bottom, ticks, bars, description, endYear: annual.at(-1)?.year ?? 2030 }
+  return { width, height, left, right, top, bottom, ticks, bars, description, hasData: values.some((value) => value !== 0), endYear: annual.at(-1)?.year ?? 2030 }
 })
 
 const money = formatCurrency

@@ -184,6 +184,36 @@ describe('PlannerView', () => {
     vi.useRealTimers()
   })
 
+  it('loads sample assumptions only after confirmation and leaves them unsaved', async () => {
+    const wrapper = await mountLoadedApp()
+    window.confirm = vi.fn().mockReturnValue(true)
+    vi.useFakeTimers()
+    wrapper.findComponent(AssumptionsForm).vm.$emit('load-sample')
+    await flushPromises()
+    await vi.advanceTimersByTimeAsync(180)
+    await flushPromises()
+
+    expect(window.confirm).toHaveBeenCalledOnce()
+    expect(wrapper.get('input[aria-label="Số tiền thu nhập, mốc 1"]').element.value).toBe('25.000.000')
+    expect(wrapper.get('#startingSavings').element.value).toBe('100.000.000')
+    expect(wrapper.get('input[aria-label="Số tiền khoản Chi phí gia đình, mốc 1"]').element.value).toBe('15.000.000')
+    expect(saveAssumptions).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('Đã cập nhật mô phỏng · Chưa lưu')
+    vi.useRealTimers()
+  })
+
+  it('replaces zero-only dashboard metrics with a guided empty state', async () => {
+    getAssumptions.mockResolvedValue({
+      januaryMultiplier: 2, startingSavings: 0, forecastYears: 2,
+      incomeChanges: [{ effectiveMonth: '2026-11', amount: 0 }], expenses: [],
+    })
+    getForecast.mockResolvedValue({ annual: [{ year: 2026, salary: 0, expenses: 0, netCashFlow: 0, endingSavings: 0 }], months: [] })
+    const wrapper = mount(PlannerView)
+    await flushPromises()
+    expect(wrapper.find('.dashboard-empty-state').text()).toContain('Bắt đầu từ các giả định tài chính')
+    expect(wrapper.find('#metric-net').exists()).toBe(false)
+  })
+
   it('keeps preview failures quiet and surfaces an explicit save failure', async () => {
     const wrapper = await mountLoadedApp()
     vi.useFakeTimers()

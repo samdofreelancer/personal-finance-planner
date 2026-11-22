@@ -44,7 +44,7 @@
           <text :x="point.x" y="171" text-anchor="middle" fill="#819087" font-size="11">{{ point.year }}{{ point.partial ? '*' : '' }}</text>
         </g>
       </svg>
-      <p class="chart-footnote">Hai đường dùng cùng thang hiển thị tương đối để thể hiện xu hướng, không so sánh trực tiếp quy mô. * Năm 2026 chỉ gồm tháng 11–12.</p>
+      <p class="chart-footnote">Biểu đồ thể hiện xu hướng tiết kiệm lũy kế và dư nợ còn lại tại cuối mỗi năm (đơn vị: triệu VND). * Năm 2026 chỉ gồm tháng 11–12.</p>
     </div>
   </section>
 </template>
@@ -74,17 +74,24 @@ const savingsNote = computed(() => {
   const last = annual.value.at(-1)
   return last?.endingSavingsProvisional ? 'Có dữ liệu đang tạm tính' : 'Dự kiến đến cuối kỳ kế hoạch'
 })
+const trendScale = computed(() => {
+  const savings = annual.value.map((row) => row.endingSavings)
+  const debt = annual.value.map((row) => {
+    const last = months.value.filter((month) => month.year === row.year).at(-1)
+    return last ? Math.max(0, last.openingPrincipal - last.principalPaid) : 0
+  })
+  const values = [...savings, ...debt]
+  const min = Math.min(0, ...values)
+  const max = Math.max(0, ...values)
+  return { min, span: max - min || 1 }
+})
 const trend = computed(() => {
   const rows = annual.value
   if (!rows.length) return []
-  const values = rows.map((row) => row.endingSavings)
-  const min = Math.min(0, ...values)
-  const max = Math.max(0, ...values)
-  const span = max - min || 1
   return rows.map((row, index) => ({
     year: row.year, partial: row.partial, value: row.endingSavings,
     x: rows.length === 1 ? 364 : 38 + index * 652 / (rows.length - 1),
-    y: 135 - (row.endingSavings - min) / span * 100,
+    y: 135 - (row.endingSavings - trendScale.value.min) / trendScale.value.span * 100,
   }))
 })
 const debtTrend = computed(() => {
@@ -94,12 +101,10 @@ const debtTrend = computed(() => {
     const last = months.value.filter((month) => month.year === row.year).at(-1)
     return last ? Math.max(0, last.openingPrincipal - last.principalPaid) : null
   })
-  const available = values.filter((value) => value != null)
-  if (!available.length) return []
-  const max = Math.max(1, ...available)
+  if (!values.some((value) => value != null)) return []
   return values.map((value, index) => value == null ? null : ({
     x: rows.length === 1 ? 364 : 38 + index * 652 / (rows.length - 1),
-    y: 135 - value / max * 100,
+    y: 135 - (value - trendScale.value.min) / trendScale.value.span * 100,
   }))
 })
 const trendPoints = computed(() => trend.value.map((point) => `${point.x},${point.y}`).join(' '))

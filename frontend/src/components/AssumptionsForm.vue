@@ -5,7 +5,10 @@
         <p class="eyebrow">ĐẦU VÀO</p>
         <h2>Giả định của bạn</h2>
       </div>
-      <button id="reset-button" class="text-button" type="button" @click="$emit('reset')">Khôi phục mặc định</button>
+      <div class="assumptions-heading-actions">
+        <button id="load-sample-button" class="button button-secondary sample-data-button" type="button" @click="$emit('load-sample')">Nạp dữ liệu mẫu</button>
+        <button id="reset-button" class="text-button" type="button" @click="$emit('reset')">Khôi phục mặc định</button>
+      </div>
     </div>
     <form id="assumptions-form" novalidate @input="onInput" @submit.prevent="onSubmit">
       <div class="input-groups">
@@ -28,6 +31,7 @@
             <span>Hệ số lương tháng 1</span>
             <span class="input-wrap input-wrap-short"><input id="januaryMultiplier" v-model.number="formDto.januaryMultiplier" name="januaryMultiplier" type="number" min="0" max="20" step="0.1" required><span>×</span></span>
           </label>
+          <p class="field-hint multiplier-hint">Tháng 1: thu nhập tháng đang có hiệu lực × hệ số; các tháng còn lại dùng mức thu nhập đang có hiệu lực.</p>
           <label class="field" for="forecastYears">
             <span>Thời gian dự phóng</span>
             <span class="input-wrap input-wrap-short">
@@ -74,8 +78,8 @@
       </div>
       <div id="form-error" class="form-error" role="alert">{{ error }}</div>
       <div class="form-footer">
-        <span id="save-status" class="save-status" role="status">{{ status }}</span>
-        <div class="form-actions">
+        <div class="save-controls">
+          <span id="save-status" class="save-status" :class="statusClass" role="status">{{ status }}</span>
           <span class="form-note">Đơn vị tiền tệ: VND</span>
           <button id="save-assumptions-button" class="button button-primary" type="submit" :disabled="status === 'Đang lưu...'">Lưu</button>
         </div>
@@ -90,7 +94,7 @@ import CurrencyInput from './CurrencyInput.vue'
 import MonthInput from './MonthInput.vue'
 
 const props = defineProps(['dto', 'expenses', 'error', 'status'])
-const emit = defineEmits(['input', 'expenses-input', 'reset', 'save'])
+const emit = defineEmits(['input', 'expenses-input', 'reset', 'save', 'load-sample'])
 const formDto = reactive({})
 const incomeDraft = reactive([])
 const expenseDraft = reactive([])
@@ -99,6 +103,16 @@ const sortedIncomeChanges = computed(() => [...incomeDraft].sort((a, b) => {
   if (b.isBaseline) return 1
   return String(a.effectiveMonth || '').localeCompare(String(b.effectiveMonth || ''))
 }))
+const statusClass = computed(() => {
+  if (statusIsDirty(props.status)) return 'save-status-dirty'
+  if (/không lưu|lỗi kết nối/i.test(props.status || '')) return 'save-status-error'
+  if (/đã lưu|đã khôi phục/i.test(props.status || '')) return 'save-status-saved'
+  return ''
+})
+
+function statusIsDirty(value) {
+  return /chưa lưu|chưa hợp lệ|không cập nhật được/i.test(value || '')
+}
 
 function syncFormDto() {
   Object.assign(formDto, props.dto)

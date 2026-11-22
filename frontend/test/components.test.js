@@ -96,6 +96,21 @@ describe('AssumptionsForm', () => {
     expect(wrapper.emitted('reset')).toHaveLength(1)
   })
 
+  it('explains the January multiplier and exposes a sample-data action', async () => {
+    const wrapper = mount(AssumptionsForm, { props: { dto: assumptions(), expenses: expenses(), error: '', status: 'Đã lưu trên máy chủ' } })
+    expect(wrapper.text()).toContain('Tháng 1: thu nhập tháng đang có hiệu lực × hệ số; các tháng còn lại dùng mức thu nhập đang có hiệu lực.')
+    await wrapper.get('#load-sample-button').trigger('click')
+    expect(wrapper.emitted('load-sample')).toHaveLength(1)
+  })
+
+  it('shows the save state as a distinct status badge', () => {
+    const wrapper = mount(AssumptionsForm, { props: { dto: assumptions(), expenses: expenses(), error: '', status: 'Đã cập nhật mô phỏng · Chưa lưu' } })
+    expect(wrapper.get('#save-status').classes()).toContain('save-status-dirty')
+    expect(wrapper.get('#save-status').text()).toContain('Chưa lưu')
+    expect(wrapper.get('#save-status').element.parentElement.className).toBe('save-controls')
+    expect(wrapper.get('#save-status').element.parentElement.querySelector('#save-assumptions-button')).not.toBeNull()
+  })
+
   it('adds and removes future income changes but keeps the required baseline', async () => {
     const dto = assumptions()
     const wrapper = mount(AssumptionsForm, { props: { dto, expenses: expenses(), error: '', status: '' } })
@@ -278,8 +293,9 @@ describe('forecast presentation components', () => {
     const wrapper = mount(AnnualChart, { props: { forecast: forecast() } })
     expect(wrapper.findAll('.chart-bar')).toHaveLength(3)
     expect(wrapper.text()).toContain('2026')
-    expect(wrapper.text()).toContain('Dòng tiền dư mỗi năm')
+    expect(wrapper.text()).toContain('Dòng tiền ròng theo năm')
     expect(wrapper.text()).toContain('tr ₫')
+    expect(wrapper.text()).toContain('Biểu đồ thể hiện dòng tiền ròng theo năm (đơn vị: triệu VND).')
     const empty = mount(AnnualChart, { props: { forecast: null } })
     expect(empty.findAll('.chart-bar')).toHaveLength(0)
     expect(empty.text()).toContain('Chưa có dữ liệu biểu đồ')
@@ -305,6 +321,10 @@ describe('forecast presentation components', () => {
     expect(withAmount.text()).toContain('0 ₫ · tạm tính')
     expect(withAmount.find('.savings-cell').attributes('aria-label')).toContain('tạm tính')
     expect(wrapper.get('tbody th[scope="row"]').text()).toBe('thg 1 2027')
+    expect(wrapper.get('tfoot tr').text()).toContain('Tổng cộng kỳ')
+    expect(wrapper.get('tfoot tr').text()).toContain('100.000.000 ₫')
+    expect(wrapper.get('tfoot tr').text()).toContain('-15.700.000 ₫')
+    expect(wrapper.get('tfoot tr').text()).toContain('-10.700.000 ₫')
     expect(wrapper.text()).toContain('Chi phí định kỳ')
     expect(wrapper.text()).toContain('Sinh hoạt phí: 4.000.000')
     expect(wrapper.get('tbody td:nth-child(3)').attributes('title')).toContain('Sinh hoạt phí: 4.000.000')

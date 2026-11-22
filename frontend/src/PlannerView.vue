@@ -25,13 +25,13 @@
 
     <div class="workspace">
       <header class="topbar">
-        <div class="breadcrumb">Không gian tài chính <span>/</span> <strong>{{ activeSectionLabel }}</strong></div>
+        <div class="breadcrumb"><span class="breadcrumb-prefix">Không gian tài chính <span>/</span></span> <strong>{{ activeSectionLabel }}</strong></div>
         <div class="topbar-actions">
           <span class="local-badge"><span aria-hidden="true"></span> Dữ liệu lưu trên máy chủ</span>
           <span class="user-badge"><strong>{{ user.email }}</strong><small>{{ user.role === 'OWNER' ? 'Chủ hộ' : 'Thành viên' }}</small></span>
-          <button id="household-settings-button" class="button button-secondary" type="button" @click="$emit('open-household-settings')">Hộ gia đình</button>
-          <button id="logout-button" class="button button-secondary" type="button" @click="$emit('logout')">Đăng xuất</button>
-          <button id="export-button" class="button button-secondary" type="button" :disabled="hasValidationError" @click="exportCsv">↓ Xuất CSV</button>
+          <button id="household-settings-button" class="button button-secondary" type="button" @click="$emit('open-household-settings')"><span class="desktop-action-label">Hộ gia đình</span><span class="mobile-action-label">Hộ</span></button>
+          <button id="logout-button" class="button button-secondary" type="button" @click="$emit('logout')"><span class="desktop-action-label">Đăng xuất</span><span class="mobile-action-label">Thoát</span></button>
+          <button id="export-button" class="button button-secondary" type="button" :disabled="hasValidationError" @click="exportCsv"><span class="desktop-action-label">↓ Xuất CSV</span><span class="mobile-action-label">CSV</span></button>
         </div>
       </header>
 
@@ -70,19 +70,22 @@
     </section>
 
     <section class="overview-section" aria-label="Triển vọng tài chính">
-      <div class="section-intro"><div><p class="eyebrow">YOUR FINANCIAL JOURNEY</p><h2>Hành trình tài chính dự kiến</h2><p class="section-description">Theo dõi quỹ tiết kiệm tăng lên và dư nợ giảm xuống theo thời gian.</p></div><span class="section-meta">Mô phỏng · 2026–{{ forecastEndYear }}</span></div>
-      <financial-position :assumptions="dto" :loans="loans" :forecast="forecast" />
-      <div class="section-intro indicator-intro"><div><p class="eyebrow">KEY INDICATORS</p><h2>Các chỉ số đáng chú ý</h2></div><span class="section-meta">Dự báo năm {{ forecastEndYear }}</span></div>
-    <metric-cards
-      :metrics="metrics"
-      :provisional="provisional"
-      :year="forecastEndYear"
-    />
+      <template v-if="hasFinancialInputs">
+        <div class="section-intro"><div><p class="eyebrow">YOUR FINANCIAL JOURNEY</p><h2>Hành trình tài chính dự kiến</h2><p class="section-description">Theo dõi quỹ tiết kiệm tăng lên và dư nợ giảm xuống theo thời gian.</p></div><span class="section-meta">Mô phỏng · 2026–{{ forecastEndYear }}</span></div>
+        <financial-position :assumptions="dto" :loans="loans" :forecast="forecast" />
+        <div class="section-intro indicator-intro"><div><p class="eyebrow">KEY INDICATORS</p><h2>Các chỉ số đáng chú ý</h2></div><span class="section-meta">Dự báo năm {{ forecastEndYear }}</span></div>
+        <metric-cards :metrics="metrics" :provisional="provisional" :year="forecastEndYear" />
+      </template>
+      <div v-else class="empty-state dashboard-empty-state">
+        <strong>Bắt đầu từ các giả định tài chính</strong>
+        <span>Nhập thu nhập, chi phí hoặc tiết kiệm ban đầu để xem dự báo thay vì các chỉ số 0 ₫.</span>
+        <a class="button button-primary" href="#assumptions">Thiết lập giả định <span aria-hidden="true">↘</span></a>
+      </div>
     </section>
 
     <section id="assumptions" class="content-section">
       <div class="section-intro"><div><p class="eyebrow">THIẾT LẬP</p><h2>Giả định tài chính</h2><p class="section-description">Cập nhật thu nhập, chi phí và khoản vay để mô phỏng kế hoạch của gia đình.</p></div></div>
-      <assumptions-form :dto="dto" :expenses="expenses" :error="errorMessage" :status="saveStatus" @input="onFormInput" @expenses-input="onExpenseInput" @save="saveAndForecast" @reset="resetDefaults" />
+      <assumptions-form :dto="dto" :expenses="expenses" :error="errorMessage" :status="saveStatus" @input="onFormInput" @expenses-input="onExpenseInput" @save="saveAndForecast" @reset="resetDefaults" @load-sample="loadSampleData" />
     </section>
 
     <section id="loans" class="content-section">
@@ -106,7 +109,7 @@
       </main>
       <footer class="page-footer">
         <span>Đây là dự báo theo các giả định bạn nhập, không phải tư vấn tài chính.</span>
-        <span>Chạy cục bộ · Không gửi dữ liệu ra ngoài</span>
+        <span>Dữ liệu tài chính được lưu trên máy chủ của Planwise.</span>
       </footer>
     </div>
   </div>
@@ -169,6 +172,12 @@ const forecastYears = computed(() => {
   return first === last ? String(first) : `${first}–${last}`
 })
 const forecastEndYear = computed(() => forecast.value?.annual?.at(-1)?.year ?? 2030)
+const hasFinancialInputs = computed(() =>
+  Number(dto.startingSavings) > 0
+  || (dto.incomeChanges || []).some((item) => Number(item.amount) > 0)
+  || (expenses.value || []).some((item) => (item.changes || []).some((change) => Number(change.amount) > 0))
+  || loans.value.some((loan) => Number(loan.openingPrincipal) > 0),
+)
 
 function syncActiveSection() {
   const section = window.location.hash.slice(1)
@@ -273,11 +282,11 @@ function schedulePreview() {
   if (errors.length) {
     clearTimeout(previewTimer)
     errorMessage.value = errors[0]
-    saveStatus.value = 'Có thay đổi chưa lưu · giả định chưa hợp lệ'
+    saveStatus.value = 'Chưa lưu · giả định chưa hợp lệ'
     return
   }
   errorMessage.value = ''
-  saveStatus.value = 'Có thay đổi chưa lưu'
+  saveStatus.value = 'Đang cập nhật mô phỏng · Chưa lưu'
   clearTimeout(previewTimer)
   previewTimer = setTimeout(() => previewForecast(payload, requestId), 180)
 }
@@ -285,9 +294,12 @@ function schedulePreview() {
 async function previewForecast(payload, requestId) {
   try {
     const res = await getForecast(payload)
-    if (requestId === latestRequest) applyForecast(res)
+    if (requestId === latestRequest) {
+      applyForecast(res)
+      saveStatus.value = 'Đã cập nhật mô phỏng · Chưa lưu'
+    }
   } catch {
-    // Preview is optional; explicit save reports persistence errors.
+    if (requestId === latestRequest) saveStatus.value = 'Chưa lưu · chưa cập nhật được mô phỏng'
   }
 }
 
@@ -315,11 +327,24 @@ async function saveAndForecast(updated, updatedExpenses) {
   const errors = validateAssumptions(payload)
   if (errors.length) {
     errorMessage.value = errors[0]
-    saveStatus.value = 'Có thay đổi chưa lưu · giả định chưa hợp lệ'
+    saveStatus.value = 'Chưa lưu · giả định chưa hợp lệ'
     return
   }
   clearTimeout(previewTimer)
   await persistAndForecast(payload)
+}
+
+function loadSampleData() {
+  if (!window.confirm('Nạp dữ liệu mẫu sẽ thay thế các giả định đang nhập trên biểu mẫu. Dữ liệu mẫu chưa được lưu lên máy chủ cho đến khi bạn bấm Lưu. Tiếp tục?')) return
+  clearTimeout(previewTimer)
+  Object.assign(dto, {
+    incomeChanges: [{ effectiveMonth: '2026-11', amount: 25000000 }],
+    januaryMultiplier: 2,
+    startingSavings: 100000000,
+    forecastYears: 2,
+  })
+  expenses.value = [{ name: 'Chi phí gia đình', changes: [{ effectiveMonth: '2026-11', amount: 15000000 }] }]
+  schedulePreview()
 }
 
 async function resetDefaults() {
