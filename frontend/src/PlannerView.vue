@@ -25,7 +25,6 @@
       <div class="drawer-actions" aria-label="Thao tác tài khoản và tiện ích">
         <p class="drawer-actions-caption">TÀI KHOẢN & TIỆN ÍCH</p>
         <button id="household-settings-button" class="drawer-action" data-action="household" type="button" aria-label="Không gian hộ gia đình" title="Không gian hộ gia đình" @click="$emit('open-household-settings')">Không gian hộ gia đình</button>
-        <button id="logout-button" class="drawer-action" data-action="logout" type="button" aria-label="Đăng xuất" @click="$emit('logout')">Đăng xuất</button>
         <button id="export-button" class="drawer-action" data-action="export" type="button" aria-label="Xuất dữ liệu CSV" :disabled="hasValidationError" @click="exportCsv">Xuất dữ liệu CSV</button>
       </div>
       <a class="drawer-period" href="#forecastYears" aria-label="Điều chỉnh thời gian dự phóng" @click="closeDrawer">
@@ -33,6 +32,9 @@
         <strong>{{ forecastPeriod }}</strong>
         <span class="drawer-period-action">Điều chỉnh thời gian dự phóng <span aria-hidden="true">↗</span></span>
       </a>
+      <div class="drawer-logout-area">
+        <button id="logout-button" class="drawer-action" data-action="logout" type="button" aria-label="Đăng xuất" @click="$emit('logout')">Đăng xuất</button>
+      </div>
       <div class="sidebar-bottom">
         <span class="local-indicator"><span></span> Dữ liệu lưu trên máy chủ</span>
         <span class="sidebar-footnote">Kế hoạch cá nhân · {{ forecastYears }}</span>
