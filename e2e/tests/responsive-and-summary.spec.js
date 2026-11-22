@@ -27,6 +27,7 @@ test('uses a slide-out navigation drawer on mobile and keeps header actions on o
 
   await page.getByRole('button', { name: 'Mở menu điều hướng' }).click()
   await expect(page.locator('.sidebar')).toBeVisible()
+  await expect(page.locator('.sidebar .side-nav')).toHaveCSS('display', 'grid')
   await expect(page.locator('.sidebar .nav-link')).toHaveCount(5)
   await expect(page.locator('.sidebar .nav-link').nth(1)).toContainText('Giả định tài chính')
   await expect(page.locator('.drawer-period strong')).toContainText('11/2026')

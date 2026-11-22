@@ -316,16 +316,29 @@ describe('forecast presentation components', () => {
         { year: 2026, partial: true, salary: 0, expenses: 0, netCashFlow: 0, endingSavings: 0 },
         { year: 2027, partial: false, salary: 0, expenses: 0, netCashFlow: 0, endingSavings: 0 },
       ],
-      months: [
-        { label: 'thg 11 2026', year: 2026, month: 11, salary: 0, recurringExpenses: 0, openingPrincipal: 0, principalPaid: 0, interestPaid: 0, loanPayment: 0, totalExpenses: 0, netCashFlow: 0, cumulativeSavings: 0 },
-        { label: 'thg 12 2026', year: 2026, month: 12, salary: 0, recurringExpenses: 0, openingPrincipal: 0, principalPaid: 0, interestPaid: 0, loanPayment: 0, totalExpenses: 0, netCashFlow: 0, cumulativeSavings: 0 },
-      ],
+      months: Array.from({ length: 14 }, (_, index) => {
+        const date = new Date(2026, 10 + index, 1)
+        return {
+          label: `thg ${date.getMonth() + 1} ${date.getFullYear()}`,
+          year: date.getFullYear(),
+          month: date.getMonth() + 1,
+          salary: 0,
+          recurringExpenses: 0,
+          openingPrincipal: 0,
+          principalPaid: 0,
+          interestPaid: 0,
+          loanPayment: 0,
+          totalExpenses: 0,
+          netCashFlow: 0,
+          cumulativeSavings: 0,
+        }
+      }),
     }
     const chart = mount(AnnualChart, { props: { forecast: zeroForecast } })
     const monthly = mount(MonthlyTable, { props: { forecast: zeroForecast } })
     expect(chart.find('#annual-chart svg').exists()).toBe(true)
     expect(chart.findAll('.chart-bar')).toHaveLength(2)
-    expect(monthly.findAll('#monthly-table tbody tr')).toHaveLength(2)
+    expect(monthly.findAll('#monthly-table tbody tr')).toHaveLength(14)
     expect(monthly.find('#monthly-table tfoot tr').text()).toContain('Tổng cộng kỳ')
   })
 

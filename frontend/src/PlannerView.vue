@@ -112,15 +112,15 @@
 
     <section id="annual-report" class="content-section">
       <div class="section-intro"><div><p class="eyebrow">PHÂN TÍCH DÀI HẠN</p><h2>Dòng tiền theo năm</h2><p class="section-description">So sánh thu nhập và chi phí qua từng năm trong kỳ kế hoạch.</p></div></div>
-      <annual-chart :forecast="forecast" />
-      <annual-table :forecast="forecast" />
+      <template v-if="forecast">
+        <annual-chart :forecast="forecast" />
+        <annual-table :forecast="forecast" />
+      </template>
     </section>
 
     <section id="monthly-forecast" class="content-section">
       <div class="section-intro"><div><p class="eyebrow">CHI TIẾT DỰ BÁO</p><h2>Kế hoạch từng tháng</h2><p class="section-description">Theo dõi các khoản thu, chi, trả nợ và tiết kiệm lũy kế.</p></div></div>
-    <monthly-table
-      :forecast="forecast"
-    />
+    <monthly-table v-if="forecast" :forecast="forecast" />
     </section>
 
       </main>

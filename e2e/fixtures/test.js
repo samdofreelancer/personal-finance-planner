@@ -24,6 +24,9 @@ export const test = base.extend({
     await expect(page.getByRole('heading', { name: /Kế hoạch tài chính/ })).toBeVisible()
     await expect(page.locator('#export-button')).toBeVisible()
     await expect(page.locator('#save-status')).toHaveText('Đã lưu trên máy chủ')
+    await expect(page.locator('#annual-chart .chart-bar')).toHaveCount(5)
+    await expect(page.locator('#annual-table tbody tr')).toHaveCount(5)
+    await expect(page.locator('#monthly-table tbody tr')).toHaveCount(50)
 
     const initialProfile = await page.evaluate(async () => {
       const [assumptions, loans] = await Promise.all([
