@@ -15,7 +15,7 @@
           <article v-for="(change, changeIndex) in sortedIncomeChanges" :key="changeIndex" class="income-change-row">
             <label class="field">
               <span>Áp dụng từ</span>
-              <span class="input-wrap"><input v-model="change.effectiveMonth" type="month" :disabled="change.isBaseline" :aria-label="`Tháng hiệu lực thu nhập, mốc ${changeIndex + 1}`"></span>
+              <span class="input-wrap"><month-input v-model="change.effectiveMonth" :disabled="change.isBaseline" :aria-label="`Tháng hiệu lực thu nhập, mốc ${changeIndex + 1}`" /></span>
             </label>
             <label class="field">
               <span>Thu nhập / tháng</span>
@@ -53,7 +53,7 @@
             <div v-for="(change, changeIndex) in expense.changes" :key="changeIndex" class="expense-change-row">
               <label class="field">
                 <span>Áp dụng từ</span>
-                <span class="input-wrap"><input v-model="change.effectiveMonth" type="month" :aria-label="`Tháng hiệu lực khoản ${expenseIndex + 1}, mốc ${changeIndex + 1}`"></span>
+                <span class="input-wrap"><month-input v-model="change.effectiveMonth" :aria-label="`Tháng hiệu lực khoản ${expenseIndex + 1}, mốc ${changeIndex + 1}`" /></span>
               </label>
               <label class="field">
                 <span>Số tiền / tháng</span>
@@ -87,6 +87,7 @@
 <script setup>
 import { computed, reactive, watch } from 'vue'
 import CurrencyInput from './CurrencyInput.vue'
+import MonthInput from './MonthInput.vue'
 
 const props = defineProps(['dto', 'expenses', 'error', 'status'])
 const emit = defineEmits(['input', 'expenses-input', 'reset', 'save'])

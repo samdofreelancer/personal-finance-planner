@@ -81,6 +81,7 @@ describe('AssumptionsForm', () => {
     expect(wrapper.text()).toContain('Lỗi')
     expect(wrapper.text()).toContain('Đã lưu')
     expect(wrapper.findAll('.income-change-row')).toHaveLength(3)
+    expect(wrapper.get('.income-change-row .month-input-display').text()).toBe('11/2026')
 
     await wrapper.get('input[aria-label="Số tiền thu nhập, mốc 1"]').setValue('50.000.000')
     await wrapper.get('form').trigger('input')
@@ -104,6 +105,19 @@ describe('AssumptionsForm', () => {
     await wrapper.findAll('.income-change-remove').at(-1).trigger('click')
     expect(wrapper.findAll('.income-change-row')).toHaveLength(3)
     expect(wrapper.get('input[aria-label="Tháng hiệu lực thu nhập, mốc 1"]').element.value).toBe('2026-11')
+  })
+
+  it('shows effective months in MM/YYYY while keeping the native month picker input', () => {
+    const wrapper = mount(AssumptionsForm, { props: { dto: assumptions(), expenses: expenses(), error: '', status: '' } })
+    const incomeMonth = wrapper.get('input[aria-label="Tháng hiệu lực thu nhập, mốc 2"]')
+    const expenseMonth = wrapper.get('input[aria-label="Tháng hiệu lực khoản 1, mốc 1"]')
+
+    expect(incomeMonth.attributes('type')).toBe('month')
+    expect(incomeMonth.element.value).toBe('2027-04')
+    expect(incomeMonth.element.disabled).toBe(false)
+    expect(wrapper.findAll('.month-input-display').map((node) => node.text())).toContain('04/2027')
+    expect(expenseMonth.attributes('type')).toBe('month')
+    expect(expenseMonth.element.value).toBe('2026-11')
   })
 
   it('allows correcting or removing a future entry that temporarily duplicates the baseline month', async () => {
