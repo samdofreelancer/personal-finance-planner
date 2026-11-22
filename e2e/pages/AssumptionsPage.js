@@ -8,6 +8,8 @@ export class AssumptionsPage extends BasePage {
   }
 
   async open() {
+    const drawerButton = this.page.getByRole('button', { name: 'Mở menu điều hướng' })
+    if (await drawerButton.isVisible()) await drawerButton.click()
     await this.page.getByRole('link', { name: /Giả định/ }).click()
     await this.saveStatus.waitFor({ state: 'visible' })
   }

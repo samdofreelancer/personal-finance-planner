@@ -1,20 +1,14 @@
 import { test, expect } from '../fixtures/test.js'
 
-test('keeps mobile navigation and header actions compact without wrapping', async ({ dashboardPage }) => {
+test('uses a slide-out navigation drawer on mobile and keeps header actions on one line', async ({ dashboardPage }) => {
   const { page } = dashboardPage
   await page.setViewportSize({ width: 390, height: 844 })
   await dashboardPage.open()
 
   const layout = await page.evaluate(() => {
-    const nav = document.querySelector('.side-nav')
     const actions = [...document.querySelectorAll('.topbar-actions .button')]
-    const breadcrumbPrefix = document.querySelector('.breadcrumb-prefix')
     return {
-      navOverflow: nav.scrollWidth > nav.clientWidth,
-      navWhiteSpace: getComputedStyle(nav.querySelector('.nav-link')).whiteSpace,
       actionWhiteSpaces: actions.map((button) => getComputedStyle(button).whiteSpace),
-      breadcrumbPrefixHidden: getComputedStyle(breadcrumbPrefix).display === 'none',
-      mobileNavLabels: [...document.querySelectorAll('.nav-label-mobile')].map((node) => getComputedStyle(node).display !== 'none' ? node.textContent.trim() : ''),
       householdAriaLabel: document.querySelector('#household-settings-button').getAttribute('aria-label'),
       householdTitle: document.querySelector('#household-settings-button').getAttribute('title'),
       documentWidth: document.documentElement.scrollWidth,
@@ -22,14 +16,53 @@ test('keeps mobile navigation and header actions compact without wrapping', asyn
     }
   })
 
-  expect(layout.navOverflow).toBe(true)
-  expect(layout.navWhiteSpace).toBe('nowrap')
   expect(layout.actionWhiteSpaces.every((value) => value === 'nowrap')).toBe(true)
-  expect(layout.breadcrumbPrefixHidden).toBe(true)
-  expect(layout.mobileNavLabels).toEqual(['Tổng quan', 'Giả định', 'Khoản vay', 'Theo năm', 'Theo tháng'])
   expect(layout.householdAriaLabel).toBe('Không gian hộ gia đình')
   expect(layout.householdTitle).toBe('Không gian hộ gia đình')
   expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth)
+  await expect(page.getByRole('button', { name: 'Mở menu điều hướng' })).toBeVisible()
+  await expect(page.locator('.mobile-brand')).toContainText('planwise')
+  await expect(page.locator('.breadcrumb strong')).toBeVisible()
+  await expect(page.locator('.sidebar')).toBeHidden()
+
+  await page.getByRole('button', { name: 'Mở menu điều hướng' }).click()
+  await expect(page.locator('.sidebar')).toBeVisible()
+  await expect(page.locator('.sidebar .nav-link')).toHaveCount(5)
+  await expect(page.locator('.sidebar .nav-link').nth(1)).toContainText('Giả định tài chính')
+  await expect(page.locator('.drawer-period strong')).toContainText('11/2026')
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.sidebar')).toBeHidden()
+
+  await page.getByRole('button', { name: 'Mở menu điều hướng' }).click()
+  await page.locator('.drawer-backdrop').click({ position: { x: 380, y: 400 } })
+  await expect(page.locator('.sidebar')).toBeHidden()
+
+  await page.getByRole('button', { name: 'Mở menu điều hướng' }).click()
+  await page.locator('.sidebar .nav-link[href="#assumptions"]').click()
+  await expect(page.locator('.sidebar')).toBeHidden()
+  await expect(page).toHaveURL(/#assumptions$/)
+  await page.getByRole('button', { name: 'Mở menu điều hướng' }).click()
+  await expect(page.locator('.sidebar .nav-link[href="#assumptions"]')).toHaveClass(/active/)
+  await page.locator('.sidebar .drawer-close').click()
+  await expect(page.locator('.sidebar')).toBeHidden()
+
+  await page.setViewportSize({ width: 320, height: 740 })
+  await expect(page.locator('.topbar-actions .button')).toHaveCount(3)
+  const narrowLayout = await page.evaluate(() => ({
+    width: document.documentElement.scrollWidth,
+    viewport: window.innerWidth,
+    buttons: [...document.querySelectorAll('.topbar-actions .button')].map((button) => ({
+      text: button.innerText,
+      height: button.getBoundingClientRect().height,
+      whiteSpace: getComputedStyle(button).whiteSpace,
+    })),
+  }))
+  expect(narrowLayout.width).toBeLessThanOrEqual(narrowLayout.viewport)
+  expect(narrowLayout.buttons.every((button) => button.whiteSpace === 'nowrap' && button.height < 45)).toBe(true)
+
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await expect(page.locator('.sidebar')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Mở menu điều hướng' })).toBeHidden()
   await expect(page.locator('#monthly-table tfoot tr')).toContainText('Tổng cộng kỳ')
   await expect(page.locator('#monthly-table thead th').first()).toHaveCSS('position', 'sticky')
 })

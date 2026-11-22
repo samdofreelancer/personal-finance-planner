@@ -1,6 +1,7 @@
 <template>
   <div class="app-shell">
-    <aside class="sidebar" aria-label="Điều hướng chính">
+    <button v-if="isDrawerOpen" class="drawer-backdrop" type="button" aria-label="Đóng menu điều hướng" @click="closeDrawer"></button>
+    <aside class="sidebar" :class="{ 'drawer-open': isDrawerOpen }" aria-label="Điều hướng chính">
       <a class="brand" href="#overview" aria-label="Planwise - Tổng quan">
         <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
           <rect width="40" height="40" rx="12" fill="currentColor" />
@@ -9,14 +10,19 @@
         </svg>
         <span class="brand-word">plan<span class="brand-light">wise</span></span>
       </a>
+      <div class="drawer-mobile-heading">
+        <span>ĐIỀU HƯỚNG</span>
+        <button type="button" class="drawer-close" aria-label="Đóng menu điều hướng" @click="closeDrawer">×</button>
+      </div>
       <p class="nav-caption">WORKSPACE</p>
-      <nav class="side-nav">
-        <a class="nav-link" :class="{ active: activeSection === 'overview' }" href="#overview" :aria-current="activeSection === 'overview' ? 'page' : undefined"><span class="nav-icon">▦</span><span class="nav-label-desktop">Tổng quan</span><span class="nav-label-mobile">Tổng quan</span></a>
-        <a class="nav-link" :class="{ active: activeSection === 'assumptions' }" href="#assumptions" :aria-current="activeSection === 'assumptions' ? 'page' : undefined"><span class="nav-icon">⚙</span><span class="nav-label-desktop">Giả định tài chính</span><span class="nav-label-mobile">Giả định</span></a>
-        <a class="nav-link" :class="{ active: activeSection === 'loans' }" href="#loans" :aria-current="activeSection === 'loans' ? 'page' : undefined"><span class="nav-icon">⌁</span><span class="nav-label-desktop">Khoản vay</span><span class="nav-label-mobile">Khoản vay</span></a>
-        <a class="nav-link" :class="{ active: activeSection === 'annual-report' }" href="#annual-report" :aria-current="activeSection === 'annual-report' ? 'page' : undefined"><span class="nav-icon">▥</span><span class="nav-label-desktop">Tổng hợp theo năm</span><span class="nav-label-mobile">Theo năm</span></a>
-        <a class="nav-link" :class="{ active: activeSection === 'monthly-forecast' }" href="#monthly-forecast" :aria-current="activeSection === 'monthly-forecast' ? 'page' : undefined"><span class="nav-icon">▤</span><span class="nav-label-desktop">Dự báo theo tháng</span><span class="nav-label-mobile">Theo tháng</span></a>
+      <nav class="side-nav" aria-label="Các mục Planwise">
+        <a class="nav-link" :class="{ active: activeSection === 'overview' }" href="#overview" :aria-current="activeSection === 'overview' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">▦</span><span class="nav-label-desktop">Tổng quan</span><span class="nav-label-mobile">Tổng quan</span></a>
+        <a class="nav-link" :class="{ active: activeSection === 'assumptions' }" href="#assumptions" :aria-current="activeSection === 'assumptions' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">⚙</span><span class="nav-label-desktop">Giả định tài chính</span><span class="nav-label-mobile">Giả định</span></a>
+        <a class="nav-link" :class="{ active: activeSection === 'loans' }" href="#loans" :aria-current="activeSection === 'loans' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">⌁</span><span class="nav-label-desktop">Khoản vay</span><span class="nav-label-mobile">Khoản vay</span></a>
+        <a class="nav-link" :class="{ active: activeSection === 'annual-report' }" href="#annual-report" :aria-current="activeSection === 'annual-report' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">▥</span><span class="nav-label-desktop">Tổng hợp theo năm</span><span class="nav-label-mobile">Theo năm</span></a>
+        <a class="nav-link" :class="{ active: activeSection === 'monthly-forecast' }" href="#monthly-forecast" :aria-current="activeSection === 'monthly-forecast' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">▤</span><span class="nav-label-desktop">Dự báo theo tháng</span><span class="nav-label-mobile">Theo tháng</span></a>
       </nav>
+      <div class="drawer-period">KỲ MÔ PHỎNG<strong>{{ forecastPeriod }}</strong></div>
       <div class="sidebar-bottom">
         <span class="local-indicator"><span></span> Dữ liệu lưu trên máy chủ</span>
         <span class="sidebar-footnote">Kế hoạch cá nhân · {{ forecastYears }}</span>
@@ -25,7 +31,17 @@
 
     <div class="workspace">
       <header class="topbar">
-        <div class="breadcrumb"><span class="breadcrumb-prefix">Không gian tài chính <span>/</span></span> <strong>{{ activeSectionLabel }}</strong></div>
+        <div class="mobile-topbar-main">
+          <button type="button" class="drawer-open-button" aria-label="Mở menu điều hướng" @click="openDrawer">☰</button>
+          <a class="brand mobile-brand" href="#overview" aria-label="Planwise - Tổng quan">
+            <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+              <rect width="40" height="40" rx="12" fill="currentColor" />
+              <path d="M12 29V11h9.2a7 7 0 0 1 0 14H17" fill="none" stroke="#F7F8F2" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="m23 25 5 4-5 3" fill="none" stroke="#9DE3C7" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span class="brand-word">plan<span class="brand-light">wise</span></span>
+          </a>
+        </div>
         <div class="topbar-actions">
           <span class="local-badge"><span aria-hidden="true"></span> Dữ liệu lưu trên máy chủ</span>
           <span class="user-badge"><strong>{{ user.email }}</strong><small>{{ user.role === 'OWNER' ? 'Chủ hộ' : 'Thành viên' }}</small></span>
@@ -33,6 +49,7 @@
           <button id="logout-button" class="button button-secondary" type="button" @click="$emit('logout')"><span class="desktop-action-label">Đăng xuất</span><span class="mobile-action-label">Thoát</span></button>
           <button id="export-button" class="button button-secondary" type="button" :disabled="hasValidationError" @click="exportCsv"><span class="desktop-action-label">↓ Xuất CSV</span><span class="mobile-action-label">CSV</span></button>
         </div>
+        <div class="breadcrumb"><span class="breadcrumb-prefix">Không gian tài chính <span>/</span></span> <strong>{{ activeSectionLabel }}</strong></div>
       </header>
 
       <main class="page" :aria-busy="isLoading">
@@ -150,6 +167,7 @@ const isSavingLoans = ref(false)
 const isLoading = ref(true)
 const provisional = ref(false)
 const activeSection = ref('overview')
+const isDrawerOpen = ref(false)
 const sectionLabels = {
   overview: 'Tổng quan',
   assumptions: 'Giả định tài chính',
@@ -184,6 +202,18 @@ function syncActiveSection() {
   activeSection.value = sectionLabels[section] ? section : 'overview'
 }
 
+function openDrawer() {
+  isDrawerOpen.value = true
+}
+
+function closeDrawer() {
+  isDrawerOpen.value = false
+}
+
+function onDrawerKeydown(event) {
+  if (event.key === 'Escape') closeDrawer()
+}
+
 function updateActiveSectionFromScroll() {
   const sections = Object.keys(sectionLabels)
   let current = 'overview'
@@ -214,6 +244,7 @@ onMounted(async () => {
   syncActiveSection()
   window.addEventListener('hashchange', syncActiveSection)
   window.addEventListener('scroll', updateActiveSectionFromScroll, { passive: true })
+  window.addEventListener('keydown', onDrawerKeydown)
   try {
     const data = await getAssumptions()
     applyDto(data)
@@ -233,6 +264,7 @@ onBeforeUnmount(() => {
   clearTimeout(previewTimer)
   window.removeEventListener('hashchange', syncActiveSection)
   window.removeEventListener('scroll', updateActiveSectionFromScroll)
+  window.removeEventListener('keydown', onDrawerKeydown)
 })
 
 function applyDto(data) {
