@@ -31,7 +31,7 @@
             <span>Hệ số lương tháng 1</span>
             <span class="input-wrap input-wrap-short"><input id="januaryMultiplier" v-model.number="formDto.januaryMultiplier" name="januaryMultiplier" type="number" min="0" max="20" step="0.1" required><span>×</span></span>
           </label>
-          <p class="field-hint multiplier-hint">Tháng 1: thu nhập tháng đang có hiệu lực × hệ số; các tháng còn lại dùng mức thu nhập đang có hiệu lực.</p>
+          <p class="field-hint multiplier-hint">Hệ số này chỉ nhân vào thu nhập tháng 1 hằng năm (tương đương thưởng / lương tháng 13); các tháng còn lại giữ nguyên mức thu nhập đang có hiệu lực.</p>
           <label class="field" for="forecastYears">
             <span>Thời gian dự phóng</span>
             <span class="input-wrap input-wrap-short">

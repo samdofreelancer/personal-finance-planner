@@ -26,6 +26,14 @@ test('uses single-purpose rows in the mobile drawer and keeps the header unclutt
   await expect(page.locator('#annual-table thead th').first()).toHaveCSS('position', 'sticky')
   await expect(page.locator('#monthly-table thead th').first()).toHaveCSS('position', 'sticky')
   await expect(page.locator('#monthly-table tbody th[scope="row"]').first()).toHaveCSS('position', 'sticky')
+  await expect(page.locator('#monthly-table tbody td:last-child').first()).toHaveCSS('position', 'sticky')
+  await page.getByRole('button', { name: '2027', exact: true }).click()
+  await expect(page.locator('#monthly-table tbody tr')).toHaveCount(12)
+  await page.getByRole('button', { name: 'Tất cả', exact: true }).click()
+  await page.getByRole('button', { name: 'Ẩn chi tiết khoản vay' }).click()
+  await expect(page.locator('#monthly-table thead')).not.toContainText('Gốc đầu kỳ')
+  await page.getByRole('button', { name: 'Hiện chi tiết khoản vay' }).click()
+  await expect(page.locator('#monthly-table thead')).toContainText('Gốc đầu kỳ')
   const mobileTables = await page.evaluate(() => [...document.querySelectorAll('.table-scroll')].map((element) => ({
     clientWidth: element.clientWidth,
     scrollWidth: element.scrollWidth,
@@ -43,6 +51,14 @@ test('uses single-purpose rows in the mobile drawer and keeps the header unclutt
     }
   }))
   expect(stickyColumns.every((column) => column.scrollLeft > 0 && Math.abs(column.cellLeft - column.containerLeft) < 2)).toBe(true)
+  const stickySavings = await page.evaluate(() => {
+    const table = document.querySelector('#monthly-table')
+    const scroller = table.closest('.table-scroll')
+    scroller.scrollLeft = scroller.scrollWidth
+    const cell = table.querySelector('tbody tr td:last-child')
+    return { cellRight: cell.getBoundingClientRect().right, containerRight: scroller.getBoundingClientRect().right }
+  })
+  expect(Math.abs(stickySavings.cellRight - stickySavings.containerRight)).toBeLessThan(2)
   const mobileHeader = await page.evaluate(() => ({ height: document.querySelector('.topbar').getBoundingClientRect().height }))
   expect(mobileHeader.height).toBeLessThan(100)
   await expect(page.locator('.sidebar')).toBeHidden()
@@ -102,7 +118,12 @@ test('uses single-purpose rows in the mobile drawer and keeps the header unclutt
   await expect(page.getByRole('button', { name: 'Mở menu điều hướng' })).toBeHidden()
   await expect(page.locator('.topbar-actions .button')).toHaveCount(0)
   await expect(page.locator('.sidebar .drawer-actions')).toBeVisible()
-  const desktopActionRows = await page.locator('.sidebar .drawer-action').evaluateAll((buttons) => buttons.map((button) => ({ top: button.getBoundingClientRect().top, width: button.getBoundingClientRect().width, height: button.getBoundingClientRect().height })))
+  const desktopActionRows = await page.locator('.sidebar .drawer-action').evaluateAll((buttons) => buttons.map((button) => ({
+    top: button.getBoundingClientRect().top,
+    left: button.getBoundingClientRect().left,
+    width: button.getBoundingClientRect().width,
+    height: button.getBoundingClientRect().height,
+  })))
   expect(desktopActionRows).toHaveLength(3)
   expect(desktopActionRows.every((button, index) => button.width > 150 && button.height >= 48 && (index === 0 || button.top > desktopActionRows[index - 1].top))).toBe(true)
   await expect(page.locator('#monthly-table tfoot tr')).toContainText('Tổng cộng kỳ')
@@ -125,6 +146,7 @@ test('loads sample assumptions into the preview without overwriting server data'
   const { page } = assumptionsPage
   await assumptionsPage.open()
   const persistedIncome = await page.evaluate(async () => (await fetch('/api/assumptions')).json()).then((data) => data.incomeChanges[0].amount)
+  const persistedLoanCount = await page.evaluate(async () => (await fetch('/api/loans')).json()).then((data) => data.length)
 
   page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Nạp dữ liệu mẫu' }).click()
@@ -133,7 +155,11 @@ test('loads sample assumptions into the preview without overwriting server data'
   await expect(page.getByLabel('Tiền tiết kiệm ban đầu')).toHaveValue('100.000.000')
   await expect(page.getByLabel('Số tiền khoản Chi phí gia đình, mốc 1')).toHaveValue('15.000.000')
   await expect(assumptionsPage.saveStatus).toContainText('Đã cập nhật mô phỏng · Chưa lưu')
+  await expect(page.locator('#loans input[id^="loan-name-"]').last()).toHaveValue('Khoản vay minh họa')
+  await expect(page.locator('#loans')).toContainText('Lịch trả đang chỉnh sửa chưa được tính vào dự báo')
 
   const stillPersistedIncome = await page.evaluate(async () => (await fetch('/api/assumptions')).json()).then((data) => data.incomeChanges[0].amount)
   expect(stillPersistedIncome).toBe(persistedIncome)
+  const stillPersistedLoanCount = await page.evaluate(async () => (await fetch('/api/loans')).json()).then((data) => data.length)
+  expect(stillPersistedLoanCount).toBe(persistedLoanCount)
 })

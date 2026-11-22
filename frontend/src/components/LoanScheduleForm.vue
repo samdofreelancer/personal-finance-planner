@@ -62,6 +62,7 @@
         </div>
       </div>
       <p class="field-hint loan-footnote">Dự báo lấy lịch trả đã lưu. Gốc trả được giới hạn theo dư nợ còn lại; lãi được cộng đúng theo từng kỳ đã nhập.</p>
+      <p v-if="isDirty" class="loan-preview-note">Lịch trả đang chỉnh sửa chưa được tính vào dự báo. Bấm <strong>Lưu</strong> để cập nhật lịch trả trên máy chủ và làm mới dự báo.</p>
     </form>
   </section>
 </template>
@@ -71,8 +72,8 @@ import { computed, ref, watch } from 'vue'
 import { formatCurrency } from '../utils/currency.js'
 import CurrencyInput from './CurrencyInput.vue'
 
-const props = defineProps({ loans: { type: Array, default: () => [] }, status: { type: String, default: '' }, error: { type: String, default: '' } })
-const emit = defineEmits(['save'])
+const props = defineProps({ loans: { type: Array, default: () => [] }, sampleLoanDraft: { type: Object, default: null }, status: { type: String, default: '' }, error: { type: String, default: '' } })
+const emit = defineEmits(['save', 'dirty-change'])
 const draft = ref([])
 let nextKey = 0
 const money = formatCurrency
@@ -93,7 +94,9 @@ function normalize(loans) {
   }))
 }
 
-watch(() => props.loans, normalize, { immediate: true, deep: true })
+watch(() => [props.loans, props.sampleLoanDraft], () => {
+  normalize([...(props.loans || []), ...(props.sampleLoanDraft ? [props.sampleLoanDraft] : [])])
+}, { immediate: true, deep: true })
 
 function addLoan() {
   draft.value.push({ key: `loan-${nextKey++}`, id: null, name: '', openingPrincipal: 0, repayments: [] })
@@ -126,6 +129,7 @@ const savePayload = computed(() => draft.value.map(({ key, ...loan }) => ({
   repayments: loan.repayments.map(({ key: repaymentKey, ...payment }) => payment),
 })))
 const isDirty = computed(() => JSON.stringify(savePayload.value) !== JSON.stringify(props.loans || []))
+watch(isDirty, (value) => emit('dirty-change', value), { immediate: true })
 const statusLabel = computed(() => props.status === 'Đang lưu...'
   ? props.status
   : isDirty.value ? 'Có thay đổi chưa lưu' : props.status)

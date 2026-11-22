@@ -24,7 +24,8 @@
       <strong>Chưa có dữ liệu biểu đồ</strong>
       <span>Dữ liệu dòng tiền theo năm sẽ xuất hiện sau khi tải được dự báo.</span>
     </div>
-    <div class="chart-footnote">* Năm 2026 gồm tháng 11–12 · † Dòng tiền tạm tính</div>
+    <p v-if="chart.allZero" class="chart-zero-hint">Các năm hiện đều ở mức 0 tr ₫. Hãy nạp dữ liệu mẫu hoặc nhập giả định để xem dòng tiền dự kiến.</p>
+    <div v-if="chart.footnotes.length" class="chart-footnote">{{ chart.footnotes.join(' · ') }}</div>
   </section>
 </template>
 
@@ -51,6 +52,7 @@ const chart = computed(() => {
   const plotHeight = height - top - bottom
   const plotWidth = width - left - right
   const values = annual.map((row) => row.netCashFlow)
+  const allZero = values.length > 0 && values.every((value) => Number(value) === 0)
   let min = Math.min(0, ...values)
   let max = Math.max(0, ...values)
   if (values.length && min === 0 && max === 0) {
@@ -101,7 +103,10 @@ const chart = computed(() => {
   const description = annual
     .map((row) => `${row.year}${row.partial ? ' (hai tháng)' : ''}: ${money(row.netCashFlow)}${row.provisional ? ' (tạm tính)' : ''}`)
     .join('; ')
-  return { width, height, left, right, top, bottom, ticks, bars, description, endYear: annual.at(-1)?.year ?? 2030 }
+  const footnotes = []
+  if (annual.some((row) => row.partial)) footnotes.push('* Năm 2026 chỉ gồm tháng 11–12')
+  if (annual.some((row) => row.provisional)) footnotes.push('† Có dòng tiền tạm tính')
+  return { width, height, left, right, top, bottom, ticks, bars, description, allZero, footnotes, endYear: annual.at(-1)?.year ?? 2030 }
 })
 
 const money = formatCurrency

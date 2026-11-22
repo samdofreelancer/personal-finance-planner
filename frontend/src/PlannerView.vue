@@ -14,7 +14,7 @@
         <span>ĐIỀU HƯỚNG</span>
       </div>
       <button type="button" class="drawer-close" aria-label="Đóng menu điều hướng" @click="closeDrawer">Đóng menu ×</button>
-      <p class="nav-caption">WORKSPACE</p>
+      <p class="nav-caption">KHÔNG GIAN LÀM VIỆC</p>
       <nav class="side-nav" aria-label="Các mục Planwise">
         <a class="nav-link" :class="{ active: activeSection === 'overview' }" href="#overview" :aria-current="activeSection === 'overview' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">▦</span><span class="nav-label-desktop">Tổng quan</span><span class="nav-label-mobile">Tổng quan</span></a>
         <a class="nav-link" :class="{ active: activeSection === 'assumptions' }" href="#assumptions" :aria-current="activeSection === 'assumptions' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">⚙</span><span class="nav-label-desktop">Giả định tài chính</span><span class="nav-label-mobile">Giả định</span></a>
@@ -70,7 +70,7 @@
     </div>
     <section id="overview" class="page-heading outlook-hero">
       <div class="outlook-copy">
-        <p class="eyebrow">FINANCIAL OUTLOOK <span class="outlook-live-dot"></span> KỊCH BẢN ĐANG MÔ PHỎNG</p>
+        <p class="eyebrow">TRIỂN VỌNG TÀI CHÍNH <span class="outlook-live-dot"></span> KỊCH BẢN ĐANG MÔ PHỎNG</p>
         <h1>Kế hoạch tài chính<br class="mobile-break"> của bạn sẽ đi đến đâu?</h1>
         <p class="subtitle">Bức tranh dự kiến từ {{ forecastPeriod }}, dựa trên các giả định hiện tại.</p>
         <div class="outlook-actions">
@@ -93,11 +93,16 @@
       </div>
     </section>
 
+    <section v-if="!hasFinancialInputs" class="sample-empty-banner" aria-labelledby="sample-empty-title">
+      <div><strong id="sample-empty-title">Bắt đầu với một kế hoạch mẫu</strong><p>Các giả định hiện đang trống. Nạp thử thu nhập, chi phí, tiết kiệm và lịch vay minh họa để khám phá biểu đồ và bảng dự báo.</p></div>
+      <button class="button button-primary" type="button" @click="loadSampleData">Nạp dữ liệu mẫu</button>
+    </section>
+
     <section class="overview-section" aria-label="Triển vọng tài chính">
       <template v-if="hasFinancialInputs">
-        <div class="section-intro"><div><p class="eyebrow">YOUR FINANCIAL JOURNEY</p><h2>Hành trình tài chính dự kiến</h2><p class="section-description">Theo dõi quỹ tiết kiệm tăng lên và dư nợ giảm xuống theo thời gian.</p></div><span class="section-meta">Mô phỏng · 2026–{{ forecastEndYear }}</span></div>
+        <div class="section-intro"><div><p class="eyebrow">HÀNH TRÌNH TÀI CHÍNH</p><h2>Hành trình tài chính dự kiến</h2><p class="section-description">Theo dõi quỹ tiết kiệm tăng lên và dư nợ giảm xuống theo thời gian.</p></div><span class="section-meta">Mô phỏng · 2026–{{ forecastEndYear }}</span></div>
         <financial-position :assumptions="dto" :loans="loans" :forecast="forecast" />
-        <div class="section-intro indicator-intro"><div><p class="eyebrow">KEY INDICATORS</p><h2>Các chỉ số đáng chú ý</h2></div><span class="section-meta">Dự báo năm {{ forecastEndYear }}</span></div>
+        <div class="section-intro indicator-intro"><div><p class="eyebrow">CHỈ SỐ CHÍNH</p><h2>Các chỉ số đáng chú ý</h2></div><span class="section-meta">Dự báo năm {{ forecastEndYear }}</span></div>
         <metric-cards :metrics="metrics" :provisional="provisional" :year="forecastEndYear" />
       </template>
       <div v-else class="empty-state dashboard-empty-state">
@@ -115,7 +120,7 @@
 
     <section id="loans" class="content-section">
       <div class="section-intro"><div><p class="eyebrow">KHOẢN VAY</p><h2>Lịch trả nợ</h2><p class="section-description">Quản lý từng khoản vay và các kỳ trả linh hoạt; dữ liệu chỉ được cập nhật khi bạn lưu.</p></div></div>
-      <loan-schedule-form :loans="loans" :status="loanSaveStatus" :error="loanError" @save="saveLoanSchedule" />
+      <loan-schedule-form :loans="loans" :sample-loan-draft="sampleLoanDraft" :status="loanSaveStatus" :error="loanError" @dirty-change="loanDraftDirty = $event" @save="saveLoanSchedule" />
     </section>
 
     <section id="annual-report" class="content-section">
@@ -172,6 +177,9 @@ const saveStatus = ref('Đang tải...')
 const loanSaveStatus = ref('')
 const loanError = ref('')
 const isSavingLoans = ref(false)
+const loanDraftDirty = ref(false)
+const sampleLoanDraft = ref(null)
+const savedAssumptionsSnapshot = ref(null)
 const isLoading = ref(true)
 const provisional = ref(false)
 const activeSection = ref('overview')
@@ -204,6 +212,8 @@ const hasFinancialInputs = computed(() =>
   || (expenses.value || []).some((item) => (item.changes || []).some((change) => Number(change.amount) > 0))
   || loans.value.some((loan) => Number(loan.openingPrincipal) > 0),
 )
+const assumptionsDirty = computed(() => savedAssumptionsSnapshot.value !== null && JSON.stringify(snapshot()) !== savedAssumptionsSnapshot.value)
+const hasUnsavedChanges = computed(() => assumptionsDirty.value || loanDraftDirty.value)
 
 function syncActiveSection() {
   const section = window.location.hash.slice(1)
@@ -253,6 +263,7 @@ onMounted(async () => {
   window.addEventListener('hashchange', syncActiveSection)
   window.addEventListener('scroll', updateActiveSectionFromScroll, { passive: true })
   window.addEventListener('keydown', onDrawerKeydown)
+  window.addEventListener('beforeunload', onBeforeUnload)
   try {
     const data = await getAssumptions()
     applyDto(data)
@@ -273,7 +284,14 @@ onBeforeUnmount(() => {
   window.removeEventListener('hashchange', syncActiveSection)
   window.removeEventListener('scroll', updateActiveSectionFromScroll)
   window.removeEventListener('keydown', onDrawerKeydown)
+  window.removeEventListener('beforeunload', onBeforeUnload)
 })
+
+function onBeforeUnload(event) {
+  if (!hasUnsavedChanges.value) return
+  event.preventDefault()
+  event.returnValue = ''
+}
 
 function applyDto(data) {
   Object.assign(dto, {
@@ -283,6 +301,7 @@ function applyDto(data) {
     forecastYears: Number(data.forecastYears ?? 4),
   })
   expenses.value = JSON.parse(JSON.stringify(data.expenses || []))
+  savedAssumptionsSnapshot.value = JSON.stringify(snapshot())
 }
 
 function snapshot() {
@@ -348,6 +367,7 @@ async function persistAndForecast(payload = snapshot(), requestId = ++latestRequ
   try {
     await saveAssumptions(payload)
     if (requestId !== latestRequest) return
+    savedAssumptionsSnapshot.value = JSON.stringify(payload)
     const res = await getForecast(payload)
     if (requestId !== latestRequest) return
     applyForecast(res)
@@ -375,15 +395,25 @@ async function saveAndForecast(updated, updatedExpenses) {
 }
 
 function loadSampleData() {
-  if (!window.confirm('Nạp dữ liệu mẫu sẽ thay thế các giả định đang nhập trên biểu mẫu. Dữ liệu mẫu chưa được lưu lên máy chủ cho đến khi bạn bấm Lưu. Tiếp tục?')) return
+  const loanDraftWarning = loanDraftDirty.value ? ' Đồng thời, nội dung khoản vay đang chỉnh sửa sẽ được thay bằng khoản vay mẫu.' : ''
+  if (!window.confirm(`Nạp dữ liệu mẫu sẽ thay thế các giả định đang nhập và thêm một khoản vay minh họa vào biểu mẫu.${loanDraftWarning} Các thay đổi chưa được lưu lên máy chủ cho đến khi bạn bấm Lưu ở từng khu vực. Tiếp tục?`)) return
   clearTimeout(previewTimer)
   Object.assign(dto, {
-    incomeChanges: [{ effectiveMonth: '2026-11', amount: 25000000 }],
+    incomeChanges: [{ effectiveMonth: '2026-11', amount: 25000000 }, { effectiveMonth: '2027-04', amount: 28000000 }],
     januaryMultiplier: 2,
     startingSavings: 100000000,
     forecastYears: 2,
   })
   expenses.value = [{ name: 'Chi phí gia đình', changes: [{ effectiveMonth: '2026-11', amount: 15000000 }] }]
+  sampleLoanDraft.value = {
+    id: null,
+    name: 'Khoản vay minh họa',
+    openingPrincipal: 120000000,
+    repayments: [
+      { id: null, dueDate: '2026-11-15', principalAmount: 5000000, interestAmount: 200000 },
+      { id: null, dueDate: '2026-12-15', principalAmount: 5000000, interestAmount: 180000 },
+    ],
+  }
   schedulePreview()
 }
 
@@ -396,6 +426,7 @@ async function resetDefaults() {
     if (requestId !== latestRequest) return
     applyDto(data)
     loans.value = await getLoans()
+    sampleLoanDraft.value = null
     errorMessage.value = ''
     const res = await getForecast(snapshot())
     if (requestId !== latestRequest) return
@@ -423,6 +454,7 @@ async function saveLoanSchedule(updatedLoans) {
   loanError.value = ''
   try {
     loans.value = await saveLoans(updatedLoans)
+    sampleLoanDraft.value = null
     loanSaveStatus.value = 'Đã lưu trên máy chủ'
     try {
       const res = await getForecast(snapshot())

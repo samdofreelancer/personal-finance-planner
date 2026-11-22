@@ -2,7 +2,7 @@
   <main class="auth-shell">
     <section class="auth-card" aria-labelledby="auth-title">
       <a class="auth-brand" href="/" aria-label="Planwise">plan<span>wise</span></a>
-      <p class="auth-eyebrow">PERSONAL FINANCE PLANNER</p>
+      <p class="auth-eyebrow">QUẢN LÝ TÀI CHÍNH CÁ NHÂN</p>
       <h1 id="auth-title">{{ title }}</h1>
       <p class="auth-description">{{ description }}</p>
 

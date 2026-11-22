@@ -36,4 +36,5 @@ Browser E2E automation có package độc lập tại [`../e2e/`](../e2e/): spec
 - Product baseline: `specs/personal-finance-planner/spec.md`.
 - Review remediation requirements: `specs/001-review-findings-remediation/spec.md`.
 - Self-service registration and independent household requirements: `specs/006-self-service-registration/spec.md`.
+- Forecast UI/UX refinement requirements: `specs/007-forecast-ui-ux/spec.md`.
 - SpecKit artifacts là tài liệu đặc tả/lập kế hoạch; trạng thái implementation phải được xác minh từ source, tests và runtime.

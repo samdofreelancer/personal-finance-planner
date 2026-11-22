@@ -98,7 +98,7 @@ describe('AssumptionsForm', () => {
 
   it('explains the January multiplier and exposes a sample-data action', async () => {
     const wrapper = mount(AssumptionsForm, { props: { dto: assumptions(), expenses: expenses(), error: '', status: 'Đã lưu trên máy chủ' } })
-    expect(wrapper.text()).toContain('Tháng 1: thu nhập tháng đang có hiệu lực × hệ số; các tháng còn lại dùng mức thu nhập đang có hiệu lực.')
+    expect(wrapper.text()).toContain('Hệ số này chỉ nhân vào thu nhập tháng 1 hằng năm (tương đương thưởng / lương tháng 13); các tháng còn lại giữ nguyên mức thu nhập đang có hiệu lực.')
     await wrapper.get('#load-sample-button').trigger('click')
     expect(wrapper.emitted('load-sample')).toHaveLength(1)
   })
@@ -239,6 +239,7 @@ describe('LoanScheduleForm', () => {
     expect(wrapper.text()).toContain('Đã lưu trên máy chủ')
     await wrapper.get('input[id^="loan-principal-"]').setValue('900')
     expect(wrapper.text()).toContain('Có thay đổi chưa lưu')
+    expect(wrapper.emitted('dirty-change').at(-1)).toEqual([true])
   })
 
   it('formats all loan amount inputs with Vietnamese thousands separators', () => {
@@ -304,13 +305,13 @@ describe('forecast presentation components', () => {
     expect(wrapper.text()).toContain('2026')
     expect(wrapper.text()).toContain('Dòng tiền ròng theo năm')
     expect(wrapper.text()).toContain('tr ₫')
-    expect(wrapper.text()).toContain('* Năm 2026 gồm tháng 11–12 · † Dòng tiền tạm tính')
+    expect(wrapper.text()).toContain('* Năm 2026 chỉ gồm tháng 11–12 · † Có dòng tiền tạm tính')
     const empty = mount(AnnualChart, { props: { forecast: null } })
     expect(empty.findAll('.chart-bar')).toHaveLength(0)
     expect(empty.text()).toContain('Chưa có dữ liệu biểu đồ')
   })
 
-  it('renders annual chart and monthly baseline tables when all forecast values are zero', () => {
+  it('renders annual chart and monthly baseline tables when all forecast values are zero', async () => {
     const zeroForecast = {
       annual: [
         { year: 2026, partial: true, salary: 0, expenses: 0, netCashFlow: 0, endingSavings: 0 },
@@ -342,9 +343,35 @@ describe('forecast presentation components', () => {
     expect(chart.findAll('.chart-bar + text').every((node) => Number(node.attributes('y')) > 0)).toBe(true)
     expect(new Set(chart.findAll('#annual-chart svg text').slice(0, 5).map((node) => node.text())).size).toBeGreaterThan(1)
     expect(chart.findAll('#annual-chart text').some((node) => node.text().includes('0 tr'))).toBe(true)
+    expect(chart.text()).toContain('Hãy nạp dữ liệu mẫu hoặc nhập giả định')
+    expect(chart.text()).toContain('* Năm 2026 chỉ gồm tháng 11–12')
+    expect(chart.text()).not.toContain('†')
     expect(monthly.findAll('.zero-value').length).toBeGreaterThan(0)
     expect(monthly.findAll('#monthly-table tbody tr')).toHaveLength(14)
     expect(monthly.find('#monthly-table tfoot tr').text()).toContain('Tổng cộng kỳ')
+    expect(monthly.find('#monthly-table thead').text()).not.toContain('Gốc đầu kỳ')
+    await monthly.get('.loan-columns-toggle').trigger('click')
+    expect(monthly.find('#monthly-table thead').text()).toContain('Gốc đầu kỳ')
+    await monthly.get('.loan-columns-toggle').trigger('click')
+    expect(monthly.find('#monthly-table thead').text()).not.toContain('Gốc đầu kỳ')
+
+    const multiYearForecast = {
+      ...zeroForecast,
+      months: zeroForecast.months.map((month) => ({
+        ...month,
+        salary: month.year === 2026 ? 100 : 200,
+        cumulativeSavings: month.year === 2026 ? 10 : 20,
+      })),
+    }
+    const filtered = mount(MonthlyTable, { props: { forecast: multiYearForecast } })
+    await filtered.get('.year-filter button:nth-child(2)').trigger('click')
+    expect(filtered.findAll('#monthly-table tbody tr')).toHaveLength(2)
+    expect(filtered.find('#monthly-table tfoot tr').text()).toContain('200 ₫')
+    expect(filtered.find('#monthly-table tfoot tr').text()).toContain('10 ₫')
+    await filtered.get('.year-filter button:nth-child(3)').trigger('click')
+    expect(filtered.findAll('#monthly-table tbody tr')).toHaveLength(12)
+    expect(filtered.find('#monthly-table tfoot tr').text()).toContain('2.400 ₫')
+    expect(filtered.find('#monthly-table tfoot tr').text()).toContain('20 ₫')
   })
 
   it('renders annual rows with partial-year and provisional labels', () => {
@@ -355,7 +382,7 @@ describe('forecast presentation components', () => {
     expect(wrapper.findAll('.negative').length).toBeGreaterThan(0)
   })
 
-  it('renders monthly provisional interest, missing interest and savings state', () => {
+  it('renders monthly provisional interest, missing interest and savings state', async () => {
     const data = forecast()
     const wrapper = mount(MonthlyTable, { props: { forecast: data } })
     expect(wrapper.findAll('tbody tr')).toHaveLength(2)
@@ -374,6 +401,12 @@ describe('forecast presentation components', () => {
     expect(wrapper.text()).toContain('Chi phí định kỳ')
     expect(wrapper.text()).toContain('Sinh hoạt phí: 4.000.000')
     expect(wrapper.get('tbody td:nth-child(3)').attributes('title')).toContain('Sinh hoạt phí: 4.000.000')
+    await wrapper.get('.year-filter button:nth-child(2)').trigger('click')
+    expect(wrapper.findAll('#monthly-table tbody tr')).toHaveLength(2)
+    expect(wrapper.find('.row-count').text()).toBe('2 / 2 tháng')
+    expect(wrapper.find('#monthly-table tfoot tr').text()).toContain('01/2027–02/2027')
+    await wrapper.get('.year-filter button:first-child').trigger('click')
+    expect(wrapper.find('.row-count').text()).toBe('2 tháng')
     expect(wrapper.find('tbody td[scope="row"]').exists()).toBe(false)
 
     const empty = mount(MonthlyTable, { props: { forecast: null } })

@@ -2,7 +2,7 @@
   <main class="household-settings-page">
     <header class="household-settings-header">
       <div>
-        <p class="auth-eyebrow">HOUSEHOLD</p>
+        <p class="auth-eyebrow">HỘ GIA ĐÌNH</p>
         <h1>Hộ gia đình</h1>
         <p class="auth-description">{{ user.email }} · {{ user.role === 'OWNER' ? 'Chủ hộ' : 'Thành viên' }}</p>
       </div>

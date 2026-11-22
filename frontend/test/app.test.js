@@ -199,6 +199,12 @@ describe('PlannerView', () => {
     expect(wrapper.get('input[aria-label="Số tiền khoản Chi phí gia đình, mốc 1"]').element.value).toBe('15.000.000')
     expect(saveAssumptions).not.toHaveBeenCalled()
     expect(wrapper.text()).toContain('Đã cập nhật mô phỏng · Chưa lưu')
+    const loanForm = wrapper.findComponent(LoanScheduleForm)
+    expect(loanForm.props('sampleLoanDraft')).toMatchObject({ name: 'Khoản vay minh họa' })
+    expect(loanForm.find('input[id^="loan-name-"]').element.value).toBe('Khoản vay minh họa')
+    expect(loanForm.findAll('input[id^="repayment-principal-"]')).toHaveLength(2)
+    expect(loanForm.text()).toContain('Lịch trả đang chỉnh sửa chưa được tính vào dự báo')
+    expect(saveLoans).not.toHaveBeenCalled()
     vi.useRealTimers()
   })
 
@@ -211,7 +217,19 @@ describe('PlannerView', () => {
     const wrapper = mount(PlannerView)
     await flushPromises()
     expect(wrapper.find('.dashboard-empty-state').text()).toContain('Bắt đầu từ các giả định tài chính')
+    expect(wrapper.find('.sample-empty-banner').exists()).toBe(true)
     expect(wrapper.find('#metric-net').exists()).toBe(false)
+  })
+
+  it('warns before leaving when assumptions have unsaved edits', async () => {
+    const wrapper = await mountLoadedApp()
+    wrapper.findComponent(AssumptionsForm).vm.$emit('input', { ...validAssumptions(), startingSavings: 31000000 })
+    await flushPromises()
+    expect(wrapper.text()).toContain('Đang cập nhật mô phỏng · Chưa lưu')
+    const dirtyEvent = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(dirtyEvent)
+    expect(dirtyEvent.defaultPrevented).toBe(true)
+    wrapper.unmount()
   })
 
   it('keeps preview failures quiet and surfaces an explicit save failure', async () => {
