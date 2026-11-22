@@ -513,7 +513,9 @@ tbody th[scope="row"] { padding: 10px 11px; border-bottom: 1px solid #edf0f3; co
   .drawer-action { display: flex; align-items: center; width: 100%; min-height: 50px; padding: 0 12px; border: 0; border-radius: 10px; color: #52685d; background: transparent; font: inherit; font-size: 13px; font-weight: 650; text-align: left; white-space: nowrap; }
   .drawer-action:hover, .drawer-action:focus-visible { color: #173f35; background: #e8f1e9; }
   .drawer-action:disabled { opacity: .45; cursor: not-allowed; }
-  .drawer-period { display: grid; gap: 5px; margin: 18px 9px 0; padding-top: 14px; border-top: 1px solid #edf0f3; color: #98a49a; font-size: 9px; font-weight: 750; letter-spacing: .8px; }
+  .drawer-period { display: grid; gap: 6px; margin: 18px 9px 0; padding: 14px 9px 9px; border-top: 1px solid #edf0f3; border-radius: 0 0 9px 9px; color: #98a49a; font-size: 9px; font-weight: 750; letter-spacing: .8px; text-decoration: none; transition: background .15s ease; }
+  .drawer-period:hover, .drawer-period:focus-visible { background: #f0f5ed; outline: none; }
+  .drawer-period-action { display: flex; align-items: center; justify-content: space-between; color: #267153; font-size: 11px; font-weight: 700; letter-spacing: 0; }
   .drawer-period strong { color: #52685a; font-size: 12px; letter-spacing: 0; font-weight: 650; }
   .drawer-backdrop { position: fixed; inset: 0; z-index: 40; display: block; width: 100%; height: 100%; border: 0; background: rgb(17 29 24 / 48%); }
   .workspace { margin-left: 0; }

@@ -28,7 +28,11 @@
         <button id="logout-button" class="drawer-action" data-action="logout" type="button" aria-label="Đăng xuất" @click="$emit('logout')">Đăng xuất</button>
         <button id="export-button" class="drawer-action" data-action="export" type="button" aria-label="Xuất dữ liệu CSV" :disabled="hasValidationError" @click="exportCsv">Xuất dữ liệu CSV</button>
       </div>
-      <div class="drawer-period">KỲ MÔ PHỎNG<strong>{{ forecastPeriod }}</strong></div>
+      <a class="drawer-period" href="#assumptions" aria-label="Điều chỉnh kỳ mô phỏng trong giả định tài chính" @click="closeDrawer">
+        <span>KỲ MÔ PHỎNG</span>
+        <strong>{{ forecastPeriod }}</strong>
+        <span class="drawer-period-action">Điều chỉnh thời gian dự phóng <span aria-hidden="true">↗</span></span>
+      </a>
       <div class="sidebar-bottom">
         <span class="local-indicator"><span></span> Dữ liệu lưu trên máy chủ</span>
         <span class="sidebar-footnote">Kế hoạch cá nhân · {{ forecastYears }}</span>
