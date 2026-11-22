@@ -59,7 +59,12 @@ const chart = computed(() => {
     min = -1_000_000
     max = 1_000_000
   }
-  const span = max - min || 1
+  // Reserve vertical breathing room so value labels stay outside the bars,
+  // including when a bar reaches the data minimum or maximum.
+  const dataSpan = max - min || 1
+  min -= dataSpan * 0.18
+  max += dataSpan * 0.18
+  const span = max - min
   const y = (value) => top + (max - value) / span * plotHeight
   const zeroY = y(0)
   const ticks = []

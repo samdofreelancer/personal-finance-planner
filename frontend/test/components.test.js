@@ -306,6 +306,12 @@ describe('forecast presentation components', () => {
     expect(wrapper.text()).toContain('Dòng tiền ròng theo năm')
     expect(wrapper.text()).toContain('tr ₫')
     expect(wrapper.text()).toContain('* Năm 2026 chỉ gồm tháng 11–12 · † Có dòng tiền tạm tính')
+    const positiveBar = wrapper.findAll('.chart-bar')[1]
+    const positiveLabel = positiveBar.element.nextElementSibling
+    expect(Number(positiveLabel.getAttribute('y'))).toBeLessThan(Number(positiveBar.attributes('y')))
+    const negativeBar = wrapper.findAll('.chart-bar')[2]
+    const negativeLabel = negativeBar.element.nextElementSibling
+    expect(Number(negativeLabel.getAttribute('y'))).toBeGreaterThan(Number(negativeBar.attributes('y')) + Number(negativeBar.attributes('height')))
     const empty = mount(AnnualChart, { props: { forecast: null } })
     expect(empty.findAll('.chart-bar')).toHaveLength(0)
     expect(empty.text()).toContain('Chưa có dữ liệu biểu đồ')
