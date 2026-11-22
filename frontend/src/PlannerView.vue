@@ -24,9 +24,9 @@
       </nav>
       <div class="drawer-actions" aria-label="Thao tác tài khoản và tiện ích">
         <p class="drawer-actions-caption">TÀI KHOẢN & TIỆN ÍCH</p>
-        <button class="drawer-action" data-action="household" type="button" aria-label="Không gian hộ gia đình" title="Không gian hộ gia đình" @click="$emit('open-household-settings')">Không gian hộ gia đình</button>
-        <button class="drawer-action" data-action="logout" type="button" aria-label="Đăng xuất" @click="$emit('logout')">Đăng xuất</button>
-        <button class="drawer-action" data-action="export" type="button" aria-label="Xuất dữ liệu CSV" :disabled="hasValidationError" @click="exportCsv">Xuất dữ liệu CSV</button>
+        <button id="household-settings-button" class="drawer-action" data-action="household" type="button" aria-label="Không gian hộ gia đình" title="Không gian hộ gia đình" @click="$emit('open-household-settings')">Không gian hộ gia đình</button>
+        <button id="logout-button" class="drawer-action" data-action="logout" type="button" aria-label="Đăng xuất" @click="$emit('logout')">Đăng xuất</button>
+        <button id="export-button" class="drawer-action" data-action="export" type="button" aria-label="Xuất dữ liệu CSV" :disabled="hasValidationError" @click="exportCsv">Xuất dữ liệu CSV</button>
       </div>
       <div class="drawer-period">KỲ MÔ PHỎNG<strong>{{ forecastPeriod }}</strong></div>
       <div class="sidebar-bottom">
@@ -51,9 +51,6 @@
         <div class="topbar-actions">
           <span class="local-badge"><span aria-hidden="true"></span> Dữ liệu lưu trên máy chủ</span>
           <span class="user-badge"><strong>{{ user.email }}</strong><small>{{ user.role === 'OWNER' ? 'Chủ hộ' : 'Thành viên' }}</small></span>
-          <button id="household-settings-button" class="button button-secondary" type="button" aria-label="Không gian hộ gia đình" title="Không gian hộ gia đình" @click="$emit('open-household-settings')">Hộ gia đình</button>
-          <button id="logout-button" class="button button-secondary" type="button" aria-label="Đăng xuất" @click="$emit('logout')">Đăng xuất</button>
-          <button id="export-button" class="button button-secondary" type="button" aria-label="Xuất dữ liệu CSV" :disabled="hasValidationError" @click="exportCsv">↓ Xuất CSV</button>
         </div>
         <div class="breadcrumb"><span class="breadcrumb-prefix">Không gian tài chính <span>/</span></span> <strong>{{ activeSectionLabel }}</strong></div>
       </header>
