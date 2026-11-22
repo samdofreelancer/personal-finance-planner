@@ -66,7 +66,8 @@ test('uses single-purpose rows in the mobile drawer and keeps the header unclutt
   await expect(page.locator('.drawer-close')).toBeVisible()
   await expect(page.locator('.drawer-period strong')).toContainText('11/2026')
   await page.locator('.drawer-period').click()
-  await expect(page).toHaveURL(/#assumptions$/)
+  await expect(page).toHaveURL(/#forecastYears$/)
+  await expect(page.locator('#forecastYears')).toBeInViewport()
   await expect(page.locator('.sidebar')).toBeHidden()
 
   await page.getByRole('button', { name: 'Mở menu điều hướng' }).click()
