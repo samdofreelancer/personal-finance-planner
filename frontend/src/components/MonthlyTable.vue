@@ -13,29 +13,29 @@
         <tbody>
           <tr v-for="m in months" :key="m.label">
             <th scope="row">{{ m.label }}</th>
-            <td>{{ money(m.salary) }}</td>
-            <td :title="expenseDetails(m)">{{ money(m.recurringExpenses) }}<span class="expense-breakdown-hint">{{ expenseSummary(m) }}</span></td>
-            <td>{{ money(m.openingPrincipal) }}</td>
-            <td>{{ money(m.principalPaid) }}</td>
-            <td :class="{provisional: m.provisional}">{{ interestText(m) }}</td>
-            <td>{{ money(m.loanPayment) }}</td>
-            <td>{{ money(m.totalExpenses) }}</td>
-            <td class="net-cash-flow-cell" :class="signedClass(m.netCashFlow)">{{ money(m.netCashFlow) }}</td>
-            <td class="savings-cell" :class="m.savingsProvisional ? 'provisional' : signedClass(m.cumulativeSavings)" :aria-label="savingsAriaLabel(m)">{{ money(m.cumulativeSavings) }}</td>
+            <td :class="{ 'zero-value': isZero(m.salary) }">{{ money(m.salary) }}</td>
+            <td :title="expenseDetails(m)" :class="{ 'zero-value': isZero(m.recurringExpenses) }">{{ money(m.recurringExpenses) }}<span class="expense-breakdown-hint">{{ expenseSummary(m) }}</span></td>
+            <td :class="{ 'zero-value': isZero(m.openingPrincipal) }">{{ money(m.openingPrincipal) }}</td>
+            <td :class="{ 'zero-value': isZero(m.principalPaid) }">{{ money(m.principalPaid) }}</td>
+            <td :class="[{provisional: m.provisional}, { 'zero-value': isZero(m.interestPaid) }]">{{ interestText(m) }}</td>
+            <td :class="{ 'zero-value': isZero(m.loanPayment) }">{{ money(m.loanPayment) }}</td>
+            <td :class="{ 'zero-value': isZero(m.totalExpenses) }">{{ money(m.totalExpenses) }}</td>
+            <td class="net-cash-flow-cell" :class="[signedClass(m.netCashFlow), { 'zero-value': isZero(m.netCashFlow) }]">{{ money(m.netCashFlow) }}</td>
+            <td class="savings-cell" :class="[m.savingsProvisional ? 'provisional' : signedClass(m.cumulativeSavings), { 'zero-value': isZero(m.cumulativeSavings) }]" :aria-label="savingsAriaLabel(m)">{{ money(m.cumulativeSavings) }}</td>
           </tr>
         </tbody>
         <tfoot>
           <tr class="monthly-total-row">
             <th scope="row">Tổng cộng kỳ <span>{{ periodLabel }}</span></th>
-            <td>{{ money(totals.salary) }}</td>
-            <td>{{ money(totals.recurringExpenses) }}</td>
+            <td :class="{ 'zero-value': isZero(totals.salary) }">{{ money(totals.salary) }}</td>
+            <td :class="{ 'zero-value': isZero(totals.recurringExpenses) }">{{ money(totals.recurringExpenses) }}</td>
             <td>—</td>
-            <td>{{ money(totals.principalPaid) }}</td>
-            <td>{{ money(totals.interestPaid) }}</td>
-            <td>{{ money(totals.loanPayment) }}</td>
-            <td>{{ money(totals.totalExpenses) }}</td>
-            <td class="net-cash-flow-cell" :class="signedClass(totals.netCashFlow)">{{ money(totals.netCashFlow) }}</td>
-            <td class="savings-cell" :class="signedClass(totals.endingSavings)">{{ money(totals.endingSavings) }}</td>
+            <td :class="{ 'zero-value': isZero(totals.principalPaid) }">{{ money(totals.principalPaid) }}</td>
+            <td :class="{ 'zero-value': isZero(totals.interestPaid) }">{{ money(totals.interestPaid) }}</td>
+            <td :class="{ 'zero-value': isZero(totals.loanPayment) }">{{ money(totals.loanPayment) }}</td>
+            <td :class="{ 'zero-value': isZero(totals.totalExpenses) }">{{ money(totals.totalExpenses) }}</td>
+            <td class="net-cash-flow-cell" :class="[signedClass(totals.netCashFlow), { 'zero-value': isZero(totals.netCashFlow) }]">{{ money(totals.netCashFlow) }}</td>
+            <td class="savings-cell" :class="[signedClass(totals.endingSavings), { 'zero-value': isZero(totals.endingSavings) }]">{{ money(totals.endingSavings) }}</td>
           </tr>
         </tfoot>
       </table>
@@ -68,6 +68,7 @@ const periodLabel = computed(() => {
 })
 const money = formatCurrency
 function signedClass(value) { return value < 0 ? 'negative' : 'positive' }
+function isZero(value) { return Number(value) === 0 }
 function expenseDetails(month) {
   return (month.expenseBreakdown || []).map((item) => `${item.name}: ${money(item.amount)}`).join('\n')
 }

@@ -12,8 +12,8 @@
       </a>
       <div class="drawer-mobile-heading">
         <span>ĐIỀU HƯỚNG</span>
-        <button type="button" class="drawer-close" aria-label="Đóng menu điều hướng" @click="closeDrawer">×</button>
       </div>
+      <button type="button" class="drawer-close" aria-label="Đóng menu điều hướng" @click="closeDrawer">Đóng menu ×</button>
       <p class="nav-caption">WORKSPACE</p>
       <nav class="side-nav" aria-label="Các mục Planwise">
         <a class="nav-link" :class="{ active: activeSection === 'overview' }" href="#overview" :aria-current="activeSection === 'overview' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">▦</span><span class="nav-label-desktop">Tổng quan</span><span class="nav-label-mobile">Tổng quan</span></a>
@@ -22,6 +22,12 @@
         <a class="nav-link" :class="{ active: activeSection === 'annual-report' }" href="#annual-report" :aria-current="activeSection === 'annual-report' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">▥</span><span class="nav-label-desktop">Tổng hợp theo năm</span><span class="nav-label-mobile">Theo năm</span></a>
         <a class="nav-link" :class="{ active: activeSection === 'monthly-forecast' }" href="#monthly-forecast" :aria-current="activeSection === 'monthly-forecast' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">▤</span><span class="nav-label-desktop">Dự báo theo tháng</span><span class="nav-label-mobile">Theo tháng</span></a>
       </nav>
+      <div class="drawer-actions" aria-label="Thao tác tài khoản và tiện ích">
+        <p class="drawer-actions-caption">TÀI KHOẢN & TIỆN ÍCH</p>
+        <button class="drawer-action" data-action="household" type="button" aria-label="Không gian hộ gia đình" title="Không gian hộ gia đình" @click="$emit('open-household-settings')">Không gian hộ gia đình</button>
+        <button class="drawer-action" data-action="logout" type="button" aria-label="Đăng xuất" @click="$emit('logout')">Đăng xuất</button>
+        <button class="drawer-action" data-action="export" type="button" aria-label="Xuất dữ liệu CSV" :disabled="hasValidationError" @click="exportCsv">Xuất dữ liệu CSV</button>
+      </div>
       <div class="drawer-period">KỲ MÔ PHỎNG<strong>{{ forecastPeriod }}</strong></div>
       <div class="sidebar-bottom">
         <span class="local-indicator"><span></span> Dữ liệu lưu trên máy chủ</span>
@@ -45,9 +51,9 @@
         <div class="topbar-actions">
           <span class="local-badge"><span aria-hidden="true"></span> Dữ liệu lưu trên máy chủ</span>
           <span class="user-badge"><strong>{{ user.email }}</strong><small>{{ user.role === 'OWNER' ? 'Chủ hộ' : 'Thành viên' }}</small></span>
-          <button id="household-settings-button" class="button button-secondary" type="button" aria-label="Không gian hộ gia đình" title="Không gian hộ gia đình" @click="$emit('open-household-settings')"><span class="desktop-action-label">Hộ gia đình</span><span class="mobile-action-label">Hộ</span></button>
-          <button id="logout-button" class="button button-secondary" type="button" @click="$emit('logout')"><span class="desktop-action-label">Đăng xuất</span><span class="mobile-action-label">Thoát</span></button>
-          <button id="export-button" class="button button-secondary" type="button" :disabled="hasValidationError" @click="exportCsv"><span class="desktop-action-label">↓ Xuất CSV</span><span class="mobile-action-label">CSV</span></button>
+          <button id="household-settings-button" class="button button-secondary" type="button" aria-label="Không gian hộ gia đình" title="Không gian hộ gia đình" @click="$emit('open-household-settings')">Hộ gia đình</button>
+          <button id="logout-button" class="button button-secondary" type="button" aria-label="Đăng xuất" @click="$emit('logout')">Đăng xuất</button>
+          <button id="export-button" class="button button-secondary" type="button" aria-label="Xuất dữ liệu CSV" :disabled="hasValidationError" @click="exportCsv">↓ Xuất CSV</button>
         </div>
         <div class="breadcrumb"><span class="breadcrumb-prefix">Không gian tài chính <span>/</span></span> <strong>{{ activeSectionLabel }}</strong></div>
       </header>
@@ -101,6 +107,7 @@
     </section>
 
     <section id="assumptions" class="content-section">
+      <span id="assumption" class="anchor-alias" aria-hidden="true"></span>
       <div class="section-intro"><div><p class="eyebrow">THIẾT LẬP</p><h2>Giả định tài chính</h2><p class="section-description">Cập nhật thu nhập, chi phí và khoản vay để mô phỏng kế hoạch của gia đình.</p></div></div>
       <assumptions-form :dto="dto" :expenses="expenses" :error="errorMessage" :status="saveStatus" @input="onFormInput" @expenses-input="onExpenseInput" @save="saveAndForecast" @reset="resetDefaults" @load-sample="loadSampleData" />
     </section>

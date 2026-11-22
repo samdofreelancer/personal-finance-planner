@@ -15,39 +15,48 @@
         <g v-for="bar in chart.bars" :key="bar.year" role="img" :aria-label="bar.aria">
           <title>{{ bar.aria }}</title>
           <rect class="chart-bar" :x="bar.x" :y="bar.y" :width="bar.width" :height="bar.height" rx="5" :fill="bar.color" />
-          <text :x="bar.center" :y="bar.labelY" text-anchor="middle" :fill="bar.color" font-size="10" font-weight="700">{{ bar.label }}</text>
+          <text :x="bar.center" :y="bar.labelY" text-anchor="middle" :fill="bar.isZero ? '#829187' : bar.color" font-size="11" font-weight="700">{{ bar.label }}</text>
           <text :x="bar.center" :y="chart.height - 13" text-anchor="middle" fill="#40594c" font-size="11" font-weight="650">{{ bar.year }}{{ bar.partial ? '*' : '' }}</text>
         </g>
-        <text :x="chart.left" :y="chart.height - 1" fill="#91a0ad" font-size="9">* Năm 2026 gồm tháng 11–12 · † Dòng tiền tạm tính</text>
       </svg>
     </div>
     <div v-else class="empty-state" role="status">
       <strong>Chưa có dữ liệu biểu đồ</strong>
       <span>Dữ liệu dòng tiền theo năm sẽ xuất hiện sau khi tải được dự báo.</span>
     </div>
-    <div class="chart-footnote">Biểu đồ thể hiện dòng tiền ròng theo năm (đơn vị: triệu VND). Năm 2026 chỉ gồm tháng 11 và 12.</div>
+    <div class="chart-footnote">* Năm 2026 gồm tháng 11–12 · † Dòng tiền tạm tính</div>
   </section>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { formatCurrency, formatCompactCurrency } from '../utils/currency.js'
 
 const props = defineProps(['forecast'])
+const viewportWidth = ref(typeof window === 'undefined' ? 1024 : window.innerWidth)
+const updateViewportWidth = () => { viewportWidth.value = window.innerWidth }
+
+onMounted(() => window.addEventListener('resize', updateViewportWidth, { passive: true }))
+onBeforeUnmount(() => window.removeEventListener('resize', updateViewportWidth))
 
 const chart = computed(() => {
   const annual = props.forecast?.annual || []
-  const width = 900
-  const height = 260
-  const left = 82
-  const right = 22
-  const top = 23
+  const compact = viewportWidth.value < 768
+  const width = compact ? 420 : 900
+  const height = 270
+  const left = compact ? 68 : 82
+  const right = compact ? 16 : 22
+  const top = 48
   const bottom = 38
   const plotHeight = height - top - bottom
   const plotWidth = width - left - right
   const values = annual.map((row) => row.netCashFlow)
-  const min = Math.min(0, ...values)
-  const max = Math.max(0, ...values)
+  let min = Math.min(0, ...values)
+  let max = Math.max(0, ...values)
+  if (values.length && min === 0 && max === 0) {
+    min = -1_000_000
+    max = 1_000_000
+  }
   const span = max - min || 1
   const y = (value) => top + (max - value) / span * plotHeight
   const zeroY = y(0)
@@ -68,7 +77,11 @@ const chart = computed(() => {
     const rectY = Math.min(zeroY, valueY)
     const rectHeight = Math.max(2, Math.abs(zeroY - valueY))
     const color = row.netCashFlow < 0 ? '#cc6668' : '#3e83ca'
-    const labelY = row.netCashFlow < 0 ? rectY + rectHeight + 15 : rectY - 7
+    const labelY = row.netCashFlow === 0
+      ? zeroY - 12
+      : row.netCashFlow < 0
+      ? Math.min(height - bottom - 8, rectY + rectHeight + 16)
+      : Math.max(top + 14, rectY - 9)
     const aria = `${row.year}${row.partial ? ', năm chỉ gồm hai tháng' : ''}: ${money(row.netCashFlow)} dòng tiền ròng${row.provisional ? ', kết quả tạm tính' : ''}`
     return {
       year: row.year,
@@ -79,6 +92,7 @@ const chart = computed(() => {
       width: barWidth,
       height: rectHeight,
       color,
+      isZero: row.netCashFlow === 0,
       labelY,
       label: compactMoney(row.netCashFlow) + (row.provisional ? '†' : ''),
       aria,
