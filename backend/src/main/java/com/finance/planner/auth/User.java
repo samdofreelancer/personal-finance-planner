@@ -30,6 +30,12 @@ public class User {
     @Column(name = "password_hash", nullable = false, length = 100)
     private String passwordHash;
 
+    @Column(name = "display_name", length = 80)
+    private String displayName;
+
+    @Column(name = "avatar_url", length = 2048)
+    private String avatarUrl;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

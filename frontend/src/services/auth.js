@@ -37,6 +37,26 @@ export async function logout() {
   return requestJson('/api/auth/logout', { method: 'POST' }, 'Đăng xuất thất bại')
 }
 
+export async function getProfile() {
+  return requestJson('/api/profile', {}, 'Không tải được hồ sơ cá nhân')
+}
+
+export async function updateProfile({ displayName, avatarUrl }) {
+  return requestJson('/api/profile', {
+    method: 'PUT',
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ displayName, avatarUrl }),
+  }, 'Không cập nhật được hồ sơ cá nhân')
+}
+
+export async function changePassword({ currentPassword, newPassword }) {
+  return requestJson('/api/profile/password', {
+    method: 'POST',
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ currentPassword, newPassword }),
+  }, 'Không đổi được mật khẩu')
+}
+
 export async function listInvitations() {
   return requestJson('/api/household/invitations', {}, 'Không tải được lời mời')
 }

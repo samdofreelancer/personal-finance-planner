@@ -25,6 +25,7 @@
       <div class="drawer-actions" aria-label="Thao tác tài khoản và tiện ích">
         <p class="drawer-actions-caption">TÀI KHOẢN & TIỆN ÍCH</p>
         <button id="household-settings-button" class="drawer-action" data-action="household" type="button" aria-label="Không gian hộ gia đình" title="Không gian hộ gia đình" @click="$emit('open-household-settings')">Không gian hộ gia đình</button>
+        <button id="profile-button" class="drawer-action" data-action="profile" type="button" aria-label="Hồ sơ cá nhân" title="Hồ sơ cá nhân" @click="$emit('open-profile')">Hồ sơ cá nhân</button>
         <button id="export-button" class="drawer-action" data-action="export" type="button" aria-label="Xuất dữ liệu CSV" :disabled="hasValidationError" @click="exportCsv">Xuất dữ liệu CSV</button>
       </div>
       <a class="drawer-period" href="#forecastYears" aria-label="Điều chỉnh thời gian dự phóng" @click="closeDrawer">
@@ -161,7 +162,7 @@ import MonthlyTable from './components/MonthlyTable.vue'
 import { formatCurrency } from './utils/currency.js'
 
 const props = defineProps({ user: { type: Object, default: () => ({ email: "", role: "MEMBER" }) } })
-defineEmits(['logout', 'open-household-settings'])
+defineEmits(['logout', 'open-household-settings', 'open-profile'])
 
 const dto = reactive({
   incomeChanges: [{ effectiveMonth: '2026-11', amount: 0 }],

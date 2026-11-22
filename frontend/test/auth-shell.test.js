@@ -19,8 +19,8 @@ const AuthViewStub = defineComponent({
 const PlannerViewStub = defineComponent({
   name: 'PlannerView',
   props: ['user'],
-  emits: ['logout', 'open-household-settings'],
-  template: '<div data-testid="planner-view"><button id="logout" @click="$emit(\'logout\')">Logout</button><button id="settings" @click="$emit(\'open-household-settings\')">Settings</button></div>',
+  emits: ['logout', 'open-household-settings', 'open-profile'],
+  template: '<div data-testid="planner-view"><button id="logout" @click="$emit(\'logout\')">Logout</button><button id="settings" @click="$emit(\'open-household-settings\')">Settings</button><button id="profile" @click="$emit(\'open-profile\')">Profile</button></div>',
 })
 
 const HouseholdSettingsStub = defineComponent({
@@ -30,11 +30,18 @@ const HouseholdSettingsStub = defineComponent({
   template: '<div data-testid="household-settings">Household settings</div>',
 })
 
+const ProfileViewStub = defineComponent({
+  name: 'ProfileView',
+  props: ['user'],
+  emits: ['close'],
+  template: '<div data-testid="profile-view">Profile</div>',
+})
+
 const wrappers = []
 
 function mountApp() {
   const wrapper = mount(App, {
-    global: { stubs: { AuthView: AuthViewStub, PlannerView: PlannerViewStub, HouseholdSettings: HouseholdSettingsStub } },
+    global: { stubs: { AuthView: AuthViewStub, PlannerView: PlannerViewStub, HouseholdSettings: HouseholdSettingsStub, ProfileView: ProfileViewStub } },
   })
   wrappers.push(wrapper)
   return wrapper
@@ -96,6 +103,15 @@ describe('App authentication shell', () => {
     await flushPromises()
     await wrapper.get('#settings').trigger('click')
     expect(wrapper.find('[data-testid="household-settings"]').exists()).toBe(true)
+  })
+
+  it('opens the personal profile independently from household settings', async () => {
+    getCurrentUser.mockResolvedValue({ userId: 1, email: 'owner@example.com', role: 'OWNER' })
+    const wrapper = mountApp()
+    await flushPromises()
+    await wrapper.get('#profile').trigger('click')
+    expect(wrapper.find('[data-testid="profile-view"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="household-settings"]').exists()).toBe(false)
   })
 
   it('returns to login when an authenticated API request reports an expired session', async () => {

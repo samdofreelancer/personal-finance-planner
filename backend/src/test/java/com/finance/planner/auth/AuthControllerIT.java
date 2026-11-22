@@ -124,6 +124,67 @@ class AuthControllerIT {
     }
 
     @Test
+    void authenticatedUserCanManageOwnProfileAndChangePassword() throws Exception {
+        MockHttpSession session = (MockHttpSession) registerInitial("profile@example.com")
+                .getRequest().getSession(false);
+
+        mockMvc.perform(get("/api/profile").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("profile@example.com"))
+                .andExpect(jsonPath("$.createdAt").exists())
+                .andExpect(jsonPath("$.passwordHash").doesNotExist());
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/profile")
+                        .session(session).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\":\"Planwise User\",\"avatarUrl\":\"https://cdn.example.com/avatar.png\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.displayName").value("Planwise User"))
+                .andExpect(jsonPath("$.avatarUrl").value("https://cdn.example.com/avatar.png"));
+
+        MockHttpSession otherUserSession = (MockHttpSession) registerInitial("other-profile@example.com")
+                .getRequest().getSession(false);
+        mockMvc.perform(get("/api/profile").session(otherUserSession))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("other-profile@example.com"))
+                .andExpect(jsonPath("$.displayName").doesNotExist());
+
+        mockMvc.perform(post("/api/profile/password").session(session).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"correct-horse-battery-staple\",\"newPassword\":\"another-secure-password\"}"))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(post("/api/auth/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"profile@example.com\",\"password\":\"correct-horse-battery-staple\"}"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(post("/api/auth/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"profile@example.com\",\"password\":\"another-secure-password\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void profileEndpointsRequireAuthenticationAndRejectInvalidAvatarUrls() throws Exception {
+        mockMvc.perform(get("/api/profile")).andExpect(status().isUnauthorized());
+        MockHttpSession session = (MockHttpSession) registerInitial("profile@example.com")
+                .getRequest().getSession(false);
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/profile")
+                        .session(session).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\":\"User\",\"avatarUrl\":\"http://example.com/avatar.png\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void passwordChangeRejectsAnIncorrectCurrentPasswordWithAnActionableError() throws Exception {
+        MockHttpSession session = (MockHttpSession) registerInitial("profile@example.com")
+                .getRequest().getSession(false);
+        mockMvc.perform(post("/api/profile/password").session(session).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"incorrect-current-password\",\"newPassword\":\"another-secure-password\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Mật khẩu hiện tại không chính xác."));
+    }
+
+    @Test
     void loginRejectsWrongPasswordAndRotatesAnExistingSessionId() throws Exception {
         registerInitial("owner@example.com");
 

@@ -10,11 +10,17 @@
     :user="user"
     @close="showHouseholdSettings = false"
   />
+  <ProfileView
+    v-else-if="showProfile"
+    :user="user"
+    @close="showProfile = false"
+  />
   <PlannerView
     v-else
     :user="user"
     @logout="handleLogout"
     @open-household-settings="showHouseholdSettings = true"
+    @open-profile="showProfile = true"
   />
 </template>
 
@@ -22,12 +28,14 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import AuthView from './components/AuthView.vue'
 import HouseholdSettings from './components/HouseholdSettings.vue'
+import ProfileView from './components/ProfileView.vue'
 import PlannerView from './PlannerView.vue'
 import { getCurrentUser, logout } from './services/auth.js'
 
 const user = ref(null)
 const isCheckingSession = ref(true)
 const showHouseholdSettings = ref(false)
+const showProfile = ref(false)
 const invitationToken = new URLSearchParams(window.location.search).get('invite') || null
 
 async function restoreSession() {
@@ -44,6 +52,7 @@ async function restoreSession() {
 function handleAuthenticated(authenticatedUser) {
   user.value = authenticatedUser
   showHouseholdSettings.value = false
+  showProfile.value = false
   if (invitationToken) {
     const url = new URL(window.location.href)
     url.searchParams.delete('invite')
@@ -57,12 +66,14 @@ async function handleLogout() {
   } finally {
     user.value = null
     showHouseholdSettings.value = false
+    showProfile.value = false
   }
 }
 
 function handleUnauthorized() {
   user.value = null
   showHouseholdSettings.value = false
+  showProfile.value = false
 }
 
 onMounted(() => {

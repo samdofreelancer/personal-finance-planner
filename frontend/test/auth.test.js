@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createInvitation,
+  changePassword,
+  getProfile,
   getCurrentUser,
   listInvitations,
   login,
@@ -8,6 +10,7 @@ import {
   registerAccount,
   registerWithInvitation,
   revokeInvitation,
+  updateProfile,
 } from '../src/services/auth.js'
 import { apiRequest, requestJson } from '../src/services/api.js'
 
@@ -85,5 +88,20 @@ describe('authentication service', () => {
       method: 'POST', body: JSON.stringify({ validityDays: 7 }),
     }), 'Không tạo được lời mời')
     expect(requestJson).toHaveBeenNthCalledWith(3, '/api/household/invitations/6', { method: 'DELETE' }, 'Không thu hồi được lời mời')
+  })
+
+  it('reads and updates the personal profile and changes its password', async () => {
+    requestJson.mockResolvedValueOnce({ email: 'user@example.com' }).mockResolvedValueOnce({ displayName: 'User' }).mockResolvedValueOnce(null)
+    await getProfile()
+    await updateProfile({ displayName: 'User', avatarUrl: null })
+    await changePassword({ currentPassword: 'current-password', newPassword: 'new-password' })
+
+    expect(requestJson).toHaveBeenNthCalledWith(1, '/api/profile', {}, 'Không tải được hồ sơ cá nhân')
+    expect(requestJson).toHaveBeenNthCalledWith(2, '/api/profile', expect.objectContaining({
+      method: 'PUT', body: JSON.stringify({ displayName: 'User', avatarUrl: null }),
+    }), 'Không cập nhật được hồ sơ cá nhân')
+    expect(requestJson).toHaveBeenNthCalledWith(3, '/api/profile/password', expect.objectContaining({
+      method: 'POST', body: JSON.stringify({ currentPassword: 'current-password', newPassword: 'new-password' }),
+    }), 'Không đổi được mật khẩu')
   })
 })

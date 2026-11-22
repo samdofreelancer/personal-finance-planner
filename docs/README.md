@@ -19,7 +19,7 @@ Tài liệu chuẩn của Personal Finance Planner. Đọc theo thứ tự dư�
 | [Architecture decisions](decisions/README.md) | Quyết định đã chốt, đang đề xuất hoặc cần xem xét |
 | [Diagrams](diagrams/) | Diagram source; dùng draw.io để render/chỉnh sửa trực quan |
 
-Product feature specifications: `specs/006-self-service-registration/spec.md` defines always-open self-registration, independent household creation and blank first-use financial data.
+Product feature specifications: `specs/006-self-service-registration/spec.md` defines always-open self-registration, independent household creation and blank first-use financial data; `specs/008-personal-profile/spec.md` defines account-level profile and password management.
 
 Browser E2E automation có package độc lập tại [`../e2e/`](../e2e/): specs, Page Objects, fixtures, Playwright config và runner. Agent routing được mô tả tại [10 — E2E agent workflow](10-e2e-agent-workflow.md), diagram source tại [`diagrams/e2e-agent-routing.mmd`](diagrams/e2e-agent-routing.mmd).
 
@@ -37,4 +37,5 @@ Browser E2E automation có package độc lập tại [`../e2e/`](../e2e/): spec
 - Review remediation requirements: `specs/001-review-findings-remediation/spec.md`.
 - Self-service registration and independent household requirements: `specs/006-self-service-registration/spec.md`.
 - Forecast UI/UX refinement requirements: `specs/007-forecast-ui-ux/spec.md`.
+- Personal profile requirements: `specs/008-personal-profile/spec.md`.
 - SpecKit artifacts là tài liệu đặc tả/lập kế hoạch; trạng thái implementation phải được xác minh từ source, tests và runtime.

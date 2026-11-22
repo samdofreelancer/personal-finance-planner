@@ -11,6 +11,9 @@ Base path: `/api`. In Docker/local production-like use, the browser calls Nginx 
 | POST | `/api/auth/login` | `{email,password}` | Creates authenticated session | `AuthResponse` (`200`) |
 | POST | `/api/auth/logout` | CSRF token + session cookie | Invalidates session | `204` |
 | GET | `/api/auth/me` | Session cookie | None | Current `AuthResponse` |
+| GET | `/api/profile` | Authenticated session | None | `ProfileResponse` for the authenticated user; excludes password hash |
+| PUT | `/api/profile` | `{displayName,avatarUrl}` + CSRF token | Updates the authenticated user's display name and optional HTTPS avatar URL | Updated `ProfileResponse` |
+| POST | `/api/profile/password` | `{currentPassword,newPassword}` + CSRF token | Replaces the authenticated user's password hash after verifying the current password | `204` |
 | GET | `/api/assumptions` | Authenticated household session | Creates a blank financial profile only when the household has no assumptions row yet | `AssumptionDTO` |
 | PUT | `/api/assumptions` | JSON `AssumptionDTO` | Saves/replaces the single assumptions row | `AssumptionDTO` |
 | POST | `/api/assumptions/seed` | None | Resets assumptions and replaces loan schedules with the synthetic sample schedule | `AssumptionDTO` |
@@ -32,6 +35,13 @@ The frontend sends a complete assumptions snapshot as JSON to `POST /api/forecas
 - The public bootstrap endpoint always reports `registrationAvailable: true`; it does not disclose account counts or user details.
 - A new household's first `GET /api/assumptions` creates a blank profile: one `2026-11` income baseline of `0`, `startingSavings: 0`, no expense categories and no loan schedules. Forecast horizon defaults to 4 years and January multiplier to 2.0. The existing reset endpoint remains the explicit action to load synthetic sample data.
 - Existing household records are not copied, reset or reassigned by later registrations.
+
+## Personal profile
+
+- Profile endpoints derive `userId` exclusively from the authenticated session principal; clients cannot select or update another user's profile.
+- `email` and `createdAt` are read-only account metadata. `displayName` is required (1–80 characters) when updating. `avatarUrl` is optional and accepts HTTPS URLs only.
+- Password changes require the current password and enforce the registration policy (at least 12 characters and at most 72 UTF-8 bytes). A new password must differ from the current password.
+- Personal profile data is account-level identity data; it is not part of the household or financial assumptions aggregate.
 
 ## Assumptions DTO fields
 

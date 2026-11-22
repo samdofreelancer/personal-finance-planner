@@ -167,6 +167,13 @@ describe('PlannerView', () => {
     expect(wrapper.text()).toContain('Không thể xuất')
   })
 
+  it('exposes a separate personal profile action in the account drawer', async () => {
+    const wrapper = await mountLoadedApp()
+    expect(wrapper.get('#profile-button').text()).toBe('Hồ sơ cá nhân')
+    await wrapper.get('#profile-button').trigger('click')
+    expect(wrapper.emitted('open-profile')).toHaveLength(1)
+  })
+
   it('debounces forecast previews without persisting until the user explicitly saves', async () => {
     const wrapper = await mountLoadedApp()
     vi.useFakeTimers()
