@@ -4,9 +4,9 @@ import com.finance.planner.dto.AssumptionDTO;
 import com.finance.planner.dto.ForecastResponse;
 import com.finance.planner.service.ForecastService;
 import com.finance.planner.service.ValidationService;
-import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.Map;
+import com.finance.planner.service.LoanScheduleService;
+import com.finance.planner.security.HouseholdContextResolver;
+import com.finance.planner.household.HouseholdContext;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -19,36 +19,32 @@ public class ForecastController {
 
     private final ForecastService forecastService;
     private final ValidationService validationService;
+    private final LoanScheduleService loanScheduleService;
+    private final HouseholdContextResolver contextResolver;
 
-    public ForecastController(ForecastService forecastService, ValidationService validationService) {
+    public ForecastController(ForecastService forecastService, ValidationService validationService,
+                              LoanScheduleService loanScheduleService, HouseholdContextResolver contextResolver) {
         this.forecastService = forecastService;
         this.validationService = validationService;
+        this.loanScheduleService = loanScheduleService;
+        this.contextResolver = contextResolver;
     }
 
-    private void ensureDefaultRaises(AssumptionDTO assumptions) {
-        if (assumptions.getRaises() == null) {
-            assumptions.setRaises(new HashMap<>());
-        }
-        Map<Integer, BigDecimal> raises = assumptions.getRaises();
-        for (int y : new int[]{2027, 2028, 2029, 2030}) {
-            if (!raises.containsKey(y)) {
-                raises.put(y, new BigDecimal("0.10"));
-            }
-        }
-    }
-
-    @GetMapping("/forecast")
-    public ResponseEntity<ForecastResponse> get(@ModelAttribute AssumptionDTO assumptions) {
-        ensureDefaultRaises(assumptions);
+    @PostMapping("/forecast")
+    public ResponseEntity<ForecastResponse> simulate(@RequestBody AssumptionDTO assumptions) {
         validationService.validate(assumptions);
-        return ResponseEntity.ok(forecastService.buildForecast(assumptions));
+        return ResponseEntity.ok(forecastService.buildForecast(assumptions,
+                loanScheduleService.getLoans(contextResolver.requireContext())));
     }
 
-    @GetMapping("/export/csv")
-    public ResponseEntity<ByteArrayResource> exportCsv(@ModelAttribute AssumptionDTO assumptions) {
-        ensureDefaultRaises(assumptions);
+    @PostMapping("/export/csv")
+    public ResponseEntity<ByteArrayResource> exportCsvSimulation(@RequestBody AssumptionDTO assumptions) {
         validationService.validate(assumptions);
-        ForecastResponse response = forecastService.buildForecast(assumptions);
+        return csvResponse(assumptions, contextResolver.requireContext());
+    }
+
+    private ResponseEntity<ByteArrayResource> csvResponse(AssumptionDTO assumptions, HouseholdContext context) {
+        ForecastResponse response = forecastService.buildForecast(assumptions, loanScheduleService.getLoans(context));
         StringBuilder csv = new StringBuilder();
         csv.append("\uFEFF"); // UTF-8 BOM
         csv.append("Tổng hợp theo năm\n");
@@ -61,23 +57,26 @@ public class ForecastController {
             csv.append(y.isProvisional() || y.isEndingSavingsProvisional() ? "Có mục tạm tính" : "Đầy đủ").append("\n");
         }
         csv.append("\nDự báo theo tháng\n");
-        csv.append("Tháng,Lương,Sinh hoạt,Nuôi con,Tiền nhà,Gốc đầu kỳ,Gốc trả,Lãi trả,Tổng trả nợ,Tổng chi,Dòng tiền ròng,Tiết kiệm lũy kế,Trạng thái\n");
+        csv.append("Tháng,Lương,Chi phí định kỳ,Chi tiết khoản chi,Gốc đầu kỳ,Gốc trả,Lãi trả,Tổng trả nợ,Tổng chi,Dòng tiền ròng,Tiết kiệm lũy kế,Trạng thái\n");
         for (var m : response.getMonths()) {
             csv.append(String.format("%02d/%d", m.getMonth(), m.getYear())).append(",");
-            csv.append(m.getSalary()).append(",").append(m.getLiving()).append(",").append(m.getChild()).append(",");
-            csv.append(m.getRent()).append(",").append(m.getOpeningPrincipal()).append(",");
+            csv.append(m.getSalary()).append(",").append(m.getRecurringExpenses()).append(",");
+            String details = m.getExpenseBreakdown().stream().map(item -> item.name() + ": " + item.amount())
+                    .collect(java.util.stream.Collectors.joining("; "));
+            csv.append('"').append(details.replace("\"", "\"\"")).append("\",");
+            csv.append(m.getOpeningPrincipal()).append(",");
             csv.append(m.getPrincipalPaid()).append(",");
-            csv.append(m.isProvisional() ? "" : String.valueOf(m.getInterestPaid())).append(",");
+            csv.append(m.getInterestPaid()).append(",");
             csv.append(m.getLoanPayment()).append(",").append(m.getTotalExpenses()).append(",");
             csv.append(m.getNetCashFlow()).append(",").append(m.getCumulativeSavings()).append(",");
-            csv.append(m.isProvisional() ? "Dòng tiền tạm tính - chưa gồm lãi tất toán"
+            csv.append(m.isProvisional() ? "Dòng tiền tạm tính"
                     : m.isSavingsProvisional() ? "Tiết kiệm lũy kế tạm tính" : "Đầy đủ").append("\n");
         }
 
         byte[] bytes = csv.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
         ByteArrayResource resource = new ByteArrayResource(bytes);
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=ke-hoach-tai-chinh-2026-2030.csv")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=ke-hoach-tai-chinh-2026-" + (2026 + assumptions.getForecastYears()) + ".csv")
                 .contentType(MediaType.parseMediaType("text/csv;charset=utf-8"))
                 .contentLength(bytes.length)
                 .body(resource);

@@ -3,7 +3,7 @@
     <div class="panel-heading">
       <div><p class="eyebrow">ĐỐI CHIẾU</p><h2>Tổng hợp theo năm</h2></div>
     </div>
-    <div class="table-scroll">
+    <div v-if="forecast?.annual?.length" class="table-scroll">
       <table id="annual-table">
         <caption class="sr-only">Tổng thu nhập, tổng chi, dòng tiền ròng và tiết kiệm cuối năm theo từng năm</caption>
         <thead>
@@ -12,20 +12,23 @@
         <tbody>
           <tr v-for="y in forecast?.annual || []" :key="y.year">
             <td><strong>{{ y.year }}</strong><span v-if="y.partial" class="partial-tag">2 tháng</span></td>
-            <td>{{ money(y.salary) }}</td>
-            <td>{{ money(y.expenses) }}</td>
-            <td><span :class="signedClass(y.netCashFlow)">{{ money(y.netCashFlow) }}{{ y.provisional ? ' · tạm tính' : '' }}</span></td>
-            <td><span class="savings-cell" :class="y.endingSavingsProvisional ? 'provisional' : signedClass(y.endingSavings)">{{ money(y.endingSavings) }}{{ y.endingSavingsProvisional ? ' · tạm tính' : '' }}</span></td>
+            <td :class="{ 'zero-value': isZero(y.salary) }">{{ money(y.salary) }}</td>
+            <td :class="{ 'zero-value': isZero(y.expenses) }">{{ money(y.expenses) }}</td>
+            <td><span :class="[signedClass(y.netCashFlow), { 'zero-value': isZero(y.netCashFlow) }]">{{ money(y.netCashFlow) }}{{ y.provisional ? ' · tạm tính' : '' }}</span></td>
+            <td><span class="savings-cell" :class="[y.endingSavingsProvisional ? 'provisional' : signedClass(y.endingSavings), { 'zero-value': isZero(y.endingSavings) }]">{{ money(y.endingSavings) }}{{ y.endingSavingsProvisional ? ' · tạm tính' : '' }}</span></td>
           </tr>
         </tbody>
       </table>
     </div>
+    <div v-else class="empty-state" role="status">Chưa có dữ liệu tổng hợp theo năm.</div>
   </section>
 </template>
 
 <script setup>
+import { formatCurrency } from '../utils/currency.js'
+
 defineProps(['forecast'])
-const formatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 })
-function money(value) { return `${formatter.format(Math.round(value ?? 0))} ₫` }
+const money = formatCurrency
 function signedClass(value) { return value < 0 ? 'negative' : 'positive' }
+function isZero(value) { return Number(value) === 0 }
 </script>

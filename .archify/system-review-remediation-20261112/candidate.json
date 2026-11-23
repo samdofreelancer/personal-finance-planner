@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Personal Finance Planner — Current Architecture",
+    "locale": "en",
+    "output": ".archify/system-review-remediation-20261112/system-review-remediation.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/samdofreelancer/personal-finance-planner.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "714ee9c1cf883cb938df71ea77f5dd2d4f128ff7"
+    }
+  },
+  "components": [
+    {
+      "id": "client",
+      "type": "frontend",
+      "label": "Browser + Vue 3 SPA",
+      "sublabel": "Assumptions form · forecast · CSV",
+      "pos": [40, 230],
+      "size": [180, 76],
+      "sources": [
+        { "path": "frontend/src/App.vue", "line": 43, "end_line": 51 },
+        { "path": "frontend/src/App.vue", "line": 95, "end_line": 105 },
+        { "path": "frontend/src/App.vue", "line": 140, "end_line": 185 }
+      ]
+    },
+    {
+      "id": "nginx",
+      "type": "cloud",
+      "label": "Nginx frontend container",
+      "sublabel": ":80 · static SPA + /api proxy",
+      "pos": [345, 230],
+      "size": [190, 76],
+      "sources": [
+        { "path": "frontend/nginx.conf", "line": 1, "end_line": 15 },
+        { "path": "docker-compose.yml", "line": 41, "end_line": 52 }
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Spring Boot REST API",
+      "sublabel": ":8080 · assumptions / forecast / export",
+      "pos": [660, 230],
+      "size": [200, 76],
+      "sources": [
+        { "path": "backend/src/main/java/com/finance/planner/controller/AssumptionController.java", "line": 9, "end_line": 35 },
+        { "path": "backend/src/main/java/com/finance/planner/controller/ForecastController.java", "line": 16, "end_line": 51 },
+        { "path": "docker-compose.yml", "line": 21, "end_line": 39 }
+      ]
+    },
+    {
+      "id": "forecast",
+      "type": "backend",
+      "label": "ForecastService",
+      "sublabel": "50-month calculation · annual aggregation",
+      "pos": [910, 130],
+      "size": [205, 76],
+      "sources": [
+        { "path": "backend/src/main/java/com/finance/planner/service/ForecastService.java", "line": 14, "end_line": 85 }
+      ]
+    },
+    {
+      "id": "assumptions",
+      "type": "backend",
+      "label": "AssumptionService",
+      "sublabel": "Load · save · seed defaults",
+      "pos": [910, 340],
+      "size": [205, 76],
+      "sources": [
+        { "path": "backend/src/main/java/com/finance/planner/service/AssumptionService.java", "line": 13, "end_line": 39 },
+        { "path": "backend/src/main/java/com/finance/planner/repository/AssumptionRepository.java", "line": 7, "end_line": 10 }
+      ]
+    },
+    {
+      "id": "postgres",
+      "type": "database",
+      "label": "PostgreSQL 16",
+      "sublabel": "assumptions · Docker volume",
+      "pos": [1220, 340],
+      "size": [180, 76],
+      "sources": [
+        { "path": "docker-compose.yml", "line": 2, "end_line": 19 },
+        { "path": "backend/src/main/java/com/finance/planner/entity/Assumption.java", "line": 8, "end_line": 37 }
+      ]
+    }
+  ],
+  "connections": [
+    { "id": "client-nginx", "from": "client", "to": "nginx", "label": "HTTP · SPA + API", "variant": "emphasis", "route": "straight", "fromSide": "right", "toSide": "left" },
+    { "id": "nginx-api", "from": "nginx", "to": "api", "label": "Proxy /api", "route": "straight", "fromSide": "right", "toSide": "left" },
+    { "id": "api-forecast", "from": "api", "to": "forecast", "label": "GET /forecast · GET /export/csv", "fromSide": "top", "toSide": "left" },
+    { "id": "api-assumptions", "from": "api", "to": "assumptions", "label": "GET / PUT / seed", "fromSide": "bottom", "toSide": "left" },
+    { "id": "assumptions-db", "from": "assumptions", "to": "postgres", "label": "JPA read / write" }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Finding F-09 · Input-source ambiguity",
+      "items": [
+        "GET /api/assumptions reads the persisted assumptions row.",
+        "GET /api/forecast currently calculates from query-bound AssumptionDTO, not from that row.",
+        "The Vue client previews and saves using separate requests; saved state and displayed forecast can diverge."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Security findings F-01",
+      "items": [
+        "Docker Compose currently publishes PostgreSQL, backend, and frontend ports without loopback-only bindings.",
+        "WebConfig currently allows wildcard CORS origins."
+      ]
+    }
+  ]
+}

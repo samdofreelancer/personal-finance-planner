@@ -6,8 +6,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-personal_finance_planner}
       POSTGRES_USER: ${POSTGRES_USER:-planner}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-    ports:
-      - "5432:5432"
     volumes:
       - finance_planner_db_data:/var/lib/postgresql/data
     healthcheck:
@@ -17,8 +15,48 @@ services:
       retries: 10
     networks:
       - finance-network
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  redis:
+    image: redis:7-alpine
+    container_name: finance-planner-redis
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
+    volumes:
+      - finance_planner_redis_data:/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      # The official image entrypoint fixes /data ownership before dropping to
+      # the unprivileged redis account.
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETUID
+      - SETGID
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - finance-network
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   backend:
+    image: planwise/backend:local
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -26,33 +64,64 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-personal_finance_planner}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-planner}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
       SERVER_PORT: 8080
-    ports:
-      - "8080:8080"
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
     networks:
       - finance-network
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/actuator/health/readiness"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
 
   frontend:
+    image: planwise/frontend:local
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: finance-planner-frontend
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
-      - "80:80"
+      # Bind only to the host loopback. Remote access is provided privately by
+      # Tailscale Serve; the app is not directly exposed to the LAN.
+      - "127.0.0.1:80:80"
     networks:
       - finance-network
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
 
 volumes:
   finance_planner_db_data:
+  finance_planner_redis_data:
 
 networks:
   finance-network:

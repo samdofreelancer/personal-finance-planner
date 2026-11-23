@@ -1,0 +1,33 @@
+flowchart LR
+    subgraph Client["Client device"]
+        Browser["Android Browser"]
+        TSClient["Tailscale Client\nWireGuard"]
+        Browser -->|"Open HTTPS URL"| TSClient
+    end
+
+    subgraph Tailnet["Private Tailscale tailnet"]
+        DNS["MagicDNS\n*.ts.net → tailnet IP"]
+        Tunnel["Encrypted WireGuard tunnel"]
+        TSClient -->|"Resolve hostname"| DNS
+        DNS -->|"Private endpoint"| Tunnel
+    end
+
+    subgraph Windows["Windows host"]
+        Serve["Tailscale Serve\nHTTPS / TLS termination"]
+        Local["Reverse proxy\n127.0.0.1:80"]
+        Serve -->|"HTTP on loopback"| Local
+    end
+
+    subgraph Compose["Docker Compose network"]
+        Nginx["Nginx\nFrontend + API gateway"]
+        SPA["Vue SPA\nHTML / JS / CSS"]
+        API["Spring Boot API\n:8080"]
+        DB[("PostgreSQL\n:5432")]
+        Nginx -->|"Static assets"| SPA
+        Nginx -->|"/api/*"| API
+        API -->|"SQL"| DB
+    end
+
+    Tunnel -->|"HTTPS over tailnet"| Serve
+    SPA -.->|"Frontend response"| Browser
+    API -.->|"JSON response via Nginx and Serve"| Browser

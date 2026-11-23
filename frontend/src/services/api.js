@@ -1,6 +1,7 @@
 const BASE = '/api'
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
-async function throwApiError(res, fallback) {
+export async function throwApiError(res, fallback) {
   let message = fallback
   try {
     const body = await res.json()
@@ -13,71 +14,89 @@ async function throwApiError(res, fallback) {
   throw new Error(message)
 }
 
+async function getCsrfToken() {
+  const response = await fetch(`${BASE}/csrf`, { credentials: 'same-origin' })
+  if (!response.ok) await throwApiError(response, 'Không lấy được mã bảo vệ CSRF')
+  const body = await response.json()
+  if (!body?.token) throw new Error('Máy chủ không cấp mã bảo vệ CSRF')
+  return body.token
+}
+
+export async function apiRequest(path, options = {}, { notifyUnauthorized = true } = {}) {
+  const method = (options.method || 'GET').toUpperCase()
+  const requestOptions = { ...options, credentials: 'same-origin' }
+
+  if (MUTATING_METHODS.has(method)) {
+    const token = await getCsrfToken()
+    requestOptions.headers = { ...(options.headers || {}), 'X-XSRF-TOKEN': token }
+  } else if (options.headers) {
+    requestOptions.headers = { ...options.headers }
+  }
+
+  const response = await fetch(path, requestOptions)
+  if (response.status === 401 && notifyUnauthorized && !path.startsWith(`${BASE}/auth/`)) {
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('auth:unauthorized'))
+  }
+  return response
+}
+
+export async function requestJson(path, options = {}, fallback = 'Yêu cầu không thành công', settings = {}) {
+  const response = await apiRequest(path, options, settings)
+  if (!response.ok) await throwApiError(response, fallback)
+  if (response.status === 204) return null
+  return response.json()
+}
+
 export async function getAssumptions() {
-  const res = await fetch(`${BASE}/assumptions`)
-  if (!res.ok) await throwApiError(res, 'Không tải được giả định')
-  return res.json()
+  return requestJson(`${BASE}/assumptions`, {}, 'Không tải được giả định')
 }
 
 export async function saveAssumptions(dto) {
-  const res = await fetch(`${BASE}/assumptions`, {
+  return requestJson(`${BASE}/assumptions`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(dto)
-  })
-  if (!res.ok) await throwApiError(res, 'Không lưu được giả định')
-  return res.json()
+    body: JSON.stringify(dto),
+  }, 'Không lưu được giả định')
 }
 
 export async function seedDefaults() {
-  const res = await fetch(`${BASE}/assumptions/seed`, { method: 'POST' })
-  if (!res.ok) await throwApiError(res, 'Không khôi phục được dữ liệu mặc định')
-  return res.json()
+  return requestJson(`${BASE}/assumptions/seed`, { method: 'POST' }, 'Không khôi phục được dữ liệu mặc định')
 }
 
-function appendAssumptionParams(params, dto) {
-  if (dto.baseSalary != null) params.set('baseSalary', dto.baseSalary)
-  if (dto.januaryMultiplier != null) params.set('januaryMultiplier', dto.januaryMultiplier.toString())
-  if (dto.living != null) params.set('living', dto.living)
-  if (dto.childThrough2026 != null) params.set('childThrough2026', dto.childThrough2026)
-  if (dto.childQ12027 != null) params.set('childQ12027', dto.childQ12027)
-  if (dto.childFromApr2027 != null) params.set('childFromApr2027', dto.childFromApr2027)
-  if (dto.rentThroughJan2027 != null) params.set('rentThroughJan2027', dto.rentThroughJan2027)
-  if (dto.rentFromFeb2027 != null) params.set('rentFromFeb2027', dto.rentFromFeb2027)
-  if (dto.loanPrincipal != null) params.set('loanPrincipal', dto.loanPrincipal)
-  if (dto.fixedPayment != null) params.set('fixedPayment', dto.fixedPayment)
-  if (dto.novInterest != null) params.set('novInterest', dto.novInterest)
-  if (dto.decInterest != null) params.set('decInterest', dto.decInterest)
-  if (dto.payoffInterest != null) params.set('payoffInterest', dto.payoffInterest)
-  if (dto.payoffInterestConfirmed != null) params.set('payoffInterestConfirmed', dto.payoffInterestConfirmed)
-  if (dto.startingSavings != null) params.set('startingSavings', dto.startingSavings)
-  if (dto.raises) {
-    for (const [y, v] of Object.entries(dto.raises)) {
-      params.set(`raises[${y}]`, v.toString())
-    }
-  }
+export async function getLoans() {
+  return requestJson(`${BASE}/loans`, {}, 'Không tải được danh sách khoản vay')
+}
+
+export async function saveLoans(loans) {
+  return requestJson(`${BASE}/loans`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(loans),
+  }, 'Không lưu được khoản vay và lịch trả')
 }
 
 export async function getForecast(dto) {
-  const params = new URLSearchParams()
-  appendAssumptionParams(params, dto)
-  const res = await fetch(`${BASE}/forecast?${params.toString()}`)
-  if (!res.ok) await throwApiError(res, 'Không tính toán được dự báo')
-  return res.json()
+  return requestJson(`${BASE}/forecast`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(dto),
+  }, 'Không tính toán được dự báo')
 }
 
 export async function exportCsv(dto) {
-  const params = new URLSearchParams()
-  appendAssumptionParams(params, dto)
-  const res = await fetch(`${BASE}/export/csv?${params.toString()}`)
-  if (!res.ok) await throwApiError(res, 'Không xuất được CSV')
-  const blob = await res.blob()
+  const response = await apiRequest(`${BASE}/export/csv`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(dto),
+  })
+  if (!response.ok) await throwApiError(response, 'Không xuất được CSV')
+  const blob = await response.blob()
   const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'ke-hoach-tai-chinh-2026-2030.csv'
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = 'ke-hoach-tai-chinh-2026-2030.csv'
+  document.body.appendChild(anchor)
+  anchor.click()
+  document.body.removeChild(anchor)
   URL.revokeObjectURL(url)
 }

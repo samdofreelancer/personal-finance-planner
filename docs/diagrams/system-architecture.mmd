@@ -1,0 +1,54 @@
+flowchart LR
+  U["Household user"] --> B["Browser"]
+  B --> FE["Vue 3 SPA<br/>Vite build"]
+  FE --> N["Nginx"]
+  N -->|"/api proxy"| API["Spring Boot 3<br/>Java 21 REST API"]
+  FE --> AUTHUI["AuthView<br/>register / login"]
+  API --> AUTH["AuthController + AuthService"]
+  AUTH --> IDDB["users + households<br/>memberships + invitations"]
+  API --> SESSION["Spring Session Redis<br/>30-minute idle timeout"]
+  API --> AC["AssumptionController"]
+  API --> LC["LoanController"]
+  API --> FC["ForecastController"]
+  AC --> AS["AssumptionService"]
+  AS --> IS["IncomeSchedulePersistenceService"]
+  AS --> ES["ExpenseScheduleService"]
+  LC --> LS["LoanScheduleService"]
+  FC --> VS["ValidationService"]
+  FC --> FS["ForecastService"]
+  FS --> IMS["IncomeScheduleService<br/>latest effective month"]
+  AS --> REPO["AssumptionRepository<br/>Spring Data JPA"]
+  IS --> IREPO["IncomeAmountChangeRepository"]
+  ES --> EREPO["ExpenseCategoryRepository<br/>categories + amount changes"]
+  LS --> LREPO["LoanRepository<br/>Loan + repayment entities"]
+  REPO --> DB[("PostgreSQL 16<br/>assumptions + income changes + expenses + loans + repayments")]
+  IDDB --> DB
+  SESSION --> REDIS[("Redis 7<br/>AOF + persistent session volume")]
+  IREPO --> DB
+  EREPO --> DB
+  LREPO --> DB
+  LS --> FS
+  FS --> OUT["Forecast response<br/>monthly + annual"]
+  OUT --> FE
+  FC --> CSV["CSV export"]
+  CSV --> B
+  FE --> FORM["Assumptions form<br/>effective-month income + user-defined expenses + savings"]
+  FE --> LFORM["Loan schedule form<br/>multiple loans + dated entries"]
+  FORM -->|"PUT assumptions"| AC
+  LFORM -->|"PUT loan schedules"| LC
+  FORM -->|"POST forecast JSON snapshot"| FC
+  subgraph Runtime["Docker Compose · local deployment"]
+    N
+    API
+    DB
+    REDIS
+  end
+
+  subgraph E2E["Isolated E2E · docker-compose.e2e.yml"]
+    SPEC["e2e/tests/*.spec.js"] --> FIXTURE["Playwright fixtures"]
+    FIXTURE --> POM["e2e/pages/* · Page Objects"]
+    POM --> PW["Playwright · Chromium"]
+    PW --> E2EN["E2E Nginx frontend"]
+    E2EN -->|"/api proxy"| E2EAPI["E2E Spring Boot API"]
+    E2EAPI --> E2EDB[("E2E PostgreSQL volume")]
+  end

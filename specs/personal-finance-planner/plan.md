@@ -8,7 +8,7 @@ Three-tier local application:
 
 - **Backend:** Spring Boot 3.x, Java 21, Maven
   - REST controllers: AssumptionController, ForecastController
-  - Service layer: AssumptionService, ForecastService (calculation ported from forecast.mjs)
+  - Service layer: AssumptionService, ForecastService (Java forecast calculation)
   - Entity: Assumption (JPA, single row)
   - Repository: AssumptionRepository (Spring Data JPA)
   - Database: PostgreSQL (Spring Data JPA + Hibernate)
@@ -61,7 +61,7 @@ frontend/
 
 ## Verification
 
-- Backend unit tests: forecast calculation matches forecast.test.mjs expected values
+- Backend unit tests: verify forecast calculation against approved synthetic fixtures and business-rule examples
 - Backend integration test: assumptions CRUD
 - Frontend: manual browser test against http://localhost:8080
 - End-to-end: edit assumptions → API PUT → API GET forecast → verify numbers

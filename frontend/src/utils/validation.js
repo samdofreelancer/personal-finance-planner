@@ -1,7 +1,4 @@
 export const MONEY_FIELDS = [
-  'baseSalary', 'living', 'childThrough2026', 'childQ12027',
-  'childFromApr2027', 'rentThroughJan2027', 'rentFromFeb2027',
-  'loanPrincipal', 'fixedPayment', 'novInterest', 'decInterest',
   'startingSavings',
 ]
 
@@ -13,28 +10,69 @@ export function validateAssumptions(input) {
       errors.push(`${field} phải là số VND nguyên không âm.`)
     }
   }
-  if (input.payoffInterest !== null && input.payoffInterest !== undefined &&
-      (!Number.isSafeInteger(input.payoffInterest) || input.payoffInterest < 0)) {
-    errors.push('Lãi tất toán phải là số VND nguyên không âm hoặc để trống nếu chưa xác nhận.')
-  }
-  if (input.payoffInterestConfirmed && (input.payoffInterest === null || input.payoffInterest === undefined)) {
-    errors.push('Nhập số lãi tất toán trước khi đánh dấu đã xác nhận.')
-  }
-  if (typeof input.payoffInterestConfirmed !== 'boolean') {
-    errors.push('Trạng thái xác nhận lãi tất toán không hợp lệ.')
-  }
   if (!Number.isFinite(input.januaryMultiplier) ||
       input.januaryMultiplier <= 0 || input.januaryMultiplier > 20) {
     errors.push('Hệ số lương tháng 1 phải lớn hơn 0 và không vượt quá 20.')
   }
-  for (const year of [2027, 2028, 2029, 2030]) {
-    const value = input.raises?.[year]
-    if (!Number.isFinite(value) || value < 0 || value > 1) {
-      errors.push(`Mức tăng lương năm ${year} phải từ 0% đến 100%.`)
-    }
+  const forecastYears = input.forecastYears
+  if (!Number.isInteger(forecastYears) || forecastYears < 1 || forecastYears > 6) {
+    errors.push('Thời gian dự phóng phải từ 1 đến 6 năm.')
   }
-  if (input.novInterest > input.fixedPayment || input.decInterest > input.fixedPayment) {
-    errors.push('Lãi từng kỳ không thể lớn hơn khoản trả cố định của kỳ đó.')
+  if (!Array.isArray(input.incomeChanges) || input.incomeChanges.length === 0) {
+    errors.push('Lịch thu nhập không được để trống.')
+  } else {
+    const months = new Set()
+    let hasBaseline = false
+    for (const change of input.incomeChanges) {
+      const month = change?.effectiveMonth
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month || '')) {
+        errors.push('Tháng hiệu lực thu nhập không hợp lệ.')
+      } else if (month < '2026-11') {
+        errors.push('Tháng hiệu lực thu nhập không được trước 11/2026.')
+      } else if (months.has(month)) {
+        errors.push('Lịch thu nhập bị trùng tháng hiệu lực.')
+      } else {
+        months.add(month)
+        if (month === '2026-11') hasBaseline = true
+      }
+      if (!Number.isSafeInteger(change?.amount) || change.amount < 0) {
+        errors.push('Số tiền thu nhập phải là VND nguyên không âm.')
+      }
+    }
+    if (!hasBaseline) errors.push('Lịch thu nhập phải có mốc cơ sở 11/2026.')
+  }
+  const expenses = input.expenses
+  if (!Array.isArray(expenses)) {
+    errors.push('Danh sách khoản chi không hợp lệ.')
+    return errors
+  }
+  const names = new Set()
+  for (const expense of expenses) {
+    const name = expense?.name?.trim()
+    if (!name || name.length > 120) {
+      errors.push('Tên khoản chi phải có từ 1 đến 120 ký tự.')
+      continue
+    }
+    const normalizedName = name.toLocaleLowerCase('vi')
+    if (names.has(normalizedName)) errors.push('Tên khoản chi không được trùng nhau.')
+    names.add(normalizedName)
+    if (!Array.isArray(expense.changes) || expense.changes.length === 0) {
+      errors.push(`Khoản chi “${name}” cần ít nhất một mốc hiệu lực.`)
+      continue
+    }
+    const months = new Set()
+    for (const change of expense.changes) {
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(change?.effectiveMonth || '')) {
+        errors.push(`Tháng hiệu lực của khoản chi “${name}” không hợp lệ.`)
+      } else if (months.has(change.effectiveMonth)) {
+        errors.push(`Khoản chi “${name}” bị trùng tháng hiệu lực.`)
+      } else {
+        months.add(change.effectiveMonth)
+      }
+      if (!Number.isSafeInteger(change?.amount) || change.amount < 0) {
+        errors.push(`Số tiền của khoản chi “${name}” phải là VND nguyên không âm.`)
+      }
+    }
   }
   return errors
 }

@@ -1,0 +1,172 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-unit:
+    name: Backend unit tests (Java 21)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+
+      - name: Run unit tests and JaCoCo coverage gate
+        run: mvn --batch-mode --no-transfer-progress verify -Dskip.integration.tests=true
+
+      - name: Run mutation tests for financial services
+        run: mvn --batch-mode --no-transfer-progress org.pitest:pitest-maven:mutationCoverage
+
+      - name: Upload JaCoCo coverage report
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jacoco-report
+          path: backend/target/site/jacoco/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload PIT mutation report
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-pit-report
+          path: backend/target/pit-reports/
+          if-no-files-found: error
+          retention-days: 14
+
+  backend-integration:
+    name: Backend integration tests (Java 21 + H2)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+
+      - name: Run integration tests only
+        run: mvn --batch-mode --no-transfer-progress verify -Dskip.unit.tests=true -Djacoco.skip=true
+
+  frontend:
+    name: Frontend tests, coverage and production build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run frontend tests and coverage gate
+        run: npm test
+
+      - name: Upload frontend coverage report
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-lcov-report
+          path: frontend/coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Build frontend
+        run: npm run build
+
+  e2e:
+    name: Browser E2E + Redis session recovery (Playwright + PostgreSQL + Redis)
+    runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_DOCKER_IMAGE: mcr.microsoft.com/playwright:v1.65.1-noble
+    defaults:
+      run:
+        working-directory: e2e
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Install E2E dependencies
+        run: npm ci
+      - name: Run isolated browser E2E suite and Redis session restart checks
+        run: npm run e2e
+
+      - name: Upload Playwright report and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-e2e-report
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  docker-build:
+    name: Build production Docker images
+    needs: [backend-unit, backend-integration, frontend, e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: false
+          tags: planwise/backend:ci
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: false
+          tags: planwise/frontend:ci
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend

@@ -1,0 +1,31 @@
+# Isolated Playwright stack. The Compose project name gives it a separate
+# network and named PostgreSQL volume; never point this stack at the user DB.
+services:
+  db:
+    container_name: finance-planner-e2e-db
+    ports: !override
+      - "127.0.0.1:15432:5432"
+
+  backend:
+    depends_on:
+      redis:
+        condition: service_healthy
+    container_name: finance-planner-e2e-backend
+    environment:
+      REDIS_HOST: redis
+      REDIS_PASSWORD: e2e-only-redis-password
+      # The isolated browser suite uses plain HTTP on loopback; production keeps Secure cookies enabled.
+      SESSION_COOKIE_SECURE: "false"
+    ports: !override
+      - "127.0.0.1:18080:8080"
+
+  redis:
+    container_name: finance-planner-e2e-redis
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "e2e-only-redis-password"]
+    environment:
+      REDIS_PASSWORD: e2e-only-redis-password
+
+  frontend:
+    container_name: finance-planner-e2e-frontend
+    ports: !override
+      - "127.0.0.1:18088:80"

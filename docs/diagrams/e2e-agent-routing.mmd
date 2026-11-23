@@ -1,0 +1,30 @@
+flowchart TD
+    U[User request] --> R[QA Orchestrator Skill]
+    R --> D{Classify intent}
+    D -->|Explore / coverage / plan| P[Playwright Planner]
+    D -->|Approved plan / implement| G[Playwright Generator]
+    D -->|Observed E2E failure| H[Playwright Healer]
+    P --> PLAN[e2e/plans/*.md]
+    PLAN --> REVIEW[Review against accepted SpecKit requirements]
+    REVIEW -->|Plan only| REPORT[Evidence and QA report]
+    REVIEW -->|User requested implementation / approved| G
+    G --> SPECS[e2e/tests/*.spec.js + e2e/pages/*]
+    SPECS --> RUN[Run on isolated E2E stack :18088]
+    RUN -->|Pass| REPORT
+    RUN -->|Fail| H
+    H --> ROOT{Root cause}
+    ROOT -->|Test-only issue| FIX[Minimal test-only repair]
+    FIX --> RUN
+    ROOT -->|Application / business defect| ISSUE[Report separately; do not hide]
+    ISSUE --> REPORT
+    REPORT --> DONE[Prime agent reviews diff, docs, test evidence and Git state]
+
+    subgraph Safety boundary
+      SAFE[Synthetic data only · isolated DB · sequential suite]
+      DOMAIN[Backend JUnit owns financial arithmetic]
+      NO[No production DB · no weakened assertions · no unrequested commit]
+    end
+    P -. obeys .-> SAFE
+    G -. obeys .-> SAFE
+    H -. obeys .-> NO
+    G -. never duplicates .-> DOMAIN

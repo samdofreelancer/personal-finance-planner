@@ -1,0 +1,120 @@
+# 05. Data Model
+
+## Persistence boundary (current)
+
+Each household has one assumptions row plus normalized expense category/change and loan/repayment tables. Forecast rows are calculated responses and are not persisted.
+
+### `assumptions`
+
+| Column group | Fields | Notes |
+|---|---|---|
+| Identity | `id`, `household_id` | Generated primary key; unique household owner; service queries by authenticated household |
+| Income | `january_multiplier` | January multiplier; monthly income amounts live in `income_amount_changes` |
+| Savings | `starting_savings` | Initial cumulative savings balance |
+| Forecast | `forecast_years` | Integer from 1–6; default 4 |
+| Audit | `created_at`, `updated_at` | Local date-time fields |
+
+### `expense_categories`
+
+| Column | Meaning |
+|---|---|
+| `id` | Generated primary key |
+| `name` | User-defined category name (1–120 characters, case-insensitive uniqueness enforced by service validation) |
+| `created_at`, `updated_at` | Local date-time audit fields |
+
+### `expense_amount_changes`
+
+| Column | Meaning |
+|---|---|
+| `id` | Generated primary key |
+| `expense_category_id` | Required FK to `expense_categories.id`, cascade delete |
+| `effective_month` | First day of the effective calendar month; unique per category |
+| `amount` | Non-negative whole VND monthly amount |
+
+One category has one or more amount changes. Forecast uses the latest change at or before each forecast month; zero means the expense is stopped from that month.
+
+### `income_amount_changes`
+
+| Column | Meaning |
+|---|---|
+| `id` | Generated primary key |
+| `assumption_id` | Required FK to the household assumptions row, cascade delete |
+| `effective_month` | First day of the effective calendar month; unique per assumption |
+| `amount` | Non-negative whole VND monthly income amount |
+
+The schedule must include a `2026-11` baseline. Forecast uses the latest amount at or before each month. Entries outside the selected horizon remain persisted. The schedule belongs to the household's assumptions aggregate.
+
+### `loans`
+
+| Column | Meaning |
+|---|---|
+| `id` | Generated primary key |
+| `name` | User-visible loan name (1–120 characters) |
+| `opening_principal` | Opening principal in whole VND, non-negative |
+| `created_at`, `updated_at` | Local date-time audit fields |
+
+### `loan_repayments`
+
+| Column | Meaning |
+|---|---|
+| `id` | Generated primary key |
+| `loan_id` | Required FK to `loans.id`, cascade delete |
+| `due_date` | Calendar due date |
+| `principal_amount` | Scheduled principal in whole VND, non-negative |
+| `interest_amount` | Scheduled interest in whole VND, non-negative |
+
+One loan has many repayment entries. Multiple entries on the same date or in the same month are valid and are aggregated by forecast month.
+
+## Identity and ownership
+
+### `users`
+
+- One row per normalized unique email; stores the password hash, optional `display_name` (max 80), optional `avatar_url` (max 2048, HTTPS only), and audit timestamps.
+- Profile identity is account-scoped, not household-scoped. `email` and `created_at` are read-only through the profile API; password changes replace `password_hash` only after current-password verification.
+
+### `households`
+
+- One row per independent financial workspace; self-registration creates a new row with `initial_household = false`.
+- The pre-authentication household created by migration V7 retains all pre-existing financial data and is not reused for new registrations.
+
+### `household_members`
+
+- Each user has exactly one household membership (`user_id` unique); role is `OWNER` or `MEMBER`.
+- Self-registered users are OWNER of their newly created household. Invitation registrations are MEMBER of the invitation's household.
+
+### HTTP sessions (Redis)
+
+- Spring Session Redis stores server-side HTTP sessions and serialized session attributes in Redis under namespace `planwise:session`.
+- Session TTL is 30 minutes. Authenticated requests refresh the idle timeout; expired sessions are rejected and Redis expires their keys.
+- Redis AOF is enabled and `/data` is backed by the named Compose volume `finance_planner_redis_data`. Keep this volume during normal deployments; deleting it logs users out but does not affect PostgreSQL financial data.
+
+### Financial aggregate ownership
+
+- `assumptions.household_id` is unique; `loans.household_id` and `expense_categories.household_id` scope their aggregates. Income changes cascade from assumptions; repayments cascade from loans; expense amount changes cascade from categories.
+- Every read/write uses the authenticated `HouseholdContext`; a client-provided household ID is not an authorization input.
+- New household initialization is lazy and blank: income baseline `2026-11 = 0`, savings `0`, empty expense categories and no loans. The separate reset action writes synthetic sample data only to the active household.
+
+## Forecast data
+
+Forecast month and annual rows are response DTOs generated by `ForecastService`; they are not persisted. Income and expense schedules come from the forecast request snapshot, while loan schedules are loaded from `loans` and `loan_repayments`.
+
+## Sensitive data and handling
+
+- Assumptions can reveal household income, expenses, debt and savings. Treat database backups, exports and logs as sensitive.
+- Do not log full assumption DTOs or CSV contents in normal application logs.
+- Do not commit `.env`, real database passwords, real household values or exported CSVs.
+- Keep test fixtures synthetic and clearly labeled.
+- Restrict database/network access and protect local backup files.
+
+## Schema lifecycle
+
+- Flyway owns schema evolution; Hibernate uses `ddl-auto=validate` and does not mutate the schema.
+- `V1` creates the baseline assumptions table and synthetic first-run defaults for an empty database.
+- Existing non-empty installations are baselined at version 1; `V2` creates loan tables and converts legacy single-loan fields into equivalent Nov/Dec 2026 and Jan 2027 dated repayment entries.
+- `V3` removes the retired single-loan columns after backfill. The assumptions row and all non-loan financial values are preserved.
+- `V4` creates `expense_categories` and `expense_amount_changes`, migrates the legacy living/child/rent amounts to equivalent monthly schedules, then removes the fixed expense columns. Existing forecast totals are preserved.
+- `V5` adds the configurable 1–6-year horizon and temporarily normalizes legacy annual raise rates into `salary_raise_rates`.
+- `V6` creates `income_amount_changes`, migrates base salary to a November 2026 baseline and compounded April raise rates to whole-VND effective amounts, then drops `base_salary` and `salary_raise_rates`.
+- `V8` adds nullable `display_name` and `avatar_url` fields to `users`; existing accounts remain valid and can complete their profile after signing in.
+- HTTP sessions are not part of the PostgreSQL schema; Redis owns their lifecycle independently from Flyway.
+- Never delete the PostgreSQL volume as part of schema migration or verification.

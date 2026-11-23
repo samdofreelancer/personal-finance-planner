@@ -5,3 +5,6 @@ dist/
 .vscode/
 *.log
 .vite/
+coverage/
+playwright-report/
+test-results/
