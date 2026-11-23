@@ -70,6 +70,7 @@ async function mountLoadedApp() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  window.innerWidth = 1024
   getAssumptions.mockResolvedValue(validAssumptions())
   getLoans.mockResolvedValue([])
   getForecast.mockResolvedValue(forecastResult())
@@ -97,6 +98,31 @@ describe('PlannerView', () => {
     expect(wrapper.text()).toContain('Hành trình tài chính dự kiến')
     expect(wrapper.text()).toContain('DƯ NỢ BAN ĐẦU')
     expect(wrapper.find('#alert-area .alert').exists()).toBe(false)
+  })
+
+  it('collapses and reopens the sidebar from the desktop menu controls', async () => {
+    window.innerWidth = 1280
+    const wrapper = await mountLoadedApp()
+
+    await wrapper.get('.drawer-close').trigger('click')
+    expect(wrapper.get('.app-shell').classes()).toContain('sidebar-collapsed')
+    expect(wrapper.get('.sidebar-reopen-button').attributes('aria-label')).toBe('Mở menu điều hướng')
+
+    await wrapper.get('.sidebar-reopen-button').trigger('click')
+    expect(wrapper.get('.app-shell').classes()).not.toContain('sidebar-collapsed')
+    expect(wrapper.find('.sidebar-reopen-button').exists()).toBe(false)
+  })
+
+  it('keeps mobile navigation links closing the drawer without collapsing the desktop sidebar', async () => {
+    window.innerWidth = 390
+    const wrapper = await mountLoadedApp()
+
+    await wrapper.get('.drawer-open-button').trigger('click')
+    expect(wrapper.get('.sidebar').classes()).toContain('drawer-open')
+
+    await wrapper.get('.nav-link[href="#loans"]').trigger('click')
+    expect(wrapper.get('.sidebar').classes()).not.toContain('drawer-open')
+    expect(wrapper.get('.app-shell').classes()).not.toContain('sidebar-collapsed')
   })
 
   it('shows an actionable error when initial assumptions cannot be loaded', async () => {

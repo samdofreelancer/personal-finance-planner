@@ -1,5 +1,5 @@
 <template>
-  <div class="app-shell">
+  <div class="app-shell" :class="{ 'sidebar-collapsed': isSidebarCollapsed }">
     <button v-if="isDrawerOpen" class="drawer-backdrop" type="button" aria-label="Đóng menu điều hướng" @click="closeDrawer"></button>
     <aside class="sidebar" :class="{ 'drawer-open': isDrawerOpen }" aria-label="Điều hướng chính">
       <a class="brand" href="#overview" aria-label="Planwise - Tổng quan">
@@ -13,7 +13,7 @@
       <div class="drawer-mobile-heading">
         <span>ĐIỀU HƯỚNG</span>
       </div>
-      <button type="button" class="drawer-close" aria-label="Đóng menu điều hướng" @click="closeDrawer">Đóng menu ×</button>
+      <button type="button" class="drawer-close" aria-label="Đóng menu điều hướng" title="Đóng menu" @click="closeMenu">×</button>
       <p class="nav-caption">KHÔNG GIAN LÀM VIỆC</p>
       <nav class="side-nav" aria-label="Các mục Planwise">
         <a class="nav-link" :class="{ active: activeSection === 'overview' }" href="#overview" :aria-current="activeSection === 'overview' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">▦</span><span class="nav-label-desktop">Tổng quan</span><span class="nav-label-mobile">Tổng quan</span></a>
@@ -44,6 +44,7 @@
 
     <div class="workspace">
       <header class="topbar">
+        <button v-if="isSidebarCollapsed" type="button" class="sidebar-reopen-button" aria-label="Mở menu điều hướng" title="Mở menu" @click="openSidebar">☰</button>
         <div class="mobile-topbar-main">
           <button type="button" class="drawer-open-button" aria-label="Mở menu điều hướng" @click="openDrawer">☰</button>
           <a class="brand mobile-brand" href="#overview" aria-label="Planwise - Tổng quan">
@@ -187,6 +188,7 @@ const isLoading = ref(true)
 const provisional = ref(false)
 const activeSection = ref('overview')
 const isDrawerOpen = ref(false)
+const isSidebarCollapsed = ref(false)
 const sectionLabels = {
   overview: 'Tổng quan',
   assumptions: 'Giả định tài chính',
@@ -224,6 +226,7 @@ function syncActiveSection() {
 }
 
 function openDrawer() {
+  isSidebarCollapsed.value = false
   isDrawerOpen.value = true
 }
 
@@ -231,8 +234,21 @@ function closeDrawer() {
   isDrawerOpen.value = false
 }
 
+function closeMenu() {
+  if (window.innerWidth <= 767) {
+    closeDrawer()
+    return
+  }
+  isDrawerOpen.value = false
+  isSidebarCollapsed.value = true
+}
+
+function openSidebar() {
+  isSidebarCollapsed.value = false
+}
+
 function onDrawerKeydown(event) {
-  if (event.key === 'Escape') closeDrawer()
+  if (event.key === 'Escape' && (isDrawerOpen.value || (window.innerWidth > 767 && !isSidebarCollapsed.value))) closeMenu()
 }
 
 function updateActiveSectionFromScroll() {

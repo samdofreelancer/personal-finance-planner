@@ -479,6 +479,46 @@ tbody th[scope="row"] { padding: 10px 11px; border-bottom: 1px solid #edf0f3; co
 .breadcrumb { order: -1; }
 .drawer-backdrop { display: none; }
 .drawer-actions { display: grid; }
+.drawer-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-end;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  margin: 12px 0 14px auto;
+  padding: 0;
+  border: 1px solid #e4eae1;
+  border-radius: 8px;
+  color: #244c3d;
+  background: #fff;
+  font-size: 22px;
+  font-weight: 450;
+  line-height: 1;
+}
+.drawer-close:hover, .drawer-close:focus-visible,
+.sidebar-reopen-button:hover, .sidebar-reopen-button:focus-visible {
+  border-color: #c9dacb;
+  background: #edf4ec;
+  outline: none;
+}
+.sidebar-reopen-button {
+  display: grid;
+  place-items: center;
+  order: -2;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #e4eae1;
+  border-radius: 8px;
+  color: #244c3d;
+  background: #fff;
+  font-size: 18px;
+}
+.sidebar { transition: transform .22s ease, visibility .22s ease; }
+.app-shell.sidebar-collapsed .sidebar { transform: translateX(-100%); visibility: hidden; }
+.app-shell.sidebar-collapsed .workspace { margin-left: 0; }
 
 @media (max-width: 767px) {
   .sidebar {
@@ -503,7 +543,7 @@ tbody th[scope="row"] { padding: 10px 11px; border-bottom: 1px solid #edf0f3; co
   .sidebar .brand { padding: 0 7px; font-size: 21px; }
   .sidebar .brand-mark { width: 35px; height: 35px; }
   .drawer-mobile-heading { display: flex; align-items: center; margin: 30px 9px 7px; color: #9aa69b; font-size: 9px; font-weight: 800; letter-spacing: 1.1px; }
-  .drawer-close { display: flex; align-items: center; justify-content: flex-end; align-self: flex-end; min-width: 96px; min-height: 40px; margin: 0 9px 12px; padding: 0 10px; border: 0; border-radius: 8px; color: #52665b; background: #edf2e9; font-size: 12px; font-weight: 650; line-height: 1; }
+  .drawer-close { margin: 12px 0 14px auto; }
   .sidebar .nav-caption { display: none; }
   .sidebar .side-nav { display: grid; width: 100%; gap: 6px; overflow: visible; padding: 0; }
   .sidebar .nav-link { flex: initial; width: 100%; min-width: 0; min-height: 50px; gap: 12px; padding: 0 12px; font-size: 13px; white-space: nowrap; }
@@ -534,6 +574,8 @@ tbody th[scope="row"] { padding: 10px 11px; border-bottom: 1px solid #edf0f3; co
   }
   .mobile-topbar-main { grid-area: brand; display: flex; align-items: center; min-width: 0; gap: 11px; }
   .drawer-open-button { display: grid; place-items: center; flex: 0 0 34px; width: 34px; height: 34px; border: 1px solid #e4eae1; border-radius: 8px; color: #244c3d; background: #fff; font-size: 19px; }
+  .sidebar-reopen-button { display: none; }
+  .app-shell.sidebar-collapsed .workspace { margin-left: 0; }
   .mobile-brand { display: inline-flex; min-width: 0; font-size: 19px; }
   .topbar-actions { grid-area: actions; display: flex; flex-wrap: nowrap; align-items: center; gap: 5px; min-width: 0; white-space: nowrap; }
   .topbar-actions .button { flex: 0 0 auto; min-height: 33px; padding: 6px 8px; font-size: 10px; white-space: nowrap; }
