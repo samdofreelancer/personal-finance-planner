@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createInvitation,
   changePassword,
+  confirmPasswordReset,
   getProfile,
   getCurrentUser,
   listInvitations,
@@ -9,6 +10,7 @@ import {
   logout,
   registerAccount,
   registerWithInvitation,
+  requestPasswordReset,
   revokeInvitation,
   updateProfile,
 } from '../src/services/auth.js'
@@ -72,6 +74,23 @@ describe('authentication service', () => {
 
     expect(requestJson).toHaveBeenNthCalledWith(1, '/api/auth/login', expect.objectContaining({ method: 'POST' }), 'Đăng nhập thất bại')
     expect(requestJson).toHaveBeenNthCalledWith(2, '/api/auth/logout', { method: 'POST' }, 'Đăng xuất thất bại')
+  })
+
+  it('requests and confirms a password reset through the public auth API', async () => {
+    apiRequest.mockResolvedValueOnce({ ok: true, status: 202 })
+    requestJson.mockResolvedValueOnce(null)
+
+    await requestPasswordReset({ email: 'owner@example.com' })
+    await confirmPasswordReset({ token: 'test-reset-value', newPassword: 'new-secure-password' })
+
+    expect(apiRequest).toHaveBeenCalledWith('/api/auth/password-reset/request', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ email: 'owner@example.com' }),
+    }))
+    expect(requestJson).toHaveBeenCalledWith('/api/auth/password-reset/confirm', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ token: 'test-reset-value', newPassword: 'new-secure-password' }),
+    }), 'Không đặt lại được mật khẩu')
   })
 
   it('lists, creates and revokes invitations without exposing token hashes', async () => {

@@ -28,12 +28,16 @@ The existing registration gate allowed only the first account to self-register. 
 - **AC-06 Legacy preservation:** Existing users and their household financial data remain unchanged by new registrations.
 - **AC-07 Concurrent registration:** Two simultaneous registrations with different emails both succeed and each receives a different household.
 - **AC-08 Security:** Password hashing, normalized unique emails, session fixation protection, CSRF and login throttling remain in place.
+- **AC-09 Password visibility:** Login and registration password fields provide an accessible show/hide control without changing the submitted password value.
+- **AC-10 Contextual password guidance:** The login password field uses a neutral masked placeholder; the minimum 12-character rule is helper text on registration only.
+- **AC-11 Form usability and language:** The primary submit action is disabled until required fields are complete, keyboard focus is visible, and authentication copy consistently uses Vietnamese terminology.
 
 ## Out of scope
 
 - Multiple households per user or switching between households.
 - Automatic household creation for invited members (they join the inviter's household).
 - Email verification, password recovery, social login or public cloud deployment.
+- A "remember me" option: the current server-side session policy has a fixed 30-minute idle timeout and no per-device persistent-login contract. Do not present a checkbox until session lifetime and security semantics are specified end to end.
 - Changing the financial forecast model or synthetic reset-to-sample values.
 
 ## Verification evidence

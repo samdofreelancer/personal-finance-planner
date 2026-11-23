@@ -9,6 +9,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,6 +42,7 @@ import org.springframework.session.MapSession;
 import org.springframework.session.SessionRepository;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.boot.test.mock.mockito.MockBean;
 
 @SpringBootTest(properties = {
         "spring.datasource.url=jdbc:h2:mem:planner-auth-api;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000;MODE=PostgreSQL",
@@ -56,11 +63,13 @@ class AuthControllerIT {
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private UserRepository userRepository;
+    @Autowired private PasswordResetTokenRepository passwordResetTokenRepository;
     @Autowired private HouseholdRepository householdRepository;
     @Autowired private HouseholdMemberRepository householdMemberRepository;
     @Autowired private HouseholdInvitationRepository invitationRepository;
     @Autowired private BootstrapLockRepository bootstrapLockRepository;
     @Autowired private SessionRepository<MapSession> sessionRepository;
+    @MockBean private PasswordResetDelivery passwordResetDelivery;
 
     @Value("${server.servlet.session.cookie.http-only}")
     private boolean sessionCookieHttpOnly;
@@ -73,6 +82,8 @@ class AuthControllerIT {
 
     @BeforeEach
     void resetSyntheticIdentityData() {
+        when(passwordResetDelivery.isConfigured()).thenReturn(true);
+        passwordResetTokenRepository.deleteAll();
         invitationRepository.deleteAll();
         householdMemberRepository.deleteAll();
         userRepository.deleteAll();
@@ -80,6 +91,83 @@ class AuthControllerIT {
         bootstrapLockRepository.deleteAll();
         bootstrapLockRepository.save(new BootstrapLock(1L));
         householdRepository.save(new Household("Gia đình", true));
+    }
+
+    @Test
+    void passwordResetRequestDoesNotRevealWhetherAnEmailExists() throws Exception {
+        registerInitial("recovery-owner@example.com");
+
+        MvcResult unknown = mockMvc.perform(post("/api/auth/password-reset/request").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"unknown@example.com\"}"))
+                .andExpect(status().isAccepted()).andReturn();
+        MvcResult existing = mockMvc.perform(post("/api/auth/password-reset/request").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"recovery-owner@example.com\"}"))
+                .andExpect(status().isAccepted()).andReturn();
+
+        org.junit.jupiter.api.Assertions.assertEquals(unknown.getResponse().getStatus(), existing.getResponse().getStatus());
+        org.junit.jupiter.api.Assertions.assertEquals(unknown.getResponse().getContentAsString(), existing.getResponse().getContentAsString());
+        verify(passwordResetDelivery).send(eq("recovery-owner@example.com"), contains("resetToken="));
+        verify(passwordResetDelivery, org.mockito.Mockito.never()).send(eq("unknown@example.com"), anyString());
+    }
+
+    @Test
+    void bothPasswordRecoveryEndpointsRemainProtectedByCsrf() throws Exception {
+        mockMvc.perform(post("/api/auth/password-reset/request")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"owner@example.com\"}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/auth/password-reset/confirm")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"invalid\",\"newPassword\":\"a-new-secure-password\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void smtpFailureDoesNotRevealWhetherAnEmailExists() throws Exception {
+        registerInitial("mail-failure@example.com");
+        doThrow(new org.springframework.mail.MailSendException("synthetic SMTP failure"))
+                .when(passwordResetDelivery).send(eq("mail-failure@example.com"), org.mockito.ArgumentMatchers.anyString());
+
+        MvcResult existing = mockMvc.perform(post("/api/auth/password-reset/request").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"mail-failure@example.com\"}"))
+                .andExpect(status().isAccepted()).andReturn();
+        MvcResult unknown = mockMvc.perform(post("/api/auth/password-reset/request").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"not-registered@example.com\"}"))
+                .andExpect(status().isAccepted()).andReturn();
+
+        org.junit.jupiter.api.Assertions.assertEquals(existing.getResponse().getStatus(), unknown.getResponse().getStatus());
+        org.junit.jupiter.api.Assertions.assertEquals(existing.getResponse().getContentAsString(), unknown.getResponse().getContentAsString());
+        org.junit.jupiter.api.Assertions.assertEquals(0, passwordResetTokenRepository.count());
+    }
+
+    @Test
+    void passwordResetLinkCanBeUsedOnceToSetANewPassword() throws Exception {
+        registerInitial("reset-owner@example.com");
+        org.mockito.ArgumentCaptor<String> linkCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        mockMvc.perform(post("/api/auth/password-reset/request").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"reset-owner@example.com\"}"))
+                .andExpect(status().isAccepted());
+        verify(passwordResetDelivery).send(eq("reset-owner@example.com"), linkCaptor.capture());
+        String link = linkCaptor.getValue();
+        String token = java.net.URI.create(link).getRawQuery().substring("resetToken=".length());
+        String payload = objectMapper.writeValueAsString(java.util.Map.of(
+                "token", token, "newPassword", "brand-new-secure-password"));
+
+        mockMvc.perform(post("/api/auth/password-reset/confirm").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content(payload))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(post("/api/auth/password-reset/confirm").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content(payload))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/auth/login").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"reset-owner@example.com\",\"password\":\"brand-new-secure-password\"}"))
+                .andExpect(status().isOk());
     }
 
     @Test

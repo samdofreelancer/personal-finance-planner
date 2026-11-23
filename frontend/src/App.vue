@@ -1,6 +1,11 @@
 <template>
   <div v-if="isCheckingSession" class="auth-loading" role="status">Đang kiểm tra phiên đăng nhập...</div>
   <AuthView
+    v-else-if="resetToken"
+    :reset-token="resetToken"
+    @password-reset="handlePasswordReset"
+  />
+  <AuthView
     v-else-if="!user"
     :invitation-token="invitationToken"
     @authenticated="handleAuthenticated"
@@ -37,6 +42,7 @@ const isCheckingSession = ref(true)
 const showHouseholdSettings = ref(false)
 const showProfile = ref(false)
 const invitationToken = new URLSearchParams(window.location.search).get('invite') || null
+const resetToken = new URLSearchParams(window.location.search).get('resetToken') || null
 
 async function restoreSession() {
   isCheckingSession.value = true
@@ -58,6 +64,15 @@ function handleAuthenticated(authenticatedUser) {
     url.searchParams.delete('invite')
     window.history.replaceState({}, '', url)
   }
+}
+
+function handlePasswordReset() {
+  user.value = null
+  showHouseholdSettings.value = false
+  showProfile.value = false
+  const url = new URL(window.location.href)
+  url.searchParams.delete('resetToken')
+  window.history.replaceState({}, '', url)
 }
 
 async function handleLogout() {

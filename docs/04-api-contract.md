@@ -9,6 +9,8 @@ Base path: `/api`. In Docker/local production-like use, the browser calls Nginx 
 | GET | `/api/auth/bootstrap` | None | None | `{"registrationAvailable":true}`; retained for older clients, registration is always open |
 | POST | `/api/auth/register` | `{email,password}` or `{email,password,invitationToken}` | Creates user + new household + OWNER membership, or consumes invitation + creates MEMBER membership | `AuthResponse` and authenticated session (`201`) |
 | POST | `/api/auth/login` | `{email,password}` | Creates authenticated session | `AuthResponse` (`200`) |
+| POST | `/api/auth/password-reset/request` | `{email}` + CSRF token | Creates a hashed, 30-minute, single-use reset token only for an existing account and sends it by configured SMTP | `202` with an empty body for both existing and unknown accounts; `503` if email delivery is unavailable |
+| POST | `/api/auth/password-reset/confirm` | `{token,newPassword}` + CSRF token | Replaces the password hash, consumes the token and invalidates indexed sessions for the account | `204` |
 | POST | `/api/auth/logout` | CSRF token + session cookie | Invalidates session | `204` |
 | GET | `/api/auth/me` | Session cookie | None | Current `AuthResponse` |
 | GET | `/api/profile` | Authenticated session | None | `ProfileResponse` for the authenticated user; excludes password hash |
@@ -22,7 +24,7 @@ Base path: `/api`. In Docker/local production-like use, the browser calls Nginx 
 | POST | `/api/forecast` | JSON `AssumptionDTO` including `expenses[]` | None | `ForecastResponse` (`months`, `annual`); loan schedules loaded from PostgreSQL |
 | POST | `/api/export/csv` | JSON `AssumptionDTO` including `expenses[]` | None | `text/csv` attachment using the supplied expense schedules |
 
-Authenticated sessions are stored in Redis (`planwise:session`) through Spring Session Redis. The inactivity timeout is 30 minutes and is refreshed by authenticated requests; Redis AOF and its persistent Compose volume keep sessions available across backend/Redis restarts until logout or expiry.
+Authenticated sessions are stored in Redis (`planwise:session`) through Spring Session Redis with principal-name indexing. The inactivity timeout is 30 minutes and is refreshed by authenticated requests; Redis AOF and its persistent Compose volume keep sessions available across backend/Redis restarts until logout or expiry. Password recovery removes all indexed sessions for the affected account.
 
 ## Forecast input semantics — important
 
@@ -43,6 +45,8 @@ The frontend sends a complete assumptions snapshot as JSON to `POST /api/forecas
 - Profile endpoints derive `userId` exclusively from the authenticated session principal; clients cannot select or update another user's profile.
 - `email` and `createdAt` are read-only account metadata. `displayName` is required (1–80 characters) when updating. `avatarUrl` is optional and accepts HTTPS URLs only.
 - Password changes require the current password and enforce the registration policy (at least 12 characters and at most 72 UTF-8 bytes). A new password must differ from the current password.
+- Password recovery uses a 256-bit random token; only its SHA-256 hash is stored. Tokens expire after 30 minutes, are single-use, and a newer request invalidates previous unused tokens. Request responses do not disclose whether an email exists. SMTP must be explicitly enabled/configured; when disabled, no undeliverable token is created.
+- Recovery email links use the trusted `PUBLIC_BASE_URL` environment setting, never the inbound Host header. Configure `MAIL_ENABLED=true`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`, `MAIL_STARTTLS` and `PUBLIC_BASE_URL` before enabling this feature.
 - Personal profile data is account-level identity data; it is not part of the household or financial assumptions aggregate.
 
 ## Assumptions DTO fields

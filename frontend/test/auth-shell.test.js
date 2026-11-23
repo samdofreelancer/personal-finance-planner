@@ -11,9 +11,9 @@ vi.mock('../src/services/auth.js', () => ({
 
 const AuthViewStub = defineComponent({
   name: 'AuthView',
-  props: ['invitationToken'],
-  emits: ['authenticated'],
-  template: '<div data-testid="auth-view"><button id="authenticate" @click="$emit(\'authenticated\', { userId: 1, email: \'owner@example.com\', role: \'OWNER\' })">Authenticate</button></div>',
+  props: ['invitationToken', 'resetToken'],
+  emits: ['authenticated', 'password-reset'],
+  template: '<div data-testid="auth-view"><button id="authenticate" @click="$emit(\'authenticated\', { userId: 1, email: \'owner@example.com\', role: \'OWNER\' })">Authenticate</button><button id="reset-complete" @click="$emit(\'password-reset\')">Reset complete</button></div>',
 })
 
 const PlannerViewStub = defineComponent({
@@ -49,6 +49,7 @@ function mountApp() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  window.history.replaceState({}, '', '/')
   getCurrentUser.mockResolvedValue(null)
   logout.mockResolvedValue(null)
 })
@@ -122,5 +123,18 @@ describe('App authentication shell', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-testid="auth-view"]').exists()).toBe(true)
+  })
+
+  it('renders the reset screen from a reset-link URL and clears the token after success', async () => {
+    window.history.replaceState({}, '', '/?resetToken=sample-reset-value')
+    const wrapper = mountApp()
+    await flushPromises()
+
+    expect(wrapper.getComponent(AuthViewStub).props('resetToken')).toBe('sample-reset-value')
+    await wrapper.get('#reset-complete').trigger('click')
+    await flushPromises()
+
+    expect(window.location.search).toBe('')
+    expect(wrapper.find('[data-testid="planner-view"]').exists()).toBe(false)
   })
 })

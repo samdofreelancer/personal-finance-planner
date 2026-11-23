@@ -2,6 +2,8 @@ package com.finance.planner.controller;
 
 import java.util.Map;
 import com.finance.planner.auth.TooManyLoginAttemptsException;
+import com.finance.planner.auth.PasswordResetDeliveryFailedException;
+import com.finance.planner.auth.PasswordResetDeliveryUnavailableException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,6 +43,11 @@ public class ApiExceptionHandler {
     public ResponseEntity<Map<String, String>> handleTooManyLoginAttempts(TooManyLoginAttemptsException ex) {
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .body(Map.of("message", ex.getMessage()));
+    }
+
+    @ExceptionHandler({PasswordResetDeliveryUnavailableException.class, PasswordResetDeliveryFailedException.class})
+    public ResponseEntity<Map<String, String>> handlePasswordResetDelivery(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of("message", ex.getMessage()));
     }
 
     @ExceptionHandler({IllegalStateException.class, DataIntegrityViolationException.class})

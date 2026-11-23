@@ -63,7 +63,8 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/actuator/health/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/csrf", "/api/auth/bootstrap").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login",
+                                "/api/auth/password-reset/request", "/api/auth/password-reset/confirm").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint((request, response, exception) ->

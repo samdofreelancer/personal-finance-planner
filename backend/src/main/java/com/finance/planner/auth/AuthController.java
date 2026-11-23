@@ -29,12 +29,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
     private final LoginAttemptService loginAttemptService;
     private final SecurityContextRepository securityContextRepository;
 
-    public AuthController(AuthService authService, LoginAttemptService loginAttemptService,
+    public AuthController(AuthService authService, PasswordResetService passwordResetService,
+                          LoginAttemptService loginAttemptService,
                           SecurityContextRepository securityContextRepository) {
         this.authService = authService;
+        this.passwordResetService = passwordResetService;
         this.loginAttemptService = loginAttemptService;
         this.securityContextRepository = securityContextRepository;
     }
@@ -73,6 +76,23 @@ public class AuthController {
         loginAttemptService.recordSuccess(attemptKey);
         establishSession(principal, servletRequest, servletResponse);
         return ResponseEntity.ok(toResponse(principal));
+    }
+
+    @PostMapping("/password-reset/request")
+    public ResponseEntity<Void> requestPasswordReset(@Valid @RequestBody PasswordResetRequest request,
+                                                      HttpServletRequest servletRequest) {
+        try {
+            passwordResetService.requestReset(request.email(), servletRequest.getRemoteAddr());
+        } catch (PasswordResetDeliveryFailedException ignored) {
+            // Keep the response identical for existing and unknown accounts, including SMTP failures.
+        }
+        return ResponseEntity.accepted().build();
+    }
+
+    @PostMapping("/password-reset/confirm")
+    public ResponseEntity<Void> confirmPasswordReset(@Valid @RequestBody PasswordResetConfirmRequest request) {
+        passwordResetService.resetPassword(request.token(), request.newPassword());
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/logout")

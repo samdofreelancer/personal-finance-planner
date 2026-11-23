@@ -33,6 +33,23 @@ export async function login({ email, password }) {
   }, 'Đăng nhập thất bại')
 }
 
+export async function requestPasswordReset({ email }) {
+  const response = await apiRequest('/api/auth/password-reset/request', {
+    method: 'POST',
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ email }),
+  })
+  if (!response.ok) await throwApiError(response, 'Không gửi được yêu cầu khôi phục mật khẩu')
+}
+
+export async function confirmPasswordReset({ token, newPassword }) {
+  return requestJson('/api/auth/password-reset/confirm', {
+    method: 'POST',
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ token, newPassword }),
+  }, 'Không đặt lại được mật khẩu')
+}
+
 export async function logout() {
   return requestJson('/api/auth/logout', { method: 'POST' }, 'Đăng xuất thất bại')
 }
