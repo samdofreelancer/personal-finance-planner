@@ -46,6 +46,16 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
+        <!-- Store HTTP sessions in Redis so backend restarts/deploys do not log users out. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.session</groupId>
+            <artifactId>spring-session-data-redis</artifactId>
+        </dependency>
+
         <!-- Versioned, data-preserving PostgreSQL schema migrations. -->
         <dependency>
             <groupId>org.flywaydb</groupId>

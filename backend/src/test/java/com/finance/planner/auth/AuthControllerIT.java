@@ -18,7 +18,12 @@ import com.finance.planner.household.Household;
 import com.finance.planner.household.HouseholdInvitationRepository;
 import com.finance.planner.household.HouseholdMemberRepository;
 import com.finance.planner.household.HouseholdRepository;
+import com.finance.planner.config.TestSessionConfiguration;
+import java.time.Duration;
+import java.time.Instant;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +31,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockHttpSession;
+import org.springframework.context.annotation.Import;
+import org.springframework.session.MapSession;
+import org.springframework.session.SessionRepository;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -39,9 +46,11 @@ import org.springframework.test.web.servlet.MvcResult;
         "spring.flyway.enabled=false",
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
         "spring.jpa.show-sql=false",
-        "server.servlet.session.cookie.secure=true"
+        "server.servlet.session.cookie.secure=true",
+        "spring.session.store-type=none"
 })
 @AutoConfigureMockMvc
+@Import(TestSessionConfiguration.class)
 class AuthControllerIT {
 
     @Autowired private MockMvc mockMvc;
@@ -51,6 +60,7 @@ class AuthControllerIT {
     @Autowired private HouseholdMemberRepository householdMemberRepository;
     @Autowired private HouseholdInvitationRepository invitationRepository;
     @Autowired private BootstrapLockRepository bootstrapLockRepository;
+    @Autowired private SessionRepository<MapSession> sessionRepository;
 
     @Value("${server.servlet.session.cookie.http-only}")
     private boolean sessionCookieHttpOnly;
@@ -105,50 +115,80 @@ class AuthControllerIT {
     @Test
     void registrationCreatesOwnerSessionAndLogoutInvalidatesIt() throws Exception {
         MvcResult registration = registerInitial("owner@example.com");
-        MockHttpSession session = (MockHttpSession) registration.getRequest().getSession(false);
+        Cookie sessionCookie = sessionCookie(registration);
+        String sessionId = decodeSessionId(sessionCookie);
+        MapSession session = sessionRepository.findById(sessionId);
         assertNotNull(session);
+        org.junit.jupiter.api.Assertions.assertEquals(Duration.ofMinutes(30), session.getMaxInactiveInterval());
 
-        mockMvc.perform(get("/api/auth/me").session(session))
+        mockMvc.perform(get("/api/auth/me").cookie(sessionCookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("owner@example.com"))
                 .andExpect(jsonPath("$.role").value("OWNER"))
                 .andExpect(jsonPath("$.passwordHash").doesNotExist());
 
-        mockMvc.perform(post("/api/auth/logout").session(session).with(csrf()))
+        mockMvc.perform(post("/api/auth/logout").cookie(sessionCookie).with(csrf()))
                 .andExpect(status().isNoContent());
-        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
-                () -> session.getAttribute("SPRING_SECURITY_CONTEXT"));
+        org.junit.jupiter.api.Assertions.assertNull(sessionRepository.findById(sessionId));
 
         mockMvc.perform(get("/api/auth/me"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void authenticatedUserCanManageOwnProfileAndChangePassword() throws Exception {
-        MockHttpSession session = (MockHttpSession) registerInitial("profile@example.com")
-                .getRequest().getSession(false);
+    void sessionExpiresAfterThirtyMinutesOfInactivity() throws Exception {
+        MvcResult registration = registerInitial("idle-timeout@example.com");
+        Cookie sessionCookie = sessionCookie(registration);
+        String sessionId = decodeSessionId(sessionCookie);
+        MapSession session = sessionRepository.findById(sessionId);
+        session.setLastAccessedTime(Instant.now().minus(Duration.ofMinutes(31)));
+        sessionRepository.save(session);
 
-        mockMvc.perform(get("/api/profile").session(session))
+        mockMvc.perform(get("/api/auth/me").cookie(sessionCookie))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void authenticatedActivityRefreshesTheSessionIdleExpiry() throws Exception {
+        MvcResult registration = registerInitial("active-session@example.com");
+        Cookie sessionCookie = sessionCookie(registration);
+        String sessionId = decodeSessionId(sessionCookie);
+        MapSession session = sessionRepository.findById(sessionId);
+        Instant lastAccessBeforeActivity = Instant.now().minus(Duration.ofMinutes(20));
+        session.setLastAccessedTime(lastAccessBeforeActivity);
+        sessionRepository.save(session);
+
+        mockMvc.perform(get("/api/auth/me").cookie(sessionCookie))
+                .andExpect(status().isOk());
+
+        Instant lastAccessAfterActivity = sessionRepository.findById(sessionId).getLastAccessedTime();
+        org.junit.jupiter.api.Assertions.assertTrue(lastAccessAfterActivity.isAfter(lastAccessBeforeActivity));
+    }
+
+    @Test
+    void authenticatedUserCanManageOwnProfileAndChangePassword() throws Exception {
+        Cookie sessionCookie = sessionCookie(registerInitial("profile@example.com"));
+
+        mockMvc.perform(get("/api/profile").cookie(sessionCookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("profile@example.com"))
                 .andExpect(jsonPath("$.createdAt").exists())
                 .andExpect(jsonPath("$.passwordHash").doesNotExist());
 
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/profile")
-                        .session(session).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .cookie(sessionCookie).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"displayName\":\"Planwise User\",\"avatarUrl\":\"https://cdn.example.com/avatar.png\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.displayName").value("Planwise User"))
                 .andExpect(jsonPath("$.avatarUrl").value("https://cdn.example.com/avatar.png"));
 
-        MockHttpSession otherUserSession = (MockHttpSession) registerInitial("other-profile@example.com")
-                .getRequest().getSession(false);
-        mockMvc.perform(get("/api/profile").session(otherUserSession))
+        Cookie otherUserSessionCookie = sessionCookie(registerInitial("other-profile@example.com"));
+        mockMvc.perform(get("/api/profile").cookie(otherUserSessionCookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("other-profile@example.com"))
                 .andExpect(jsonPath("$.displayName").doesNotExist());
 
-        mockMvc.perform(post("/api/profile/password").session(session).with(csrf())
+        mockMvc.perform(post("/api/profile/password").cookie(sessionCookie).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"currentPassword\":\"correct-horse-battery-staple\",\"newPassword\":\"another-secure-password\"}"))
                 .andExpect(status().isNoContent());
@@ -165,19 +205,17 @@ class AuthControllerIT {
     @Test
     void profileEndpointsRequireAuthenticationAndRejectInvalidAvatarUrls() throws Exception {
         mockMvc.perform(get("/api/profile")).andExpect(status().isUnauthorized());
-        MockHttpSession session = (MockHttpSession) registerInitial("profile@example.com")
-                .getRequest().getSession(false);
+        Cookie sessionCookie = sessionCookie(registerInitial("profile@example.com"));
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/profile")
-                        .session(session).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .cookie(sessionCookie).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"displayName\":\"User\",\"avatarUrl\":\"http://example.com/avatar.png\"}"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void passwordChangeRejectsAnIncorrectCurrentPasswordWithAnActionableError() throws Exception {
-        MockHttpSession session = (MockHttpSession) registerInitial("profile@example.com")
-                .getRequest().getSession(false);
-        mockMvc.perform(post("/api/profile/password").session(session).with(csrf())
+        Cookie sessionCookie = sessionCookie(registerInitial("profile@example.com"));
+        mockMvc.perform(post("/api/profile/password").cookie(sessionCookie).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"currentPassword\":\"incorrect-current-password\",\"newPassword\":\"another-secure-password\"}"))
                 .andExpect(status().isBadRequest())
@@ -196,11 +234,14 @@ class AuthControllerIT {
                                 """))
                 .andExpect(status().isUnauthorized());
 
-        MockHttpSession existingSession = new MockHttpSession();
+        MapSession existingSession = sessionRepository.createSession();
         existingSession.setAttribute("pre-authentication", "preserve-unrelated-session-state");
+        sessionRepository.save(existingSession);
         String previousSessionId = existingSession.getId();
+        Cookie existingSessionCookie = new Cookie("SESSION", Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(previousSessionId.getBytes(StandardCharsets.UTF_8)));
         MvcResult login = mockMvc.perform(post("/api/auth/login")
-                        .session(existingSession)
+                        .cookie(existingSessionCookie)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -209,25 +250,24 @@ class AuthControllerIT {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        MockHttpSession authenticatedSession = (MockHttpSession) login.getRequest().getSession(false);
-        assertNotNull(authenticatedSession);
-        assertNotEquals(previousSessionId, authenticatedSession.getId(), "Login must rotate the session ID");
+        Cookie authenticatedSessionCookie = sessionCookie(login);
+        String authenticatedSessionId = decodeSessionId(authenticatedSessionCookie);
+        assertNotEquals(previousSessionId, authenticatedSessionId, "Login must rotate the session ID");
         org.junit.jupiter.api.Assertions.assertEquals("preserve-unrelated-session-state",
-                authenticatedSession.getAttribute("pre-authentication"));
-        mockMvc.perform(get("/api/auth/me").session(authenticatedSession))
+                sessionRepository.findById(authenticatedSessionId).getAttribute("pre-authentication"));
+        mockMvc.perform(get("/api/auth/me").cookie(authenticatedSessionCookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.role").value("OWNER"));
     }
 
     @Test
     void invitationIsSingleUseAndOnlyOwnerCanCreateOrRevokeInvitations() throws Exception {
-        MockHttpSession ownerSession = (MockHttpSession) registerInitial("owner@example.com")
-                .getRequest().getSession(false);
-        MvcResult created = createInvitation(ownerSession);
+        Cookie ownerSessionCookie = sessionCookie(registerInitial("owner@example.com"));
+        MvcResult created = createInvitation(ownerSessionCookie);
         JsonNode invite = objectMapper.readTree(created.getResponse().getContentAsString(StandardCharsets.UTF_8));
         String token = invite.get("token").asText();
         long invitationId = invite.get("id").asLong();
-        mockMvc.perform(get("/api/household/invitations").session(ownerSession))
+        mockMvc.perform(get("/api/household/invitations").cookie(ownerSessionCookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(1)))
                 .andExpect(jsonPath("$[0].tokenHash").doesNotExist());
@@ -240,8 +280,7 @@ class AuthControllerIT {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.role").value("MEMBER"))
                 .andReturn();
-        MockHttpSession memberSession = (MockHttpSession) memberRegistration.getRequest().getSession(false);
-        assertNotNull(memberSession);
+        Cookie memberSessionCookie = sessionCookie(memberRegistration);
 
         mockMvc.perform(post("/api/auth/register")
                         .with(csrf())
@@ -250,17 +289,17 @@ class AuthControllerIT {
                                 "second-member@example.com", "correct-horse-battery-staple", token))))
                 .andExpect(status().isBadRequest());
 
-        mockMvc.perform(post("/api/household/invitations").session(memberSession).with(csrf())
+        mockMvc.perform(post("/api/household/invitations").cookie(memberSessionCookie).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"validityDays\":7}"))
                 .andExpect(status().isForbidden());
-        mockMvc.perform(get("/api/household/invitations").session(memberSession))
+        mockMvc.perform(get("/api/household/invitations").cookie(memberSessionCookie))
                 .andExpect(status().isForbidden());
-        mockMvc.perform(delete("/api/household/invitations/{id}", invitationId).session(memberSession).with(csrf()))
+        mockMvc.perform(delete("/api/household/invitations/{id}", invitationId).cookie(memberSessionCookie).with(csrf()))
                 .andExpect(status().isForbidden());
 
-        MvcResult secondInvite = createInvitation(ownerSession);
+        MvcResult secondInvite = createInvitation(ownerSessionCookie);
         long secondInvitationId = objectMapper.readTree(secondInvite.getResponse().getContentAsString()).get("id").asLong();
-        mockMvc.perform(delete("/api/household/invitations/{id}", secondInvitationId).session(ownerSession).with(csrf()))
+        mockMvc.perform(delete("/api/household/invitations/{id}", secondInvitationId).cookie(ownerSessionCookie).with(csrf()))
                 .andExpect(status().isNoContent());
     }
 
@@ -312,12 +351,22 @@ class AuthControllerIT {
                 .andReturn();
     }
 
-    private MvcResult createInvitation(MockHttpSession ownerSession) throws Exception {
-        return mockMvc.perform(post("/api/household/invitations").session(ownerSession).with(csrf())
+    private MvcResult createInvitation(Cookie ownerSessionCookie) throws Exception {
+        return mockMvc.perform(post("/api/household/invitations").cookie(ownerSessionCookie).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"validityDays\":7}"))
                 .andExpect(status().isCreated())
                 .andReturn();
+    }
+
+    private Cookie sessionCookie(MvcResult result) {
+        Cookie cookie = result.getResponse().getCookie("SESSION");
+        assertNotNull(cookie, "Successful authentication must return a session cookie");
+        return cookie;
+    }
+
+    private String decodeSessionId(Cookie cookie) {
+        return new String(Base64.getUrlDecoder().decode(cookie.getValue()), StandardCharsets.UTF_8);
     }
 
     private record InvitationRegistrationRequest(String email, String password, String invitationToken) {

@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -23,10 +24,12 @@ import org.springframework.transaction.annotation.Transactional;
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.flyway.enabled=false",
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
-        "spring.jpa.show-sql=false"
+        "spring.jpa.show-sql=false",
+        "spring.session.store-type=none"
 })
 @AutoConfigureMockMvc
 @Transactional
+@Import(com.finance.planner.config.TestSessionConfiguration.class)
 class SecurityConfigurationTest {
 
     @Autowired

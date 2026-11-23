@@ -15,10 +15,11 @@ Do not silently broaden this product into a bank aggregator, accounting system, 
 - Frontend: Vue 3 + Vite; production assets are served by Nginx.
 - Backend: Spring Boot 3.3.5, Java 21, REST API and Spring Data JPA.
 - Database: PostgreSQL 16; household-scoped `assumptions`, `expense_categories`, `loans` and dependent schedules, evolved by Flyway.
-- Local orchestration: Docker Compose (`frontend`, `backend`, `db`).
+- Local orchestration: Docker Compose (`frontend`, `backend`, `db`, `redis`).
 - Forecast horizon: November 2026 through December of the selected end year (default December 2030; selectable 1–6 complete years after the partial 2026 starting year).
 - Backend Java is the single implementation of forecast calculations.
 - Authentication uses server-side sessions. Self-registration is always enabled and creates a new household; invitations join an existing household. Financial data is scoped by the authenticated household context.
+- HTTP sessions live in Redis with a 30-minute idle TTL; Redis AOF and a named volume preserve sessions across service restarts. PostgreSQL remains the source of truth for financial and identity records.
 - No bank integration or cloud deployment is implemented.
 
 ## Source-of-truth hierarchy

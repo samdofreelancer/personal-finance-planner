@@ -6,6 +6,7 @@ flowchart LR
   FE --> AUTHUI["AuthView<br/>register / login"]
   API --> AUTH["AuthController + AuthService"]
   AUTH --> IDDB["users + households<br/>memberships + invitations"]
+  API --> SESSION["Spring Session Redis<br/>30-minute idle timeout"]
   API --> AC["AssumptionController"]
   API --> LC["LoanController"]
   API --> FC["ForecastController"]
@@ -22,6 +23,7 @@ flowchart LR
   LS --> LREPO["LoanRepository<br/>Loan + repayment entities"]
   REPO --> DB[("PostgreSQL 16<br/>assumptions + income changes + expenses + loans + repayments")]
   IDDB --> DB
+  SESSION --> REDIS[("Redis 7<br/>AOF + persistent session volume")]
   IREPO --> DB
   EREPO --> DB
   LREPO --> DB
@@ -39,6 +41,7 @@ flowchart LR
     N
     API
     DB
+    REDIS
   end
 
   subgraph E2E["Isolated E2E · docker-compose.e2e.yml"]

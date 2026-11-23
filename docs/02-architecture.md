@@ -9,7 +9,7 @@
 | Presentation | Vue 3, Composition API, Vite | Form, validation phía client, metrics, chart, tables, CSV download |
 | Web edge | Nginx | Serve static frontend; reverse-proxy `/api` tới backend |
 | Application | Spring Boot 3.3.5, Java 21 | REST controllers, validation, assumptions persistence, forecast calculation, CSV generation |
-| Persistence | PostgreSQL 16, Spring Data JPA/Hibernate + Flyway | Lưu assumptions, income amount changes, expense categories/amount changes, nhiều loans và repayment entries |
+| Persistence | PostgreSQL 16, Spring Data JPA/Hibernate + Flyway; Redis 7 + Spring Session Redis | PostgreSQL lưu assumptions, income amount changes, expense categories/amount changes, loans và repayment entries; Redis lưu HTTP sessions |
 
 Không có microservice boundary. Không tạo service/domain boundaries chỉ để phản chiếu class; backend là một deployable unit.
 
@@ -42,7 +42,8 @@ Không có microservice boundary. Không tạo service/domain boundaries chỉ �
 - `frontend`: Nginx container, public HTTP port 80 theo compose hiện tại.
 - `backend`: Spring Boot container, port 8080 theo compose hiện tại.
 - `db`: PostgreSQL 16, volume `finance_planner_db_data`.
-- Backend chờ database healthcheck thành công trước khi khởi động.
+- `redis`: Redis 7, AOF persistence và volume `finance_planner_redis_data`; không publish port ra host.
+- Backend chờ PostgreSQL và Redis healthcheck thành công trước khi khởi động.
 
 ### Browser E2E automation (`e2e/`)
 
@@ -94,7 +95,7 @@ Các điểm dưới đây là trạng thái quan sát được từ source/conf
 | CORS | Explicit origins are configured in properties; verify actual environment-specific allowlist | Keep strict allowlist; document local origins |
 | Autosave consistency | UI request IDs suppress stale UI responses, but concurrent PUTs can still race at persistence | Serialize writes or implement server-side concurrency control |
 | Money arithmetic | ForecastService uses `BigDecimal` for January multiplier and HALF_UP rounding | Keep decimal-safe arithmetic end-to-end and explicit rounding |
-| Schema lifecycle | Flyway V1–V7 migrations; Hibernate `ddl-auto=validate` | Continue evolving schema only through reviewed migrations |
+| Schema lifecycle | Flyway V1–V8 migrations; Hibernate `ddl-auto=validate` | Continue evolving schema only through reviewed migrations |
 | Forecast source | Income and expense schedules are supplied as a JSON preview snapshot; loan schedules are loaded from PostgreSQL | Keep preview input explicit and non-persisting |
 | Automated tests | Backend Java is the only forecast calculation implementation. Meaningful backend unit/integration tests are required to verify its behavior. | Add and maintain backend tests for forecast, validation, persistence and API contracts |
 
@@ -109,7 +110,7 @@ Review finding source of truth: [`specs/001-review-findings-remediation/spec.md`
 
 ## Authentication and household data isolation
 
-- Spring Security uses server-side sessions, HttpOnly cookies and CSRF tokens for unsafe requests.
+- Spring Security uses server-side sessions persisted in Redis through Spring Session Redis, HttpOnly cookies and CSRF tokens for unsafe requests. The idle timeout is 30 minutes; active requests refresh the session, and backend restarts/deploys do not discard it. Redis AOF and its named volume preserve sessions across Redis container restarts.
 - `App.vue` restores the current session and routes unauthenticated users to `AuthView`; authenticated users use `PlannerView`.
 - Every self-registration creates a new household and an OWNER membership, regardless of how many accounts already exist. A valid single-use invitation instead creates a MEMBER in the inviter's household.
 - A newly created household is initialized lazily on first assumptions read with an empty financial profile (zero income baseline/savings, no expense categories and no loans). Reset-to-sample is a separate explicit action scoped to that household.

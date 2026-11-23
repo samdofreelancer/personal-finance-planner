@@ -39,6 +39,7 @@ const composeEnvironment = {
   POSTGRES_DB: 'personal_finance_planner_e2e',
   POSTGRES_USER: 'planner',
   POSTGRES_PASSWORD: e2eDatabasePassword,
+  REDIS_PASSWORD: 'e2e-only-redis-password',
 }
 let activeChild = null
 let receivedSignal = null
@@ -95,6 +96,7 @@ try {
     `POSTGRES_DB=${composeEnvironment.POSTGRES_DB}`,
     `POSTGRES_USER=${composeEnvironment.POSTGRES_USER}`,
     `POSTGRES_PASSWORD=${composeEnvironment.POSTGRES_PASSWORD}`,
+    `REDIS_PASSWORD=${composeEnvironment.REDIS_PASSWORD}`,
     '',
   ].join('\n'), { mode: 0o600 })
 

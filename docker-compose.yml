@@ -17,6 +17,23 @@ services:
       - finance-network
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    container_name: finance-planner-redis
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
+    volumes:
+      - finance_planner_redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - finance-network
+    restart: unless-stopped
+
   backend:
     build:
       context: ./backend
@@ -25,10 +42,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-personal_finance_planner}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-planner}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
       SERVER_PORT: 8080
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
@@ -53,6 +75,7 @@ services:
 
 volumes:
   finance_planner_db_data:
+  finance_planner_redis_data:
 
 networks:
   finance-network:

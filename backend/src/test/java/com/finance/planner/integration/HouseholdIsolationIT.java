@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.finance.planner.auth.RegisterRequest;
+import com.finance.planner.config.TestSessionConfiguration;
 import com.finance.planner.auth.UserRepository;
 import com.finance.planner.household.BootstrapLock;
 import com.finance.planner.household.BootstrapLockRepository;
@@ -24,13 +25,13 @@ import com.finance.planner.repository.IncomeAmountChangeRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -42,9 +43,11 @@ import org.springframework.test.web.servlet.MvcResult;
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.flyway.enabled=false",
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
-        "spring.jpa.show-sql=false"
+        "spring.jpa.show-sql=false",
+        "spring.session.store-type=none"
 })
 @AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(TestSessionConfiguration.class)
 class HouseholdIsolationIT {
 
     @Autowired private MockMvc mockMvc;
@@ -76,63 +79,63 @@ class HouseholdIsolationIT {
 
     @Test
     void newlyRegisteredHouseholdStartsWithEmptyFinancialInputsAndNoSampleLoans() throws Exception {
-        MockHttpSession session = registerSelfRegisteredOwner("new-user@example.com");
+        Cookie session = registerSelfRegisteredOwner("new-user@example.com");
 
-        mockMvc.perform(get("/api/assumptions").session(session))
+        mockMvc.perform(get("/api/assumptions").cookie(session))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.incomeChanges", org.hamcrest.Matchers.hasSize(1)))
                 .andExpect(jsonPath("$.incomeChanges[0].amount").value(0))
                 .andExpect(jsonPath("$.startingSavings").value(0))
                 .andExpect(jsonPath("$.expenses", org.hamcrest.Matchers.hasSize(0)));
-        mockMvc.perform(get("/api/loans").session(session))
+        mockMvc.perform(get("/api/loans").cookie(session))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(0)));
     }
 
     @Test
     void assumptionsExpensesLoansForecastAndCsvAreIsolatedByHousehold() throws Exception {
-        MockHttpSession firstSession = registerSelfRegisteredOwner("owner-one@example.com");
-        MockHttpSession secondSession = registerSelfRegisteredOwner("owner-two@example.com");
+        Cookie firstSession = registerSelfRegisteredOwner("owner-one@example.com");
+        Cookie secondSession = registerSelfRegisteredOwner("owner-two@example.com");
 
         saveAssumptions(firstSession, 1_000L, "Food One", 100L);
         saveAssumptions(secondSession, 2_000L, "Food Two", 200L);
         saveLoans(firstSession, "Loan One", 1_000L, 100L, 10L);
         saveLoans(secondSession, "Loan Two", 2_000L, 200L, 20L);
 
-        mockMvc.perform(get("/api/assumptions").session(firstSession))
+        mockMvc.perform(get("/api/assumptions").cookie(firstSession))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.incomeChanges[0].amount").value(1_000))
                 .andExpect(jsonPath("$.expenses[0].name").value("Food One"));
-        mockMvc.perform(get("/api/assumptions").session(secondSession))
+        mockMvc.perform(get("/api/assumptions").cookie(secondSession))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.incomeChanges[0].amount").value(2_000))
                 .andExpect(jsonPath("$.expenses[0].name").value("Food Two"));
 
-        MvcResult firstLoans = mockMvc.perform(get("/api/loans").session(firstSession))
+        MvcResult firstLoans = mockMvc.perform(get("/api/loans").cookie(firstSession))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(1)))
                 .andExpect(jsonPath("$[0].name").value("Loan One"))
                 .andReturn();
-        mockMvc.perform(get("/api/loans").session(secondSession))
+        mockMvc.perform(get("/api/loans").cookie(secondSession))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(1)))
                 .andExpect(jsonPath("$[0].name").value("Loan Two"));
 
         String firstAssumptions = assumptionsJson(1_000L, "Food One", 100L);
         String secondAssumptions = assumptionsJson(2_000L, "Food Two", 200L);
-        mockMvc.perform(post("/api/forecast").session(firstSession).with(csrf())
+        mockMvc.perform(post("/api/forecast").cookie(firstSession).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(firstAssumptions))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.months[0].loanPayment").value(110));
-        mockMvc.perform(post("/api/forecast").session(secondSession).with(csrf())
+        mockMvc.perform(post("/api/forecast").cookie(secondSession).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(secondAssumptions))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.months[0].loanPayment").value(220));
 
-        String firstCsv = mockMvc.perform(post("/api/export/csv").session(firstSession).with(csrf())
+        String firstCsv = mockMvc.perform(post("/api/export/csv").cookie(firstSession).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(firstAssumptions))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
-        String secondCsv = mockMvc.perform(post("/api/export/csv").session(secondSession).with(csrf())
+        String secondCsv = mockMvc.perform(post("/api/export/csv").cookie(secondSession).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(secondAssumptions))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         org.junit.jupiter.api.Assertions.assertTrue(firstCsv.contains(",110,"));
@@ -146,8 +149,8 @@ class HouseholdIsolationIT {
 
     @Test
     void foreignLoanIdsAreRejectedAndSeedResetDoesNotTouchAnotherHousehold() throws Exception {
-        MockHttpSession firstSession = registerSelfRegisteredOwner("owner-one@example.com");
-        MockHttpSession secondSession = registerSelfRegisteredOwner("owner-two@example.com");
+        Cookie firstSession = registerSelfRegisteredOwner("owner-one@example.com");
+        Cookie secondSession = registerSelfRegisteredOwner("owner-two@example.com");
         MvcResult firstLoanResult = saveLoans(firstSession, "Loan One", 1_000L, 100L, 10L);
         MvcResult secondLoanResult = saveLoans(secondSession, "Loan Two", 2_000L, 200L, 20L);
         long firstLoanId = objectMapper.readTree(firstLoanResult.getResponse().getContentAsString()).get(0).get("id").asLong();
@@ -155,13 +158,13 @@ class HouseholdIsolationIT {
         long foreignLoanId = secondLoan.get("id").asLong();
         long foreignRepaymentId = secondLoan.get("repayments").get(0).get("id").asLong();
 
-        mockMvc.perform(put("/api/loans").session(firstSession).with(csrf())
+        mockMvc.perform(put("/api/loans").cookie(firstSession).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("[{\"id\":" + foreignLoanId
                                 + ",\"name\":\"Attempted takeover\",\"openingPrincipal\":1,\"repayments\":[]}]"))
                 .andExpect(status().isBadRequest());
 
-        mockMvc.perform(put("/api/loans").session(firstSession).with(csrf())
+        mockMvc.perform(put("/api/loans").cookie(firstSession).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("[{\"id\":" + firstLoanId
                                 + ",\"name\":\"Loan One\",\"openingPrincipal\":1000,\"repayments\":[{\"id\":"
@@ -171,33 +174,33 @@ class HouseholdIsolationIT {
 
         saveAssumptions(firstSession, 1_000L, "Food One", 100L);
         saveAssumptions(secondSession, 2_000L, "Food Two", 200L);
-        mockMvc.perform(post("/api/assumptions/seed").session(firstSession).with(csrf()))
+        mockMvc.perform(post("/api/assumptions/seed").cookie(firstSession).with(csrf()))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/assumptions").session(secondSession))
+        mockMvc.perform(get("/api/assumptions").cookie(secondSession))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.incomeChanges[0].amount").value(2_000))
                 .andExpect(jsonPath("$.expenses[0].name").value("Food Two"));
-        mockMvc.perform(get("/api/loans").session(secondSession))
+        mockMvc.perform(get("/api/loans").cookie(secondSession))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(1)))
                 .andExpect(jsonPath("$[0].name").value("Loan Two"));
     }
 
-    private MockHttpSession registerSelfRegisteredOwner(String email) throws Exception {
+    private Cookie registerSelfRegisteredOwner(String email) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/register").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new RegisterRequest(
                                 email, "correct-horse-battery-staple"))))
                 .andExpect(status().isCreated())
                 .andReturn();
-        MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);
+        Cookie session = result.getResponse().getCookie("SESSION");
         assertNotNull(session);
         return session;
     }
 
-    private void saveAssumptions(MockHttpSession session, long salary, String expenseName, long amount) throws Exception {
-        mockMvc.perform(put("/api/assumptions").session(session).with(csrf())
+    private void saveAssumptions(Cookie session, long salary, String expenseName, long amount) throws Exception {
+        mockMvc.perform(put("/api/assumptions").cookie(session).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(assumptionsJson(salary, expenseName, amount)))
                 .andExpect(status().isOk());
@@ -210,9 +213,9 @@ class HouseholdIsolationIT {
                 """.formatted(salary, expenseName, amount);
     }
 
-    private MvcResult saveLoans(MockHttpSession session, String name, long principal,
+    private MvcResult saveLoans(Cookie session, String name, long principal,
                                 long principalPayment, long interestPayment) throws Exception {
-        return mockMvc.perform(put("/api/loans").session(session).with(csrf())
+        return mockMvc.perform(put("/api/loans").cookie(session).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("[{\"householdId\":999,\"name\":\"" + name + "\",\"openingPrincipal\":" + principal
                                 + ",\"repayments\":[{\"dueDate\":\"2026-11-30\",\"principalAmount\":"

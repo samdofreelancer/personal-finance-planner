@@ -22,6 +22,8 @@ Base path: `/api`. In Docker/local production-like use, the browser calls Nginx 
 | POST | `/api/forecast` | JSON `AssumptionDTO` including `expenses[]` | None | `ForecastResponse` (`months`, `annual`); loan schedules loaded from PostgreSQL |
 | POST | `/api/export/csv` | JSON `AssumptionDTO` including `expenses[]` | None | `text/csv` attachment using the supplied expense schedules |
 
+Authenticated sessions are stored in Redis (`planwise:session`) through Spring Session Redis. The inactivity timeout is 30 minutes and is refreshed by authenticated requests; Redis AOF and its persistent Compose volume keep sessions available across backend/Redis restarts until logout or expiry.
+
 ## Forecast input semantics — important
 
 The frontend sends a complete assumptions snapshot as JSON to `POST /api/forecast` and `POST /api/export/csv`. The backend validates that snapshot and calculates salary and expense assumptions directly from it. Both operations load persisted loan schedules through `LoanScheduleService`; they do not load saved assumptions for preview calculations.
