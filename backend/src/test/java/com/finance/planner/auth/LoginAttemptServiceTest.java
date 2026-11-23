@@ -11,11 +11,11 @@ import org.junit.jupiter.api.Test;
 
 class LoginAttemptServiceTest {
 
-    private LoginAttemptService service;
+    private InMemoryLoginAttemptService service;
 
     @BeforeEach
     void setUp() {
-        service = new LoginAttemptService(Clock.fixed(Instant.parse("2026-11-21T00:00:00Z"), ZoneOffset.UTC));
+        service = new InMemoryLoginAttemptService(Clock.fixed(Instant.parse("2026-11-21T00:00:00Z"), ZoneOffset.UTC));
     }
 
     @Test

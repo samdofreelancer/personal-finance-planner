@@ -17,6 +17,7 @@ Tài liệu chuẩn của Personal Finance Planner. Đọc theo thứ tự dư�
 | [12 — Tailscale network flow](12-tailscale-network-flow.md) | Sơ đồ và luồng request khi truy cập app qua tailnet |
 | [13 — New machine deployment](13-new-machine-deployment.md) | Cài đặt PC Windows mới, backup/restore PostgreSQL, triển khai Docker và cấu hình Tailscale/auto-start |
 | [14 — Redis operations](14-redis-operations.md) | Session persistence, backup policy, disaster recovery và health checks cho Redis |
+| [15 — Backup, deployment & operations](15-backup-deployment-operations.md) | PostgreSQL backup/restore, lịch backup Windows, deploy local có rollback và health report |
 | [Architecture decisions](decisions/README.md) | Quyết định đã chốt, đang đề xuất hoặc cần xem xét |
 | [Diagrams](diagrams/) | Diagram source; dùng draw.io để render/chỉnh sửa trực quan |
 

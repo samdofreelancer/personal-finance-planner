@@ -164,6 +164,36 @@ async function verifyRedisSessionPersistence() {
   console.log('  PASS: authenticated session survived Redis container recreation (AOF + named volume).')
 }
 
+async function verifyRedisLoginRateLimit() {
+  console.log('\nVerifying Redis-backed login throttling...')
+  const csrfResponse = await fetch(`${frontendUrl}/api/csrf`)
+  if (!csrfResponse.ok) throw new Error(`CSRF bootstrap failed with HTTP ${csrfResponse.status}.`)
+  const csrf = await csrfResponse.json()
+  const csrfCookie = setCookieValue(csrfResponse, 'XSRF-TOKEN')
+  const email = `rate-limit-${Date.now()}@example.test`
+  const request = () => fetch(`${frontendUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Cookie: csrfCookie,
+      'X-XSRF-TOKEN': csrf.token,
+    },
+    body: JSON.stringify({ email, password: 'incorrect-password-for-e2e' }),
+  })
+
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    const response = await request()
+    if (response.status !== 401) {
+      throw new Error(`Failed login attempt ${attempt} returned HTTP ${response.status}; expected 401.`)
+    }
+  }
+  const blocked = await request()
+  if (blocked.status !== 429) {
+    throw new Error(`Sixth failed login returned HTTP ${blocked.status}; expected Redis rate-limit HTTP 429.`)
+  }
+  console.log('  PASS: five failed logins are allowed; the sixth is throttled by Redis.')
+}
+
 let exitCode = 1
 let stackStarted = false
 
@@ -209,6 +239,7 @@ try {
     ], e2eDirectory)
   }
 
+  if (exitCode === 0) await verifyRedisLoginRateLimit()
   if (exitCode === 0) await verifyRedisSessionPersistence()
 } catch (error) {
   console.error(`\nE2E execution failed: ${error.message}`)

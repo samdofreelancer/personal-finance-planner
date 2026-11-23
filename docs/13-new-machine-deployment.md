@@ -107,13 +107,10 @@ Không chạy `docker compose down -v` và không xóa volume `finance_planner_d
 Chạy từ thư mục repository trên laptop nguồn:
 
 ```powershell
-$backup = Join-Path $PWD 'planner-transfer.dump'
-docker exec finance-planner-db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc -f /tmp/planner-transfer.dump'
-if ($LASTEXITCODE -ne 0) { throw 'pg_dump failed' }
-docker cp finance-planner-db:/tmp/planner-transfer.dump $backup
-docker exec finance-planner-db rm -f /tmp/planner-transfer.dump
-if (-not (Test-Path $backup) -or (Get-Item $backup).Length -eq 0) { throw 'Backup file missing or empty' }
-Get-FileHash $backup -Algorithm SHA256
+./scripts/backup-postgres.ps1 -BackupDirectory (Join-Path $PWD 'backups\transfer')
+$backup = Get-ChildItem .\backups\transfer -Filter '*.dump' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+if (-not $backup) { throw 'Verified backup archive not found' }
+Get-FileHash $backup.FullName -Algorithm SHA256
 ```
 
 Lưu file dump và checksum ở nơi an toàn, mã hóa khi chuyển qua USB/cloud. File backup chứa dữ liệu tài chính hộ gia đình; không commit vào Git. Sau khi xác nhận backup đã an toàn, có thể khởi động lại app nguồn nếu vẫn cần dùng laptop:
@@ -157,13 +154,10 @@ if ($state -ne 'healthy') { throw 'PostgreSQL did not become healthy' }
 
 ### 5.2. Restore backup
 
-Copy dump vào container rồi restore. Thông tin database/user được lấy từ biến môi trường của container, không hardcode mật khẩu vào lệnh:
+Restore helper kiểm tra checksum và chỉ cho phép restore mặc định khi public schema của database đích còn rỗng:
 
 ```powershell
-docker cp C:\SecureTransfer\planner-transfer.dump finance-planner-db:/tmp/planner-transfer.dump
-docker exec finance-planner-db sh -c 'pg_restore --no-owner --role="$POSTGRES_USER" -U "$POSTGRES_USER" -d "$POSTGRES_DB" /tmp/planner-transfer.dump'
-if ($LASTEXITCODE -ne 0) { throw 'pg_restore failed; inspect the restore output before proceeding' }
-docker exec finance-planner-db rm -f /tmp/planner-transfer.dump
+./scripts/restore-postgres.ps1 -BackupPath C:\SecureTransfer\planwise-postgres-YYYYMMDD-HHMMSS.dump
 ```
 
 Lệnh trên dành cho database đích mới, rỗng. **Không chạy lặp lại trên database đã có dữ liệu**: restore lần hai có thể báo object đã tồn tại hoặc tạo trạng thái không mong muốn. Nếu restore thất bại, dừng tại đây và điều tra; không xóa volume theo phản xạ.

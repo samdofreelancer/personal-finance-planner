@@ -7,6 +7,8 @@ backend/.classpath
 !.env.example
 *.dump
 *.backup
+/backups/
+/.backup-staging/
 *.sqlite
 *.sqlite3
 *.db

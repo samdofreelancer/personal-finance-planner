@@ -2,7 +2,7 @@
 
 ## Purpose and data classification
 
-Planwise uses Redis 7 only as the Spring Session store (`planwise:session`). PostgreSQL remains the source of truth for user identities, household membership and all financial data. Redis contains authentication session identifiers, security contexts and CSRF/session attributes; treat its contents as bearer credentials.
+Planwise uses Redis 7 for Spring Session (`planwise:session`) and login-failure throttling (`planwise:security:login-failures:*`). PostgreSQL remains the source of truth for user identities, household membership and all financial data. Session values are bearer credentials. Rate-limit keys are SHA-256 hashes of the immediate peer address and normalized email; raw email addresses are not stored in Redis keys. The backend does not trust arbitrary forwarded-IP headers from clients.
 
 ## Persistence and backup policy
 
@@ -10,7 +10,7 @@ Planwise uses Redis 7 only as the Spring Session store (`planwise:session`). Pos
 - AOF persistence is enabled and `/data` is mounted to the named `finance_planner_redis_data` Compose volume. This protects sessions against normal Redis/backend container restarts and recreation.
 - **Do not export or off-site-backup Redis session contents by default.** A copied session store can contain still-valid bearer sessions. Session loss is recoverable by signing in again; no household or financial records are stored in Redis.
 - Back up PostgreSQL independently and protect those backups as sensitive financial data. Redis AOF is persistence, not a substitute for the PostgreSQL backup policy.
-- Login-failure throttling currently uses a bounded in-process counter (5 failures per 15-minute window). It protects a single backend instance but resets on backend restart and is not shared across multiple replicas; move it to Redis before horizontally scaling the backend.
+- Login-failure throttling uses Redis counters with an atomic `INCR` + first-write `EXPIRE`: five failed attempts per client-address/email key within a 15-minute fixed window; a successful login clears that key. All backend instances share the same limit. If Redis is unavailable, login throttling fails closed rather than silently disabling the control.
 
 ## Normal operation checks
 
@@ -22,6 +22,8 @@ docker compose exec -T redis sh -c 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli IN
 ```
 
 Expected Redis response is `PONG`; `aof_enabled:1` confirms AOF is active. Backend readiness checks PostgreSQL and Redis. Liveness checks only the backend process so a Redis outage does not trigger an unnecessary liveness restart loop. Backend and frontend Compose healthchecks gate startup in dependency order.
+
+Run `./scripts/health-report.ps1` for a local operational snapshot: Compose health, backend readiness, Redis AOF status, container CPU/memory and Docker disk usage. Docker JSON logs are rotated at 10 MB per file with five files retained per service.
 
 ## Recovery when Redis data is corrupt or its volume is lost
 
@@ -56,4 +58,4 @@ Never remove `finance_planner_db_data` as part of Redis recovery. Never use `doc
 
 ## CI recovery test
 
-The isolated Playwright runner registers a synthetic account, then restarts the E2E backend and Redis containers. It verifies that the same authenticated session remains valid after both restarts. The E2E PostgreSQL and Redis volumes are separate from local application volumes.
+The isolated Playwright runner verifies Redis login throttling (five failed logins allowed; sixth receives HTTP 429), registers a synthetic account, then restarts the E2E backend and Redis containers. It verifies that the same authenticated session remains valid after both restarts. The E2E PostgreSQL and Redis volumes are separate from local application volumes.

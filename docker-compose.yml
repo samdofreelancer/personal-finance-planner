@@ -16,6 +16,11 @@ services:
     networks:
       - finance-network
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   redis:
     image: redis:7-alpine
@@ -44,8 +49,14 @@ services:
     networks:
       - finance-network
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   backend:
+    image: planwise/backend:local
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -68,6 +79,11 @@ services:
     networks:
       - finance-network
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/actuator/health/readiness"]
       interval: 10s
@@ -76,6 +92,7 @@ services:
       start_period: 40s
 
   frontend:
+    image: planwise/frontend:local
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -90,6 +107,11 @@ services:
     networks:
       - finance-network
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
       interval: 10s
