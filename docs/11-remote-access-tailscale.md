@@ -14,10 +14,12 @@ Windows host (Tailscale Serve)
           | http://127.0.0.1:80
           v
 Docker Nginx -> Spring Boot -> PostgreSQL
+                         |
+                         +-> Redis (HTTP sessions)
 ```
 
 - Không cần domain riêng, hosting, IP tĩnh hoặc port forwarding trên router.
-- PostgreSQL và Spring Boot chỉ nằm trong Docker network; không publish port ra host.
+- PostgreSQL, Redis và Spring Boot chỉ nằm trong Docker network; không publish port ra host.
 - Nginx chỉ publish trên `127.0.0.1:80`, không mở trực tiếp cho thiết bị LAN.
 - Không bật Tailscale Funnel. Funnel là chế độ public Internet, không phù hợp với ứng dụng tài chính cá nhân.
 - Máy Windows phải bật, có Internet và Docker/Tailscale đang chạy thì mới truy cập được.
@@ -93,8 +95,9 @@ Kiểm thử cả khi điện thoại dùng 4G/5G, đã tắt Wi-Fi. Nếu truy 
 
 - Giữ Windows host bật và không để máy ngủ khi cần truy cập từ xa.
 - Giới hạn thành viên/thiết bị trong tailnet; không chia sẻ URL như một website public.
-- Ứng dụng hiện chưa có đăng nhập người dùng riêng. Tailscale giới hạn lớp mạng, nhưng không thay thế authentication/authorization ở cấp ứng dụng. Chỉ thêm thiết bị cá nhân đáng tin cậy vào tailnet; nếu chia sẻ cho người khác, cần thiết kế đăng nhập ứng dụng trước.
+- Ứng dụng có đăng nhập/đăng ký riêng theo từng household. Tailscale giới hạn lớp mạng, không thay thế authentication/authorization ở cấp ứng dụng. Chỉ thêm thiết bị/người dùng đáng tin cậy vào tailnet.
 - Không publish cổng `8080` (backend) hoặc `5432` (PostgreSQL).
+- Redis chỉ truy cập được từ Docker network; không publish cổng `6379`. Production session cookie mặc định bật `Secure`, `HttpOnly`, `SameSite=Lax`; chỉ development overlay mới tắt `Secure` cho HTTP localhost.
 - Không commit Tailscale auth key, token hoặc secret vào Git.
 - Sao lưu PostgreSQL định kỳ; Tailscale không phải giải pháp backup.
 

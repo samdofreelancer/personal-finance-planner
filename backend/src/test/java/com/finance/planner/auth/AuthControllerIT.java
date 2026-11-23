@@ -327,6 +327,21 @@ class AuthControllerIT {
     }
 
     @Test
+    void issuedSessionCookieCarriesHttpOnlySecureAndSameSiteLaxAttributes() throws Exception {
+        MvcResult registration = registerInitial("secure-cookie@example.com");
+
+        String sessionSetCookie = registration.getResponse().getHeaders("Set-Cookie").stream()
+                .filter(header -> header.startsWith("SESSION="))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("SESSION Set-Cookie header was not returned"));
+
+        org.junit.jupiter.api.Assertions.assertTrue(sessionSetCookie.contains("HttpOnly"), sessionSetCookie);
+        org.junit.jupiter.api.Assertions.assertTrue(sessionSetCookie.contains("Secure"), sessionSetCookie);
+        org.junit.jupiter.api.Assertions.assertTrue(sessionSetCookie.contains("SameSite=Lax"), sessionSetCookie);
+        org.junit.jupiter.api.Assertions.assertTrue(sessionSetCookie.contains("Path=/"), sessionSetCookie);
+    }
+
+    @Test
     void csrfCookieIsReadableSecureAndSameSiteLax() throws Exception {
         MvcResult result = mockMvc.perform(get("/api/csrf"))
                 .andExpect(status().isOk())

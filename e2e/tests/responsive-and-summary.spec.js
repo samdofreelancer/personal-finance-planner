@@ -118,7 +118,7 @@ test('uses single-purpose rows in the mobile drawer and keeps the header unclutt
   await expect(page.getByRole('button', { name: 'Mở menu điều hướng' })).toBeHidden()
   await expect(page.locator('.topbar-actions .button')).toHaveCount(0)
   await expect(page.locator('.sidebar .drawer-actions')).toBeVisible()
-  const desktopActionRows = await page.locator('.sidebar .drawer-action').evaluateAll((buttons) => buttons.map((button) => ({
+  const desktopActionRows = await page.locator('.drawer-actions .drawer-action').evaluateAll((buttons) => buttons.map((button) => ({
     top: button.getBoundingClientRect().top,
     left: button.getBoundingClientRect().left,
     width: button.getBoundingClientRect().width,
@@ -126,6 +126,9 @@ test('uses single-purpose rows in the mobile drawer and keeps the header unclutt
   })))
   expect(desktopActionRows).toHaveLength(3)
   expect(desktopActionRows.every((button, index) => button.width > 150 && button.height >= 48 && (index === 0 || button.top > desktopActionRows[index - 1].top))).toBe(true)
+  const desktopLogout = page.locator('.drawer-logout-area .drawer-action')
+  await expect(desktopLogout).toBeVisible()
+  expect(await desktopLogout.evaluate((button) => button.getBoundingClientRect().top)).toBeGreaterThan(desktopActionRows.at(-1).top)
   await expect(page.locator('#monthly-table tfoot tr')).toContainText('Tổng cộng kỳ')
   await expect(page.locator('#monthly-table tfoot tr th')).toHaveCSS('font-weight', '800')
   await expect(page.locator('#monthly-table thead th').first()).toHaveCSS('position', 'sticky')

@@ -20,11 +20,22 @@ services:
   redis:
     image: redis:7-alpine
     container_name: finance-planner-redis
-    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}"]
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
     volumes:
       - finance_planner_redis_data:/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      # The official image entrypoint fixes /data ownership before dropping to
+      # the unprivileged redis account.
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETUID
+      - SETGID
     healthcheck:
       test: ["CMD-SHELL", "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping | grep -q PONG"]
       interval: 5s
@@ -57,6 +68,12 @@ services:
     networks:
       - finance-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/actuator/health/readiness"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
 
   frontend:
     build:
@@ -64,7 +81,8 @@ services:
       dockerfile: Dockerfile
     container_name: finance-planner-frontend
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       # Bind only to the host loopback. Remote access is provided privately by
       # Tailscale Serve; the app is not directly exposed to the LAN.
@@ -72,6 +90,12 @@ services:
     networks:
       - finance-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
 
 volumes:
   finance_planner_db_data:

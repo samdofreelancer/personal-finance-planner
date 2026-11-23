@@ -21,6 +21,7 @@ services:
 
   redis:
     container_name: finance-planner-e2e-redis
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "e2e-only-redis-password"]
     environment:
       REDIS_PASSWORD: e2e-only-redis-password
 

@@ -56,6 +56,12 @@
             <artifactId>spring-session-data-redis</artifactId>
         </dependency>
 
+        <!-- Internal readiness/liveness endpoints for Compose and orchestration. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
         <!-- Versioned, data-preserving PostgreSQL schema migrations. -->
         <dependency>
             <groupId>org.flywaydb</groupId>

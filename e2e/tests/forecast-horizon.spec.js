@@ -9,7 +9,7 @@ test('changing the forecast horizon updates every dashboard section and persists
     }
   })
 
-  const horizon = page.getByLabel('Thời gian dự phóng')
+  const horizon = page.locator('#forecastYears')
   await expect(horizon).toBeVisible()
   await expect(horizon.locator('option')).toHaveCount(6)
   await expect(horizon).toHaveValue('4')
@@ -30,7 +30,7 @@ test('changing the forecast horizon updates every dashboard section and persists
   await expect(page.locator('#save-status')).toContainText('Đã lưu trên máy chủ')
   await page.reload()
 
-  await expect(page.getByLabel('Thời gian dự phóng')).toHaveValue('2')
+  await expect(page.locator('#forecastYears')).toHaveValue('2')
   await expect(page.locator('#monthly-table tbody tr')).toHaveCount(26)
   await expect(page.locator('#annual-table tbody tr')).toHaveCount(3)
   await expect(page.locator('.outlook-period').first()).toContainText('11/2026 — 12/2028')

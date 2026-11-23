@@ -85,8 +85,19 @@ try {
     }
 
     Invoke-Check 'SonarQube Docker Compose configuration validation' {
-        docker compose -f docker-compose.sonar.yml config --quiet
-        if ($LASTEXITCODE -ne 0) { throw "SonarQube Compose config exited with code $LASTEXITCODE" }
+        $validationFolderName = ".e2e-tmp-sonar-$([guid]::NewGuid().ToString('N'))"
+        $validationDirectory = Join-Path $repoRoot $validationFolderName
+        $validationEnvFile = Join-Path $validationDirectory '.env'
+        try {
+            # Compose validation only needs a non-empty value; never require or
+            # copy the user's real Sonar credential into a verification process.
+            New-Item -ItemType Directory -Path $validationDirectory -Force | Out-Null
+            Set-Content -LiteralPath $validationEnvFile -Value 'SONAR_DB_PASSWORD=compose-validation-only' -Encoding ascii
+            docker compose --env-file "$validationFolderName/.env" -f docker-compose.sonar.yml config --quiet
+            if ($LASTEXITCODE -ne 0) { throw "SonarQube Compose config exited with code $LASTEXITCODE" }
+        } finally {
+            Remove-Item -LiteralPath $validationDirectory -Recurse -Force -ErrorAction SilentlyContinue
+        }
     }
 
     if ($DockerBuild) {

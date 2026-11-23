@@ -14,6 +14,7 @@ const dockerE2eDirectory = process.platform === 'win32'
 const projectName = 'personal-finance-planner-e2e'
 const frontendUrl = 'http://127.0.0.1:18088'
 const apiUrl = `${frontendUrl}/api/auth/bootstrap`
+const readinessUrl = 'http://127.0.0.1:18080/actuator/health/readiness'
 // Stable across runs because the isolated E2E-only PostgreSQL volume persists.
 const e2eDatabasePassword = 'planner-e2e-local-only'
 
@@ -76,9 +77,14 @@ async function waitForStack() {
   while (Date.now() < deadline) {
     if (receivedSignal) throw new Error(`Interrupted by ${receivedSignal}.`)
     try {
-      const [frontend, api] = await Promise.all([fetch(frontendUrl), fetch(apiUrl)])
-      if (frontend.ok && api.ok) return
-      lastError = new Error(`Frontend HTTP ${frontend.status}; API HTTP ${api.status}`)
+      const [frontend, api, readiness] = await Promise.all([
+        fetch(frontendUrl),
+        fetch(apiUrl),
+        fetch(readinessUrl),
+      ])
+      const health = readiness.ok ? await readiness.json() : null
+      if (frontend.ok && api.ok && readiness.ok && health?.status === 'UP') return
+      lastError = new Error(`Frontend HTTP ${frontend.status}; API HTTP ${api.status}; readiness ${health?.status ?? readiness.status}`)
     } catch (error) {
       lastError = error
     }
@@ -86,6 +92,76 @@ async function waitForStack() {
   }
 
   throw new Error(`E2E stack did not become ready within 180 seconds: ${lastError}`)
+}
+
+function setCookieValue(response, name) {
+  const headers = response.headers.getSetCookie?.() ?? [response.headers.get('set-cookie') ?? '']
+  const header = headers.find((value) => value.startsWith(`${name}=`))
+  if (!header) throw new Error(`${name} cookie was not returned.`)
+  return header.split(';', 1)[0]
+}
+
+async function waitForSession(apiSessionCookie, expectedEmail, description) {
+  const deadline = Date.now() + 90_000
+  let lastStatus = 'no response'
+
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(`${frontendUrl}/api/auth/me`, {
+        headers: { Cookie: apiSessionCookie },
+      })
+      lastStatus = `HTTP ${response.status}`
+      if (response.ok) {
+        const user = await response.json()
+        if (user.email !== expectedEmail) throw new Error('Session resolved to an unexpected user.')
+        return
+      }
+    } catch (error) {
+      if (error.message.includes('unexpected user')) throw error
+      lastStatus = error.message
+    }
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 1_000))
+  }
+
+  throw new Error(`${description} did not recover the authenticated session within 90 seconds (${lastStatus}).`)
+}
+
+async function verifyRedisSessionPersistence() {
+  console.log('\nVerifying Redis-backed session persistence across service restarts...')
+  const csrfResponse = await fetch(`${frontendUrl}/api/csrf`)
+  if (!csrfResponse.ok) throw new Error(`CSRF bootstrap failed with HTTP ${csrfResponse.status}.`)
+  const csrf = await csrfResponse.json()
+  const csrfCookie = setCookieValue(csrfResponse, 'XSRF-TOKEN')
+  const email = `redis-session-${Date.now()}@example.test`
+  const registration = await fetch(`${frontendUrl}/api/auth/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Cookie: csrfCookie,
+      'X-XSRF-TOKEN': csrf.token,
+    },
+    body: JSON.stringify({ email, password: 'redis-session-smoke-password' }),
+  })
+  if (!registration.ok) {
+    throw new Error(`Synthetic session registration failed with HTTP ${registration.status}: ${await registration.text()}`)
+  }
+
+  const sessionCookie = setCookieValue(registration, 'SESSION')
+  await waitForSession(sessionCookie, email, 'Initial Redis session check')
+
+  let restartCode = await run('docker', ['restart', 'finance-planner-e2e-backend'])
+  if (restartCode !== 0) throw new Error('Could not restart the isolated E2E backend container.')
+  await waitForStack()
+  await waitForSession(sessionCookie, email, 'Backend restart')
+  console.log('  PASS: authenticated session survived backend restart.')
+
+  // Redis uses appendfsync everysec; allow the registration/session write to
+  // reach the AOF before deliberately restarting the isolated Redis container.
+  await new Promise((resolveDelay) => setTimeout(resolveDelay, 1_500))
+  restartCode = await run('docker', [...composePrefix, 'up', '-d', '--force-recreate', 'redis'])
+  if (restartCode !== 0) throw new Error('Could not recreate the isolated E2E Redis container.')
+  await waitForSession(sessionCookie, email, 'Redis AOF restart')
+  console.log('  PASS: authenticated session survived Redis container recreation (AOF + named volume).')
 }
 
 let exitCode = 1
@@ -132,6 +208,8 @@ try {
       ...process.argv.slice(2),
     ], e2eDirectory)
   }
+
+  if (exitCode === 0) await verifyRedisSessionPersistence()
 } catch (error) {
   console.error(`\nE2E execution failed: ${error.message}`)
   exitCode = 1

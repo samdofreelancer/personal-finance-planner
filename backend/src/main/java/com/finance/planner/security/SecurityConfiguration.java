@@ -22,7 +22,7 @@ import org.springframework.beans.factory.annotation.Value;
 @Configuration
 public class SecurityConfiguration {
 
-    @Value("${server.servlet.session.cookie.secure:false}")
+    @Value("${server.servlet.session.cookie.secure:true}")
     private boolean secureCookies;
 
     @Bean
@@ -61,6 +61,7 @@ public class SecurityConfiguration {
                         .sessionFixation(sessionFixation -> sessionFixation.changeSessionId()))
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
                 .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/actuator/health/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/csrf", "/api/auth/bootstrap").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
                         .anyRequest().authenticated())

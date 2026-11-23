@@ -15,6 +15,10 @@ RUN --mount=type=cache,target=/root/.m2 \
 # Run stage
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
+RUN apk add --no-cache wget \
+    && addgroup -S app \
+    && adduser -S app -G app
 COPY --from=build /app/target/*.jar app.jar
+USER app
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]

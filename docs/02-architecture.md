@@ -43,7 +43,8 @@ Không có microservice boundary. Không tạo service/domain boundaries chỉ �
 - `backend`: Spring Boot container, port 8080 theo compose hiện tại.
 - `db`: PostgreSQL 16, volume `finance_planner_db_data`.
 - `redis`: Redis 7, AOF persistence và volume `finance_planner_redis_data`; không publish port ra host.
-- Backend chờ PostgreSQL và Redis healthcheck thành công trước khi khởi động.
+- Backend chờ PostgreSQL và Redis healthcheck thành công; frontend chờ backend readiness thành công.
+- Backend Actuator chỉ expose health endpoint trên Docker network. Readiness kiểm tra process + PostgreSQL + Redis; liveness chỉ kiểm tra backend process để tránh restart loop khi dependency tạm thời lỗi. Redis và frontend cũng có Docker healthcheck riêng.
 
 ### Browser E2E automation (`e2e/`)
 
@@ -54,7 +55,7 @@ Không có microservice boundary. Không tạo service/domain boundaries chỉ �
 - `scripts/run-e2e.mjs`: điều khiển Compose project riêng và gọi Playwright CLI.
 - `package.json`/`package-lock.json`: dependency boundary độc lập với frontend.
 
-E2E chạy qua một Docker Compose project và PostgreSQL volume riêng; nó không kết nối database planner thông thường. Vitest vẫn thuộc `frontend/` và không cài Playwright.
+E2E chạy qua một Docker Compose project với PostgreSQL và Redis volume riêng; nó không kết nối database/session store planner thông thường. Sau browser suite, runner đăng ký synthetic account và xác minh cùng session còn hiệu lực sau khi restart backend và Redis. Vitest vẫn thuộc `frontend/` và không cài Playwright.
 
 ## Request/data flows
 

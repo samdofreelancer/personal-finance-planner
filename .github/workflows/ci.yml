@@ -111,7 +111,7 @@ jobs:
         run: npm run build
 
   e2e:
-    name: Browser E2E (Playwright + isolated PostgreSQL)
+    name: Browser E2E + Redis session recovery (Playwright + PostgreSQL + Redis)
     runs-on: ubuntu-latest
     env:
       PLAYWRIGHT_DOCKER_IMAGE: mcr.microsoft.com/playwright:v1.65.1-noble
@@ -131,7 +131,7 @@ jobs:
 
       - name: Install E2E dependencies
         run: npm ci
-      - name: Run isolated browser E2E suite
+      - name: Run isolated browser E2E suite and Redis session restart checks
         run: npm run e2e
 
       - name: Upload Playwright report and diagnostics

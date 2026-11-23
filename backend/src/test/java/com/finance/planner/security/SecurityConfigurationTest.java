@@ -42,6 +42,13 @@ class SecurityConfigurationTest {
     }
 
     @Test
+    void exposesOnlyProcessLivenessWithoutAuthentication() throws Exception {
+        mockMvc.perform(get("/actuator/health/liveness"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UP"));
+    }
+
+    @Test
     void allowsPublicCsrfBootstrapAndSetsReadableCsrfCookie() throws Exception {
         mockMvc.perform(get("/api/csrf"))
                 .andExpect(status().isOk())

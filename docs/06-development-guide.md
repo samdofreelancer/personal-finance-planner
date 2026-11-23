@@ -4,7 +4,7 @@
 
 - Docker Engine/Desktop and Docker Compose for the full local stack.
 - For isolated development: Java 21 and Maven for backend; Node.js 20.19+ (or 22.12+) and npm for frontend.
-- PostgreSQL 16 when running backend outside Docker.
+- PostgreSQL 16 and Redis 7 when running backend outside Docker.
 
 ## Database schema migrations
 
@@ -13,6 +13,8 @@
 - A fresh empty database runs V1–V8. V1 creates the assumptions table and synthetic defaults; V2–V8 evolve loan schedules, expense/income schedules, household authentication and account profiles.
 - On an existing non-empty database without Flyway history, `baseline-on-migrate=true` baselines the existing schema at version 1, then runs V2–V8. Existing assumptions, loans, household data and user accounts are retained.
 - Configure a private `REDIS_PASSWORD` in `.env`; Redis is internal-only and its port is not published. Preserve both `finance_planner_db_data` and `finance_planner_redis_data` during routine deployments. Removing the Redis volume invalidates active sessions but does not delete financial data.
+- Production session cookies default to `Secure; HttpOnly; SameSite=Lax`. The development Compose overlay explicitly disables `Secure` only for plain-HTTP localhost; do not carry that override into the remote-access stack.
+- Actuator exposes only `/actuator/health/**` internally. Docker readiness checks require PostgreSQL and Redis; liveness is process-only. Backend runtime runs as a non-root user.
 - The first switch from in-memory sessions to Redis requires users to sign in once again; subsequent backend/Redis restarts preserve sessions until their 30-minute idle expiry.
 - V1–V3 SQL was executed against isolated temporary PostgreSQL 16 databases for synthetic fresh defaults and a modified legacy fixture. On 2026-11-19, the live local Compose database was backed up to `backups/finance-planner-pre-deploy-20261119.dump` (custom-format archive verified with `pg_restore --list`), then Flyway successfully baselined it at V1 and applied V2/V3. Post-migration checks confirmed one assumptions row, one migrated loan with three repayment entries, and removal of all six retired loan columns. Frontend, assumptions, loans, 50-month/5-year forecast and CSV HTTP smoke checks passed. The PostgreSQL volume was preserved.
 - On 2026-11-21, the live local Compose database was backed up to `backups/finance-planner-pre-v4-20261121.dump` (PostgreSQL custom-format archive; `pg_restore --list` succeeded; SHA-256: `3BA09863587E53E9DD2D15C2F719680A832E5282087B9E3E28D987BBCB4ED2C1`). The rebuilt backend applied Flyway V4 successfully on PostgreSQL 16.15. Verification confirmed three migrated expense categories with six effective-month changes, all legacy expense amounts/months preserved, and all six retired fixed-expense columns removed. Existing assumptions and loan data remained present (one assumptions row, one loan and three repayment entries). A temporary expense category was added, renamed, assigned a future effective-month amount, forecasted and exported to CSV through the live API, then deleted; the original assumptions snapshot was restored and compared exactly. The 50-month forecast and frontend HTML/JS/CSS assets returned successfully. Both backend and frontend Compose images were rebuilt and are running. The backup is ignored by Git and must not be committed. Never use `docker compose down -v` for this migration.
@@ -21,7 +23,7 @@
 
 ```powershell
 Copy-Item .env.example .env
-# Set a unique local POSTGRES_PASSWORD in .env before startup.
+# Set unique POSTGRES_PASSWORD and REDIS_PASSWORD values in .env before startup.
 docker compose up --build
 ```
 
@@ -39,7 +41,7 @@ Stop containers but keep persisted data:
 docker compose down
 ```
 
-Delete containers and the database volume (destructive):
+Delete containers and both database/session volumes (destructive; logs all users out and deletes financial data):
 
 ```powershell
 docker compose down -v
@@ -145,7 +147,7 @@ npx playwright install chromium   # local host-run mode only; CI uses the Docker
 npm run e2e                       # starts isolated Compose stack, runs tests, then stops containers
 ```
 
-The runner is `e2e/scripts/run-e2e.mjs`; it uses `docker-compose.e2e.yml` and the fixed Compose project `personal-finance-planner-e2e`: frontend `http://127.0.0.1:18088`, backend `http://127.0.0.1:18080`, PostgreSQL `localhost:15432`. It supplies stable, local-only PostgreSQL and Redis passwords and does not load the repository `.env`; this is required because the isolated E2E volumes persist between runs. The project has distinct container names, network, PostgreSQL volume and Redis volume; it never attaches to `finance_planner_db_data`, `finance_planner_redis_data` or the normal application containers. Each test resets only this synthetic E2E database through `POST /api/assumptions/seed`.
+The runner is `e2e/scripts/run-e2e.mjs`; it uses `docker-compose.e2e.yml` and the fixed Compose project `personal-finance-planner-e2e`: frontend `http://127.0.0.1:18088`, backend `http://127.0.0.1:18080`, PostgreSQL `localhost:15432`. It supplies stable, local-only PostgreSQL and Redis passwords and does not load the repository `.env`; this is required because the isolated E2E volumes persist between runs. The project has distinct container names, network, PostgreSQL volume and Redis volume; it never attaches to `finance_planner_db_data`, `finance_planner_redis_data` or the normal application containers. Each test resets only this synthetic E2E database through `POST /api/assumptions/seed`. After Playwright, the runner registers a separate synthetic user and verifies the same session survives backend and Redis restarts.
 
 The runner stops E2E containers with `docker compose down` and deliberately preserves the E2E-only volume for reuse. It never runs `down -v`. Do not manually change the E2E project to point at the normal planner database. The suite is sequential because each scenario seeds a shared isolated database. When `PLAYWRIGHT_DOCKER_IMAGE` is set, the runner executes `npm ci` and Playwright inside that image using host networking; the E2E directory is bind-mounted so HTML reports, traces, screenshots and videos remain available to GitHub Actions. Without that variable, local runs use the host-installed npm dependencies and browser as before.
 

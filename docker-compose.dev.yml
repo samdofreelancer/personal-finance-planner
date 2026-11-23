@@ -4,6 +4,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile.dev
     environment:
+      # Vite/backend development traffic is plain HTTP on localhost only.
+      SESSION_COOKIE_SECURE: "false"
       SPRING_DEVTOOLS_RESTART_ENABLED: "true"
       SPRING_DEVTOOLS_RESTART_POLL_INTERVAL: 1s
       SPRING_DEVTOOLS_RESTART_QUIET_PERIOD: 400ms
