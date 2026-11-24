@@ -207,7 +207,27 @@ describe('PlannerView', () => {
     await flushPromises()
     expect(saveAssumptions).toHaveBeenCalledOnce()
     expect(getForecast).toHaveBeenCalledTimes(2)
-    expect(wrapper.text()).toContain('Đã lưu trên máy chủ')
+    expect(wrapper.get('.app-toast').text()).toBe('Đã lưu thay đổi thành công')
+  })
+
+  it('does not show a success toast when saving assumptions fails', async () => {
+    const wrapper = await mountLoadedApp('assumptions')
+    saveAssumptions.mockRejectedValueOnce(new Error('Máy chủ không khả dụng'))
+    wrapper.findComponent(AssumptionsForm).vm.$emit('save', validAssumptions())
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Máy chủ không khả dụng')
+    expect(wrapper.find('.app-toast').exists()).toBe(false)
+  })
+
+  it('confirms persistence even when the subsequent forecast refresh fails', async () => {
+    const wrapper = await mountLoadedApp('assumptions')
+    getForecast.mockRejectedValueOnce(new Error('Lỗi dự báo'))
+    wrapper.findComponent(AssumptionsForm).vm.$emit('save', validAssumptions())
+    await flushPromises()
+
+    expect(wrapper.get('.app-toast').text()).toBe('Đã lưu thay đổi thành công')
+    expect(wrapper.text()).toContain('Đã lưu giả định, nhưng chưa cập nhật được dự báo: Lỗi dự báo')
   })
 
   it('exports CSV and handles export errors', async () => {
@@ -334,7 +354,7 @@ describe('PlannerView', () => {
     await flushPromises()
     expect(seedDefaults).toHaveBeenCalledOnce()
     expect(getLoans).toHaveBeenCalledTimes(2)
-    expect(wrapper.text()).toContain('Đã khôi phục mặc định')
+    expect(wrapper.get('.app-toast').text()).toBe('Đã khôi phục mặc định thành công')
     expect(getForecast).toHaveBeenCalledTimes(2)
   })
 
@@ -348,7 +368,17 @@ describe('PlannerView', () => {
 
     expect(saveLoans).toHaveBeenCalledWith(updated)
     expect(getForecast).toHaveBeenCalledTimes(2)
-    expect(wrapper.text()).toContain('Đã lưu trên máy chủ')
+    expect(wrapper.get('.app-toast').text()).toBe('Đã lưu lịch trả nợ thành công')
+  })
+
+  it('does not show a success toast when saving a loan schedule fails', async () => {
+    const wrapper = await mountLoadedApp('loans')
+    saveLoans.mockRejectedValueOnce(new Error('Không thể lưu lịch trả'))
+    wrapper.findComponent(LoanScheduleForm).vm.$emit('save', [])
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Không thể lưu lịch trả')
+    expect(wrapper.find('.app-toast').exists()).toBe(false)
   })
 
   it('handles a forecast without a 2030 annual row', async () => {

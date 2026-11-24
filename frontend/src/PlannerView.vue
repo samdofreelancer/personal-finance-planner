@@ -1,5 +1,6 @@
 <template>
   <div class="app-shell" :class="{ 'sidebar-collapsed': isSidebarCollapsed }">
+    <div v-if="toastMessage" class="app-toast" :class="`app-toast-${toastType}`" role="status" aria-live="polite">{{ toastMessage }}</div>
     <button v-if="isDrawerOpen" class="drawer-backdrop" type="button" aria-label="Đóng menu điều hướng" @click="closeDrawer"></button>
     <aside class="sidebar" :class="{ 'drawer-open': isDrawerOpen }" aria-label="Điều hướng chính">
       <router-link class="brand" to="/dashboard" aria-label="Planwise - Tổng quan" @click="closeDrawer">
@@ -199,6 +200,9 @@ const isSavingLoans = ref(false)
 const loanDraftDirty = ref(false)
 const sampleLoanDraft = ref(null)
 const savedAssumptionsSnapshot = ref(null)
+const toastMessage = ref('')
+const toastType = ref('success')
+let toastTimer = null
 const isLoading = ref(true)
 const provisional = ref(false)
 const activeSection = computed(() => props.section || 'overview')
@@ -308,7 +312,7 @@ onMounted(async () => {
     loans.value = await getLoans()
     await loadForecast()
     errorMessage.value = ''
-    saveStatus.value = 'Đã lưu trên máy chủ'
+    saveStatus.value = ''
   } catch (e) {
     errorMessage.value = e.message
     saveStatus.value = 'Lỗi kết nối máy chủ'
@@ -319,6 +323,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   clearTimeout(previewTimer)
+  clearTimeout(toastTimer)
   window.removeEventListener('keydown', onDrawerKeydown)
   window.removeEventListener('beforeunload', onBeforeUnload)
 })
@@ -404,16 +409,30 @@ async function persistAndForecast(payload = snapshot(), requestId = ++latestRequ
     await saveAssumptions(payload)
     if (requestId !== latestRequest) return
     savedAssumptionsSnapshot.value = JSON.stringify(payload)
-    const res = await getForecast(payload)
-    if (requestId !== latestRequest) return
-    applyForecast(res)
     errorMessage.value = ''
-    saveStatus.value = 'Đã lưu trên máy chủ'
+    saveStatus.value = ''
+    showToast('Đã lưu thay đổi thành công')
   } catch (e) {
     if (requestId !== latestRequest) return
     errorMessage.value = e.message
-    saveStatus.value = 'Không lưu được giả định'
+    saveStatus.value = ''
+    return
   }
+  try {
+    const res = await getForecast(payload)
+    if (requestId !== latestRequest) return
+    applyForecast(res)
+  } catch (e) {
+    if (requestId !== latestRequest) return
+    errorMessage.value = `Đã lưu giả định, nhưng chưa cập nhật được dự báo: ${e.message}`
+  }
+}
+
+function showToast(message, type = 'success') {
+  clearTimeout(toastTimer)
+  toastMessage.value = message
+  toastType.value = type
+  toastTimer = setTimeout(() => { toastMessage.value = '' }, 3000)
 }
 
 async function saveAndForecast(updated, updatedExpenses) {
@@ -467,11 +486,12 @@ async function resetDefaults() {
     const res = await getForecast(snapshot())
     if (requestId !== latestRequest) return
     applyForecast(res)
-    saveStatus.value = 'Đã khôi phục mặc định'
+    saveStatus.value = ''
+    showToast('Đã khôi phục mặc định thành công')
   } catch (e) {
     if (requestId !== latestRequest) return
     errorMessage.value = e.message
-    saveStatus.value = 'Không khôi phục được mặc định'
+    saveStatus.value = ''
   }
 }
 
@@ -491,7 +511,8 @@ async function saveLoanSchedule(updatedLoans) {
   try {
     loans.value = await saveLoans(updatedLoans)
     sampleLoanDraft.value = null
-    loanSaveStatus.value = 'Đã lưu trên máy chủ'
+    loanSaveStatus.value = ''
+    showToast('Đã lưu lịch trả nợ thành công')
     try {
       const res = await getForecast(snapshot())
       applyForecast(res)
@@ -500,7 +521,7 @@ async function saveLoanSchedule(updatedLoans) {
     }
   } catch (e) {
     loanError.value = e.message
-    loanSaveStatus.value = 'Không lưu được lịch trả'
+    loanSaveStatus.value = ''
   } finally {
     isSavingLoans.value = false
   }

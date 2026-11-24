@@ -79,7 +79,7 @@ describe('AssumptionsForm', () => {
     const dto = assumptions()
     const wrapper = mount(AssumptionsForm, { props: { dto, expenses: expenses(), error: 'Lỗi', status: 'Đã lưu' } })
     expect(wrapper.text()).toContain('Lỗi')
-    expect(wrapper.text()).toContain('Đã lưu')
+    expect(wrapper.find('#save-status').exists()).toBe(false)
     expect(wrapper.findAll('.income-change-row')).toHaveLength(3)
     expect(wrapper.get('.income-change-row .month-input-display').text()).toBe('11/2026')
 
@@ -97,19 +97,20 @@ describe('AssumptionsForm', () => {
   })
 
   it('explains the January multiplier and exposes a sample-data action', async () => {
-    const wrapper = mount(AssumptionsForm, { props: { dto: assumptions(), expenses: expenses(), error: '', status: 'Đã lưu trên máy chủ' } })
+    const wrapper = mount(AssumptionsForm, { props: { dto: assumptions(), expenses: expenses(), error: '', status: '' } })
     expect(wrapper.text()).toContain('Hệ số này chỉ nhân vào thu nhập tháng 1 hằng năm (tương đương thưởng / lương tháng 13); các tháng còn lại giữ nguyên mức thu nhập đang có hiệu lực.')
     await wrapper.get('#load-sample-button').trigger('click')
     expect(wrapper.emitted('load-sample')).toHaveLength(1)
   })
 
-  it('shows the save state as a distinct status badge', () => {
+  it('shows unsaved changes but hides the status when there is nothing to report', async () => {
     const wrapper = mount(AssumptionsForm, { props: { dto: assumptions(), expenses: expenses(), error: '', status: 'Đã cập nhật mô phỏng · Chưa lưu' } })
     expect(wrapper.get('#save-status').classes()).toContain('save-status-dirty')
     expect(wrapper.get('#save-status').text()).toContain('Chưa lưu')
     expect(wrapper.get('#save-status').element.parentElement.className).toBe('save-controls')
     expect(wrapper.get('#save-status').element.parentElement.querySelector('#save-assumptions-button')).not.toBeNull()
   })
+    expect(wrapper.find('#save-status').exists()).toBe(false)
 
   it('adds and removes future income changes but keeps the required baseline', async () => {
     const dto = assumptions()
@@ -120,6 +121,8 @@ describe('AssumptionsForm', () => {
     await wrapper.findAll('.income-change-remove').at(-1).trigger('click')
     expect(wrapper.findAll('.income-change-row')).toHaveLength(3)
     expect(wrapper.get('input[aria-label="Tháng hiệu lực thu nhập, mốc 1"]').element.value).toBe('2026-11')
+    await wrapper.setProps({ status: '' })
+    expect(wrapper.find('#save-status').exists()).toBe(false)
   })
 
   it('disables income removal when only the required baseline remains', () => {
@@ -232,11 +235,11 @@ describe('LoanScheduleForm', () => {
     expect(wrapper.text()).toContain('Chưa có khoản vay')
   })
 
-  it('marks edits as unsaved after a previously persisted schedule changes', async () => {
-    const wrapper = mount(LoanScheduleForm, { props: { status: 'Đã lưu trên máy chủ', loans: [{
+  it('does not show a saved label but marks edits as unsaved after a persisted schedule changes', async () => {
+    const wrapper = mount(LoanScheduleForm, { props: { status: '', loans: [{
       id: 1, name: 'Khoản vay', openingPrincipal: 1000, repayments: [],
     }] } })
-    expect(wrapper.text()).toContain('Đã lưu trên máy chủ')
+    expect(wrapper.find('[role="status"]').exists()).toBe(false)
     await wrapper.get('input[id^="loan-principal-"]').setValue('900')
     expect(wrapper.text()).toContain('Có thay đổi chưa lưu')
     expect(wrapper.emitted('dirty-change').at(-1)).toEqual([true])

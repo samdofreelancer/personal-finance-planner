@@ -79,7 +79,7 @@
       <div id="form-error" class="form-error" role="alert">{{ error }}</div>
       <div class="form-footer">
         <div class="save-controls">
-          <span id="save-status" class="save-status" :class="statusClass" role="status">{{ status }}</span>
+          <span v-if="status" id="save-status" class="save-status" :class="statusClass" role="status">{{ status }}</span>
           <span class="form-note">Đơn vị tiền tệ: VND</span>
           <button id="save-assumptions-button" class="button button-primary" type="submit" :disabled="status === 'Đang lưu...'">Lưu</button>
         </div>
@@ -105,8 +105,6 @@ const sortedIncomeChanges = computed(() => [...incomeDraft].sort((a, b) => {
 }))
 const statusClass = computed(() => {
   if (statusIsDirty(props.status)) return 'save-status-dirty'
-  if (/không lưu|lỗi kết nối/i.test(props.status || '')) return 'save-status-error'
-  if (/đã lưu|đã khôi phục/i.test(props.status || '')) return 'save-status-saved'
   return ''
 })
 

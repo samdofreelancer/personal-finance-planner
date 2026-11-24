@@ -20,7 +20,7 @@ test('changing the forecast horizon updates every dashboard section and persists
   await expect.poll(() => requestedHorizons.at(-1)).toBe(2)
 
   await page.locator('#save-assumptions-button').click()
-  await expect(page.locator('#save-status')).toContainText('Đã lưu trên máy chủ')
+  await expect(page.locator('.app-toast')).toContainText('Đã lưu thay đổi thành công')
   await page.getByRole('link', { name: /Dự báo theo tháng/ }).click()
   await expect(page.locator('#monthly-table tbody tr')).toHaveCount(26)
   await page.getByRole('link', { name: /Phân tích theo năm/ }).click()

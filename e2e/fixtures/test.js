@@ -25,7 +25,7 @@ export const test = base.extend({
     await expect(page.locator('#export-button')).toBeVisible()
     await page.locator('.side-nav .nav-link[href="/plan/assumptions"]').click()
     await expect(page).toHaveURL(/\/plan\/assumptions$/)
-    await expect(page.locator('#save-status')).toHaveText('Đã lưu trên máy chủ')
+    await expect(page.locator('#save-status')).toHaveCount(0)
     await page.getByRole('link', { name: /Phân tích theo năm/ }).click()
     await expect(page.locator('#annual-chart .chart-bar')).toHaveCount(5)
     await expect(page.locator('#annual-table tbody tr')).toHaveCount(5)
@@ -62,7 +62,7 @@ export const test = base.extend({
     expect(reloadSessionStatus, 'Session cookie must survive a full browser reload').toBe(200)
     await expect(page.getByRole('button', { name: 'Đăng xuất' })).toBeVisible()
     await page.locator('.side-nav .nav-link[href="/plan/assumptions"]').click()
-    await expect(page.locator('#save-status')).toHaveText('Đã lưu trên máy chủ')
+    await expect(page.locator('#save-status')).toHaveCount(0)
     await page.locator('.side-nav .nav-link[href="/dashboard"]').click()
 
     await use(page)

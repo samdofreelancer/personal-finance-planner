@@ -57,7 +57,7 @@
       <div class="loan-form-footer">
         <button class="button button-secondary" type="button" @click="addLoan">＋ Thêm khoản vay</button>
         <div class="loan-save-actions">
-          <span class="save-status" role="status">{{ statusLabel }}</span>
+          <span v-if="statusLabel" class="save-status" role="status">{{ statusLabel }}</span>
           <button class="button button-primary" type="submit" :disabled="Boolean(validationError) || status === 'Đang lưu...'"><span aria-hidden="true">✓</span> Lưu</button>
         </div>
       </div>
@@ -132,7 +132,7 @@ const isDirty = computed(() => JSON.stringify(savePayload.value) !== JSON.string
 watch(isDirty, (value) => emit('dirty-change', value), { immediate: true })
 const statusLabel = computed(() => props.status === 'Đang lưu...'
   ? props.status
-  : isDirty.value ? 'Có thay đổi chưa lưu' : props.status)
+  : isDirty.value ? 'Có thay đổi chưa lưu' : '')
 
 function save() {
   if (validationError.value) return
