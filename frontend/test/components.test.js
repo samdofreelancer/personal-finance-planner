@@ -8,6 +8,7 @@ import FinancialPosition from '../src/components/FinancialPosition.vue'
 import AnnualChart from '../src/components/AnnualChart.vue'
 import AnnualTable from '../src/components/AnnualTable.vue'
 import MonthlyTable from '../src/components/MonthlyTable.vue'
+import MoneyAmount from '../src/components/MoneyAmount.vue'
 
 function assumptions() {
   return {
@@ -74,10 +75,20 @@ describe('CurrencyInput', () => {
   })
 })
 
+describe('MoneyAmount', () => {
+  it('keeps Vietnamese thousands separators and isolates the currency glyph', () => {
+    const wrapper = mount(MoneyAmount, { props: { value: 1234567890 } })
+    expect(wrapper.find('.money-number').text()).toBe('1.234.567.890')
+    expect(wrapper.find('.money-currency').text()).toBe('₫')
+    expect(wrapper.text()).toBe('1.234.567.890 ₫')
+    expect(wrapper.attributes('aria-label')).toBe('1.234.567.890 đồng')
+  })
+})
+
 describe('AssumptionsForm', () => {
   it('renders and emits an editable effective-month income schedule', async () => {
     const dto = assumptions()
-    const wrapper = mount(AssumptionsForm, { props: { dto, expenses: expenses(), error: 'Lỗi', status: 'Đã lưu' } })
+    const wrapper = mount(AssumptionsForm, { props: { dto, expenses: expenses(), error: 'Lỗi', status: '' } })
     expect(wrapper.text()).toContain('Lỗi')
     expect(wrapper.find('#save-status').exists()).toBe(false)
     expect(wrapper.findAll('.income-change-row')).toHaveLength(3)
@@ -99,6 +110,7 @@ describe('AssumptionsForm', () => {
   it('explains the January multiplier and exposes a sample-data action', async () => {
     const wrapper = mount(AssumptionsForm, { props: { dto: assumptions(), expenses: expenses(), error: '', status: '' } })
     expect(wrapper.text()).toContain('Hệ số này chỉ nhân vào thu nhập tháng 1 hằng năm (tương đương thưởng / lương tháng 13); các tháng còn lại giữ nguyên mức thu nhập đang có hiệu lực.')
+    expect(wrapper.find('#save-status').exists()).toBe(false)
     await wrapper.get('#load-sample-button').trigger('click')
     expect(wrapper.emitted('load-sample')).toHaveLength(1)
   })
@@ -109,8 +121,9 @@ describe('AssumptionsForm', () => {
     expect(wrapper.get('#save-status').text()).toContain('Chưa lưu')
     expect(wrapper.get('#save-status').element.parentElement.className).toBe('save-controls')
     expect(wrapper.get('#save-status').element.parentElement.querySelector('#save-assumptions-button')).not.toBeNull()
-  })
+    await wrapper.setProps({ status: '' })
     expect(wrapper.find('#save-status').exists()).toBe(false)
+  })
 
   it('adds and removes future income changes but keeps the required baseline', async () => {
     const dto = assumptions()
@@ -121,8 +134,6 @@ describe('AssumptionsForm', () => {
     await wrapper.findAll('.income-change-remove').at(-1).trigger('click')
     expect(wrapper.findAll('.income-change-row')).toHaveLength(3)
     expect(wrapper.get('input[aria-label="Tháng hiệu lực thu nhập, mốc 1"]').element.value).toBe('2026-11')
-    await wrapper.setProps({ status: '' })
-    expect(wrapper.find('#save-status').exists()).toBe(false)
   })
 
   it('disables income removal when only the required baseline remains', () => {
@@ -271,6 +282,17 @@ describe('forecast presentation components', () => {
     expect(wrapper.text()).toContain('tr ₫')
     expect(wrapper.findAll('circle').length).toBeGreaterThanOrEqual(3)
     expect(wrapper.text()).toContain('-10.700.000 ₫')
+  })
+
+  it('exposes both savings and remaining debt when a year is selected on the journey chart', async () => {
+    const wrapper = mount(FinancialPosition, { props: { assumptions: assumptions(), loans: [{ openingPrincipal: 100000000 }], forecast: forecast() } })
+    const yearButton = wrapper.get('.trend-year-selector button:nth-child(2)')
+    await yearButton.trigger('click')
+    expect(yearButton.attributes('aria-pressed')).toBe('true')
+    expect(wrapper.get('.trend-tooltip').text()).toContain('2027')
+    expect(wrapper.get('.trend-tooltip').text()).toContain('Tiết kiệm: 359 tr ₫')
+    expect(wrapper.get('.trend-tooltip').text()).toContain('Dư nợ: 0 tr ₫')
+    expect(wrapper.get('.trend-point[role="button"]').attributes('tabindex')).toBe('0')
   })
 
   it('keeps the opening debt when the forecast has no monthly results', () => {

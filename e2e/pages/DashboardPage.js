@@ -16,11 +16,11 @@ export class DashboardPage extends BasePage {
   }
 
   async openAnnualAnalysis() {
-    await this.page.getByRole('link', { name: /Phân tích theo năm/ }).click()
+    await this.page.locator('.side-nav a[href="/analytics/annual"]').click()
   }
 
   async openMonthlyForecast() {
-    await this.page.getByRole('link', { name: /Dự báo theo tháng/ }).click()
+    await this.page.locator('.side-nav a[href="/forecast/monthly"]').click()
   }
 
   async exportCsv() {

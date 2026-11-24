@@ -11,7 +11,7 @@ test('creates and persists a loan with a dated repayment', async ({ loansPage })
   })
   await loansPage.save()
 
-  await expect(loansPage.saveStatus).toHaveText('Đã lưu trên máy chủ')
+  await expect(loansPage.saveToast).toHaveText('Đã lưu lịch trả nợ thành công')
   await loansPage.reload()
 
   await expect(loansPage.savedLoanNameInput).toHaveValue('E2E - Vay thử nghiệm')

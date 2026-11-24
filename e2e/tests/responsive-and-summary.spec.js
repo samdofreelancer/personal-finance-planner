@@ -138,7 +138,7 @@ test('uses persistent mobile navigation and keeps the header uncluttered', async
 
   await page.goto('/plan/assumptions')
   await expect(page.locator('#assumptions-form')).toBeVisible()
-  await expect(page.locator('#save-status')).toHaveText('Đã lưu trên máy chủ')
+  await expect(page.locator('#save-status')).toHaveCount(0)
 })
 
 test('loads sample assumptions into the preview without overwriting server data', async ({ assumptionsPage }) => {

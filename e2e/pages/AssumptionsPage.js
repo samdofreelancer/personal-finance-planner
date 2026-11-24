@@ -4,12 +4,13 @@ export class AssumptionsPage extends BasePage {
   constructor(page) {
     super(page)
     this.saveStatus = page.locator('#save-status')
+    this.saveToast = page.locator('.app-toast')
     this.monthlyTable = page.locator('#monthly-table')
   }
 
   async open() {
     await this.navigateTo('/plan/assumptions')
-    await this.saveStatus.waitFor({ state: 'visible' })
+    await this.page.locator('#assumptions-form').waitFor({ state: 'visible' })
   }
 
   async openForecast() {

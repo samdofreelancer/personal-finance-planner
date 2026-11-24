@@ -210,6 +210,23 @@ describe('PlannerView', () => {
     expect(wrapper.get('.app-toast').text()).toBe('Đã lưu thay đổi thành công')
   })
 
+  it('shows a blocking progress overlay instead of a small saving label while assumptions are persisted', async () => {
+    const wrapper = await mountLoadedApp('assumptions')
+    let finishSave
+    saveAssumptions.mockImplementationOnce(() => new Promise((resolve) => { finishSave = resolve }))
+
+    wrapper.findComponent(AssumptionsForm).vm.$emit('save', validAssumptions())
+    await flushPromises()
+
+    expect(wrapper.get('.save-progress-overlay').text()).toContain('Đang lưu giả định tài chính...')
+    expect(wrapper.find('#save-status').exists()).toBe(false)
+    expect(wrapper.get('.save-progress-overlay').attributes('aria-busy')).toBe('true')
+
+    finishSave(validAssumptions())
+    await flushPromises()
+    expect(wrapper.find('.save-progress-overlay').exists()).toBe(false)
+  })
+
   it('does not show a success toast when saving assumptions fails', async () => {
     const wrapper = await mountLoadedApp('assumptions')
     saveAssumptions.mockRejectedValueOnce(new Error('Máy chủ không khả dụng'))
@@ -371,6 +388,21 @@ describe('PlannerView', () => {
     expect(wrapper.get('.app-toast').text()).toBe('Đã lưu lịch trả nợ thành công')
   })
 
+  it('shows the same full-screen progress treatment while a loan schedule is being saved', async () => {
+    const wrapper = await mountLoadedApp('loans')
+    let finishSave
+    saveLoans.mockImplementationOnce(() => new Promise((resolve) => { finishSave = resolve }))
+    wrapper.findComponent(LoanScheduleForm).vm.$emit('save', [])
+    await flushPromises()
+
+    expect(wrapper.get('.save-progress-overlay').text()).toContain('Đang lưu lịch trả nợ...')
+    expect(wrapper.find('.loan-save-actions .save-status').exists()).toBe(false)
+
+    finishSave([])
+    await flushPromises()
+    expect(wrapper.find('.save-progress-overlay').exists()).toBe(false)
+  })
+
   it('does not show a success toast when saving a loan schedule fails', async () => {
     const wrapper = await mountLoadedApp('loans')
     saveLoans.mockRejectedValueOnce(new Error('Không thể lưu lịch trả'))
@@ -385,8 +417,8 @@ describe('PlannerView', () => {
     getForecast.mockResolvedValue(forecastResult({ include2030: false }))
     const wrapper = mountPlanner()
     await flushPromises()
-    expect(wrapper.get('#metric-net').text()).toContain('0 ₫')
-    expect(wrapper.get('#metric-income').text()).toContain('0 ₫')
-    expect(wrapper.get('#metric-expenses').text()).toContain('0 ₫')
+    expect(wrapper.get('#metric-net').text()).toContain('10.000.000 ₫')
+    expect(wrapper.get('#metric-income').text()).toContain('40.000.000 ₫')
+    expect(wrapper.get('#metric-expenses').text()).toContain('30.000.000 ₫')
   })
 })

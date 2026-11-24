@@ -131,7 +131,7 @@ const savePayload = computed(() => draft.value.map(({ key, ...loan }) => ({
 const isDirty = computed(() => JSON.stringify(savePayload.value) !== JSON.stringify(props.loans || []))
 watch(isDirty, (value) => emit('dirty-change', value), { immediate: true })
 const statusLabel = computed(() => props.status === 'Đang lưu...'
-  ? props.status
+  ? ''
   : isDirty.value ? 'Có thay đổi chưa lưu' : '')
 
 function save() {

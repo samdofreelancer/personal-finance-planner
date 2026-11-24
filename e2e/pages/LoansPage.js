@@ -5,6 +5,7 @@ export class LoansPage extends BasePage {
     super(page)
     this.panel = page.locator('.loan-schedule-panel')
     this.saveStatus = this.panel.getByRole('status')
+    this.saveToast = page.locator('.app-toast')
     this.savedLoan = this.panel.locator('.loan-card').last()
     this.savedLoanNameInput = this.savedLoan.getByLabel('Tên khoản vay')
     this.savedLoanPrincipalInput = this.savedLoan.getByLabel('Dư nợ gốc ban đầu (VND)')

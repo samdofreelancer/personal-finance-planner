@@ -16,6 +16,8 @@ services:
       REDIS_PASSWORD: e2e-only-redis-password
       # The isolated browser suite uses plain HTTP on loopback; production keeps Secure cookies enabled.
       SESSION_COOKIE_SECURE: "false"
+    healthcheck:
+      start_period: 120s
     ports: !override
       - "127.0.0.1:18080:8080"
 

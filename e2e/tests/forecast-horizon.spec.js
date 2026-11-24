@@ -21,9 +21,9 @@ test('changing the forecast horizon updates every dashboard section and persists
 
   await page.locator('#save-assumptions-button').click()
   await expect(page.locator('.app-toast')).toContainText('Đã lưu thay đổi thành công')
-  await page.getByRole('link', { name: /Dự báo theo tháng/ }).click()
+  await page.locator('.side-nav a[href="/forecast/monthly"]').click()
   await expect(page.locator('#monthly-table tbody tr')).toHaveCount(26)
-  await page.getByRole('link', { name: /Phân tích theo năm/ }).click()
+  await page.locator('.side-nav a[href="/analytics/annual"]').click()
   await expect(page.locator('#annual-table tbody tr')).toHaveCount(3)
   await expect(page.locator('#annual-chart')).toContainText('2028')
   await page.locator('.side-nav .nav-link[href="/dashboard"]').click()
@@ -31,8 +31,8 @@ test('changing the forecast horizon updates every dashboard section and persists
   await expect(page.locator('.outlook-result-note')).toContainText('12/2028')
   await page.reload()
 
-  await page.getByRole('link', { name: /Kế hoạch tài chính/ }).click()
+  await page.locator('.side-nav a[href="/plan/assumptions"]').click()
   await expect(page.locator('#forecastYears')).toHaveValue('2')
-  await page.getByRole('link', { name: /Dự báo theo tháng/ }).click()
+  await page.locator('.side-nav a[href="/forecast/monthly"]').click()
   await expect(page.locator('#monthly-table tbody tr')).toHaveCount(26)
 })

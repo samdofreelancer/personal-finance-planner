@@ -15,7 +15,7 @@ test('stretches the income assumptions group across the available width on mobil
 
 test('creates and persists effective-month income changes reflected in monthly forecast', async ({ assumptionsPage }) => {
   await assumptionsPage.open()
-  await expect(assumptionsPage.saveStatus).toHaveText('Đã lưu trên máy chủ')
+  await expect(assumptionsPage.saveStatus).toHaveCount(0)
 
   await assumptionsPage.setIncomeSchedule([
     { effectiveMonth: '2026-11', amount: 50000000 },
@@ -23,7 +23,7 @@ test('creates and persists effective-month income changes reflected in monthly f
     { effectiveMonth: '2028-01', amount: 65000000 },
   ])
   await assumptionsPage.save()
-  await expect(assumptionsPage.saveStatus).toHaveText('Đã lưu trên máy chủ')
+  await expect(assumptionsPage.saveToast).toHaveText('Đã lưu thay đổi thành công')
 
   await assumptionsPage.openForecast()
   await expect(assumptionsPage.monthlyRow('thg 3 2027').locator('td').nth(0)).toContainText('50.000.000')
@@ -33,7 +33,7 @@ test('creates and persists effective-month income changes reflected in monthly f
 
   await assumptionsPage.reload()
   await assumptionsPage.open()
-  await expect(assumptionsPage.saveStatus).toHaveText('Đã lưu trên máy chủ')
+  await expect(assumptionsPage.saveStatus).toHaveCount(0)
   await expect(assumptionsPage.page.locator('.income-change-row')).toHaveCount(7)
   await expect(assumptionsPage.incomeChangeRow(0).getByLabel('Số tiền thu nhập, mốc 1')).toHaveValue('50.000.000')
   await expect(assumptionsPage.incomeChangeRow(1).getByLabel('Tháng hiệu lực thu nhập, mốc 2')).toHaveValue('2027-04')

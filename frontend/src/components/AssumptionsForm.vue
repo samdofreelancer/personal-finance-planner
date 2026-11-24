@@ -79,7 +79,7 @@
       <div id="form-error" class="form-error" role="alert">{{ error }}</div>
       <div class="form-footer">
         <div class="save-controls">
-          <span v-if="status" id="save-status" class="save-status" :class="statusClass" role="status">{{ status }}</span>
+          <span v-if="status && status !== 'Đang lưu...'" id="save-status" class="save-status" :class="statusClass" role="status">{{ status }}</span>
           <span class="form-note">Đơn vị tiền tệ: VND</span>
           <button id="save-assumptions-button" class="button button-primary" type="submit" :disabled="status === 'Đang lưu...'">Lưu</button>
         </div>

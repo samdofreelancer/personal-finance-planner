@@ -1,8 +1,15 @@
 <template>
   <div class="app-shell" :class="{ 'sidebar-collapsed': isSidebarCollapsed }">
     <div v-if="toastMessage" class="app-toast" :class="`app-toast-${toastType}`" role="status" aria-live="polite">{{ toastMessage }}</div>
+    <div v-if="isSavingData" class="save-progress-overlay" role="status" aria-live="polite" aria-atomic="true" aria-busy="true">
+      <div class="save-progress-card">
+        <span class="save-progress-spinner" aria-hidden="true"></span>
+        <strong>{{ savingMessage }}</strong>
+        <span>Vui lòng chờ trong giây lát và không đóng trang này.</span>
+      </div>
+    </div>
     <button v-if="isDrawerOpen" class="drawer-backdrop" type="button" aria-label="Đóng menu điều hướng" @click="closeDrawer"></button>
-    <aside class="sidebar" :class="{ 'drawer-open': isDrawerOpen }" aria-label="Điều hướng chính">
+    <aside class="sidebar" :class="{ 'drawer-open': isDrawerOpen }" :inert="isSavingData" aria-label="Điều hướng chính">
       <router-link class="brand" to="/dashboard" aria-label="Planwise - Tổng quan" @click="closeDrawer">
         <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
           <rect width="40" height="40" rx="12" fill="currentColor" />
@@ -17,11 +24,11 @@
       <button type="button" class="drawer-close" aria-label="Đóng menu điều hướng" title="Đóng menu" @click="closeMenu">×</button>
       <p class="nav-caption">KHÔNG GIAN LÀM VIỆC</p>
       <nav class="side-nav" aria-label="Các mục Planwise">
-        <router-link class="nav-link" to="/dashboard" :class="{ active: activeSection === 'overview' }" :aria-current="activeSection === 'overview' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">▦</span><span class="nav-label-desktop">Tổng quan</span><span class="nav-label-mobile">Tổng quan</span></router-link>
-        <router-link class="nav-link" to="/plan/assumptions" :class="{ active: activeSection === 'assumptions' }" :aria-current="activeSection === 'assumptions' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">⚙</span><span class="nav-label-desktop">Kế hoạch tài chính</span><span class="nav-label-mobile">Kế hoạch</span></router-link>
-        <router-link class="nav-link" to="/loans" :class="{ active: activeSection === 'loans' }" :aria-current="activeSection === 'loans' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">⌁</span><span class="nav-label-desktop">Khoản vay</span><span class="nav-label-mobile">Khoản vay</span></router-link>
-        <router-link class="nav-link" to="/analytics/annual" :class="{ active: activeSection === 'annual-report' }" :aria-current="activeSection === 'annual-report' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">▥</span><span class="nav-label-desktop">Phân tích theo năm</span><span class="nav-label-mobile">Phân tích</span></router-link>
-        <router-link class="nav-link" to="/forecast/monthly" :class="{ active: activeSection === 'monthly-forecast' }" :aria-current="activeSection === 'monthly-forecast' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">▤</span><span class="nav-label-desktop">Dự báo theo tháng</span><span class="nav-label-mobile">Dự báo</span></router-link>
+        <router-link class="nav-link" to="/dashboard" active-class="active" exact-active-class="active" :class="{ active: activeSection === 'overview' }" :aria-current="activeSection === 'overview' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">▦</span><span class="nav-label-desktop">Tổng quan</span><span class="nav-label-mobile">Tổng quan</span></router-link>
+        <router-link class="nav-link" to="/plan/assumptions" active-class="active" exact-active-class="active" :class="{ active: activeSection === 'assumptions' }" :aria-current="activeSection === 'assumptions' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">⚙</span><span class="nav-label-desktop">Kế hoạch</span><span class="nav-label-mobile">Kế hoạch</span></router-link>
+        <router-link class="nav-link" to="/loans" active-class="active" exact-active-class="active" :class="{ active: activeSection === 'loans' }" :aria-current="activeSection === 'loans' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">⌁</span><span class="nav-label-desktop">Khoản vay</span><span class="nav-label-mobile">Khoản vay</span></router-link>
+        <router-link class="nav-link" to="/analytics/annual" active-class="active" exact-active-class="active" :class="{ active: activeSection === 'annual-report' }" :aria-current="activeSection === 'annual-report' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">▥</span><span class="nav-label-desktop">Phân tích</span><span class="nav-label-mobile">Phân tích</span></router-link>
+        <router-link class="nav-link" to="/forecast/monthly" active-class="active" exact-active-class="active" :class="{ active: activeSection === 'monthly-forecast' }" :aria-current="activeSection === 'monthly-forecast' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">▤</span><span class="nav-label-desktop">Dự báo</span><span class="nav-label-mobile">Dự báo</span></router-link>
       </nav>
       <div class="drawer-actions" aria-label="Thao tác tài khoản và tiện ích">
         <p class="drawer-actions-caption">TÀI KHOẢN & TIỆN ÍCH</p>
@@ -43,7 +50,7 @@
       </div>
     </aside>
 
-    <div class="workspace">
+    <div class="workspace" :inert="isSavingData">
       <header class="topbar">
         <button v-if="isSidebarCollapsed" type="button" class="sidebar-reopen-button" aria-label="Mở menu điều hướng" title="Mở menu" @click="openSidebar">☰</button>
         <div class="mobile-topbar-main">
@@ -64,7 +71,7 @@
         <div class="breadcrumb"><span class="breadcrumb-prefix">Không gian tài chính <span>/</span></span> <strong>{{ activeSectionLabel }}</strong></div>
       </header>
 
-      <main class="page" :aria-busy="isLoading">
+      <main class="page" :aria-busy="isLoading || isSavingData">
     <div v-if="isLoading && !forecast" class="loading-state" role="status">
       <span class="loading-spinner" aria-hidden="true"></span>
       Đang tải dữ liệu tài chính và dự báo...
@@ -80,7 +87,7 @@
     </header>
     <section v-if="activeSection === 'overview'" id="overview" class="page-heading outlook-hero">
       <div class="outlook-copy">
-        <p class="eyebrow">TRIỂN VỌNG TÀI CHÍNH <span class="outlook-live-dot"></span> KỊCH BẢN ĐANG MÔ PHỎNG</p>
+        <p class="eyebrow outlook-kicker"><span>TRIỂN VỌNG TÀI CHÍNH</span><span class="outlook-live-dot" aria-hidden="true"></span><span>KỊCH BẢN ĐANG MÔ PHỎNG</span></p>
         <h1>Kế hoạch tài chính<br class="mobile-break"> của bạn sẽ đi đến đâu?</h1>
         <p class="subtitle">Bức tranh dự kiến từ {{ forecastPeriod }}, dựa trên các giả định hiện tại.</p>
         <div class="outlook-actions">
@@ -90,7 +97,7 @@
       </div>
       <div class="outlook-result" aria-live="polite">
         <span class="outlook-result-label">TIẾT KIỆM DỰ KIẾN CUỐI KỲ</span>
-        <strong :class="metrics.savingsEnd < 0 ? 'negative' : ''">{{ money(metrics.savingsEnd) }}</strong>
+        <strong :class="metrics.savingsEnd < 0 ? 'negative' : ''"><money-amount :value="metrics.savingsEnd" /></strong>
         <span class="outlook-result-note">{{ provisional ? 'Kết quả tạm tính · cần xác minh' : `Dự kiến đến tháng 12/${forecastEndYear}` }}</span>
         <span class="outlook-result-disclaimer">Không phải số dư tài khoản thực tế</span>
       </div>
@@ -152,12 +159,12 @@
         <span>Dữ liệu tài chính được lưu trên máy chủ của Planwise.</span>
       </footer>
     </div>
-    <nav class="mobile-bottom-nav" aria-label="Điều hướng chính trên di động">
-      <router-link class="mobile-nav-link" to="/dashboard" :class="{ active: activeSection === 'overview' }" :aria-current="activeSection === 'overview' ? 'page' : undefined"><span aria-hidden="true">▦</span><small>Tổng quan</small></router-link>
-      <router-link class="mobile-nav-link" to="/plan/assumptions" :class="{ active: activeSection === 'assumptions' }" :aria-current="activeSection === 'assumptions' ? 'page' : undefined"><span aria-hidden="true">⚙</span><small>Kế hoạch</small></router-link>
-      <router-link class="mobile-nav-link" to="/loans" :class="{ active: activeSection === 'loans' }" :aria-current="activeSection === 'loans' ? 'page' : undefined"><span aria-hidden="true">⌁</span><small>Khoản vay</small></router-link>
-      <router-link class="mobile-nav-link" to="/analytics/annual" :class="{ active: activeSection === 'annual-report' }" :aria-current="activeSection === 'annual-report' ? 'page' : undefined"><span aria-hidden="true">▥</span><small>Phân tích</small></router-link>
-      <router-link class="mobile-nav-link" to="/forecast/monthly" :class="{ active: activeSection === 'monthly-forecast' }" :aria-current="activeSection === 'monthly-forecast' ? 'page' : undefined"><span aria-hidden="true">▤</span><small>Dự báo</small></router-link>
+    <nav class="mobile-bottom-nav" :inert="isSavingData" aria-label="Điều hướng chính trên di động">
+      <router-link class="mobile-nav-link" to="/dashboard" active-class="active" exact-active-class="active" :aria-current="activeSection === 'overview' ? 'page' : undefined"><span aria-hidden="true">▦</span><small>Tổng quan</small></router-link>
+      <router-link class="mobile-nav-link" to="/plan/assumptions" active-class="active" exact-active-class="active" :aria-current="activeSection === 'assumptions' ? 'page' : undefined"><span aria-hidden="true">⚙</span><small>Kế hoạch</small></router-link>
+      <router-link class="mobile-nav-link" to="/loans" active-class="active" exact-active-class="active" :aria-current="activeSection === 'loans' ? 'page' : undefined"><span aria-hidden="true">⌁</span><small>Khoản vay</small></router-link>
+      <router-link class="mobile-nav-link" to="/analytics/annual" active-class="active" exact-active-class="active" :aria-current="activeSection === 'annual-report' ? 'page' : undefined"><span aria-hidden="true">▥</span><small>Phân tích</small></router-link>
+      <router-link class="mobile-nav-link" to="/forecast/monthly" active-class="active" exact-active-class="active" :aria-current="activeSection === 'monthly-forecast' ? 'page' : undefined"><span aria-hidden="true">▤</span><small>Dự báo</small></router-link>
     </nav>
   </div>
 </template>
@@ -167,13 +174,13 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { getAssumptions, saveAssumptions, seedDefaults, getForecast, exportCsv as exportCsvApi, getLoans, saveLoans } from './services/api.js'
 import { validateAssumptions } from './utils/validation.js'
 import MetricCards from './components/MetricCards.vue'
+import MoneyAmount from './components/MoneyAmount.vue'
 import FinancialPosition from './components/FinancialPosition.vue'
 import AssumptionsForm from './components/AssumptionsForm.vue'
 import LoanScheduleForm from './components/LoanScheduleForm.vue'
 import AnnualChart from './components/AnnualChart.vue'
 import AnnualTable from './components/AnnualTable.vue'
 import MonthlyTable from './components/MonthlyTable.vue'
-import { formatCurrency } from './utils/currency.js'
 
 const props = defineProps({
   user: { type: Object, default: () => ({ email: "", role: "MEMBER" }) },
@@ -197,6 +204,8 @@ const saveStatus = ref('Đang tải...')
 const loanSaveStatus = ref('')
 const loanError = ref('')
 const isSavingLoans = ref(false)
+const isSavingData = ref(false)
+const savingMessage = ref('Đang lưu dữ liệu...')
 const loanDraftDirty = ref(false)
 const sampleLoanDraft = ref(null)
 const savedAssumptionsSnapshot = ref(null)
@@ -210,7 +219,7 @@ const isDrawerOpen = ref(false)
 const isSidebarCollapsed = ref(false)
 const sectionLabels = {
   overview: 'Tổng quan',
-  assumptions: 'Kế hoạch tài chính',
+  assumptions: 'Kế hoạch',
   loans: 'Khoản vay',
   'annual-report': 'Phân tích theo năm',
   'monthly-forecast': 'Dự báo theo tháng',
@@ -404,27 +413,34 @@ async function previewForecast(payload, requestId) {
 }
 
 async function persistAndForecast(payload = snapshot(), requestId = ++latestRequest) {
+  isSavingData.value = true
+  savingMessage.value = 'Đang lưu giả định tài chính...'
   saveStatus.value = 'Đang lưu...'
   try {
-    await saveAssumptions(payload)
-    if (requestId !== latestRequest) return
-    savedAssumptionsSnapshot.value = JSON.stringify(payload)
-    errorMessage.value = ''
-    saveStatus.value = ''
-    showToast('Đã lưu thay đổi thành công')
-  } catch (e) {
-    if (requestId !== latestRequest) return
-    errorMessage.value = e.message
-    saveStatus.value = ''
-    return
-  }
-  try {
-    const res = await getForecast(payload)
-    if (requestId !== latestRequest) return
-    applyForecast(res)
-  } catch (e) {
-    if (requestId !== latestRequest) return
-    errorMessage.value = `Đã lưu giả định, nhưng chưa cập nhật được dự báo: ${e.message}`
+    try {
+      await saveAssumptions(payload)
+      if (requestId !== latestRequest) return
+      savedAssumptionsSnapshot.value = JSON.stringify(payload)
+      errorMessage.value = ''
+      saveStatus.value = ''
+      showToast('Đã lưu thay đổi thành công')
+    } catch (e) {
+      if (requestId !== latestRequest) return
+      errorMessage.value = e.message
+      saveStatus.value = ''
+      return
+    }
+    savingMessage.value = 'Đang cập nhật dự báo tài chính...'
+    try {
+      const res = await getForecast(payload)
+      if (requestId !== latestRequest) return
+      applyForecast(res)
+    } catch (e) {
+      if (requestId !== latestRequest) return
+      errorMessage.value = `Đã lưu giả định, nhưng chưa cập nhật được dự báo: ${e.message}`
+    }
+  } finally {
+    isSavingData.value = false
   }
 }
 
@@ -476,6 +492,8 @@ async function resetDefaults() {
   if (!window.confirm('Khôi phục toàn bộ giả định về giá trị ban đầu theo workbook?')) return
   clearTimeout(previewTimer)
   const requestId = ++latestRequest
+  isSavingData.value = true
+  savingMessage.value = 'Đang khôi phục dữ liệu mặc định...'
   try {
     const data = await seedDefaults()
     if (requestId !== latestRequest) return
@@ -492,6 +510,8 @@ async function resetDefaults() {
     if (requestId !== latestRequest) return
     errorMessage.value = e.message
     saveStatus.value = ''
+  } finally {
+    isSavingData.value = false
   }
 }
 
@@ -506,6 +526,8 @@ async function exportCsv() {
 async function saveLoanSchedule(updatedLoans) {
   if (isSavingLoans.value) return
   isSavingLoans.value = true
+  isSavingData.value = true
+  savingMessage.value = 'Đang lưu lịch trả nợ...'
   loanSaveStatus.value = 'Đang lưu...'
   loanError.value = ''
   try {
@@ -524,8 +546,8 @@ async function saveLoanSchedule(updatedLoans) {
     loanSaveStatus.value = ''
   } finally {
     isSavingLoans.value = false
+    isSavingData.value = false
   }
 }
 
-const money = formatCurrency
 </script>

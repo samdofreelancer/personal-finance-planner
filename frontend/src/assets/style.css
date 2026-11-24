@@ -352,6 +352,36 @@ tbody tr:hover { background: #fafbfd; }
 .overview-section > .metrics .metric-card { min-height: 126px; }
 .overview-section > .metrics .metric-card-accent { order: -1; }
 
+/* Dashboard micro-typography and consistent currency rendering. */
+.outlook-kicker {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: clamp(8px, 2.2vw, 10px);
+  line-height: 1.35;
+  letter-spacing: .55px;
+}
+.outlook-kicker > span:not(.outlook-live-dot) { white-space: nowrap; }
+.outlook-kicker .outlook-live-dot { flex: 0 0 7px; margin: 0; }
+.journey-simulated { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.journey-simulated span { flex: 0 0 7px; margin: 0; }
+.money-amount { display: inline-flex; align-items: baseline; white-space: nowrap; font-variant-numeric: tabular-nums lining-nums; font-feature-settings: "tnum" 1, "lnum" 1; }
+.money-number { font: inherit; color: inherit; letter-spacing: inherit; }
+.money-currency { color: inherit; font-size: .78em; font-weight: 600; letter-spacing: 0; opacity: .88; text-decoration: none; }
+.trend-point { cursor: pointer; outline: none; }
+.trend-hit-area { fill: transparent; pointer-events: all; }
+.trend-point:focus-visible > circle:not(.trend-hit-area), .trend-point.is-selected > circle:not(.trend-hit-area) { stroke: #244c3d; stroke-width: 2; }
+.trend-year-selector { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.trend-year-selector button { min-width: 52px; min-height: 32px; padding: 5px 9px; border: 1px solid #e0e8de; border-radius: 7px; color: #53685d; background: #fffefa; font-size: 11px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.trend-year-selector button:hover, .trend-year-selector button.active { border-color: #b8d2bd; color: #1d5948; background: #edf5ed; }
+.trend-year-selector button:focus-visible { outline: 2px solid #6d9d80; outline-offset: 2px; }
+.trend-tooltip { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; margin-top: 10px; padding: 10px 12px; border: 1px solid #e2eadf; border-radius: 8px; color: #53685d; background: #f8faf5; font-size: 11px; }
+.trend-tooltip strong { color: #244c3d; font-variant-numeric: tabular-nums; }
+.trend-tooltip span { display: inline-flex; align-items: center; gap: 7px; }
+.trend-tooltip i { display: inline-block; width: 15px; height: 3px; border-radius: 3px; }
+.savings-trend svg { display: block; width: 100%; max-width: 100%; height: auto; touch-action: pan-y; }
+
 @media (max-width: 900px) {
   .page-heading.outlook-hero { grid-template-columns: minmax(0, 1fr) minmax(220px, .8fr); gap: 18px; padding: 24px; }
   .journey-panel .position-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -370,6 +400,8 @@ tbody tr:hover { background: #fafbfd; }
   .journey-milestone strong { font-size: 15px; }
   .journey-panel .position-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .journey-legend { flex-wrap: wrap; gap: 10px 15px; }
+  .outlook-kicker { column-gap: 5px; row-gap: 5px; letter-spacing: .4px; }
+  .trend-tooltip { align-items: flex-start; flex-direction: column; gap: 7px; }
   .indicator-intro { margin-top: 22px !important; }
 }
 
@@ -791,6 +823,13 @@ tbody th[scope="row"] { padding: 10px 11px; border-bottom: 1px solid #edf0f3; co
 .save-status-dirty { border-color: #ead5a8; color: #805615; background: #fff9ec; }
 .app-toast { position: fixed; top: max(16px, env(safe-area-inset-top)); right: 20px; z-index: 100; max-width: min(420px, calc(100vw - 32px)); padding: 12px 16px; border: 1px solid #cfe3d3; border-radius: 9px; color: #245b40; background: #f0f8f1; box-shadow: 0 8px 28px rgb(25 48 35 / 16%); font-size: 13px; font-weight: 650; line-height: 1.45; }
 .app-toast-error { border-color: #e5c6c1; color: #8a4038; background: #fff8f6; }
+.save-progress-overlay { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 24px; background: rgb(20 38 30 / 42%); backdrop-filter: blur(3px); }
+.save-progress-card { display: grid; justify-items: center; gap: 12px; width: min(360px, 100%); padding: 30px 26px; border: 1px solid #e1e9df; border-radius: 16px; color: var(--ink); background: var(--surface); box-shadow: 0 20px 60px rgb(17 35 25 / 22%); text-align: center; }
+.save-progress-card strong { color: var(--navy); font-size: 16px; font-weight: 750; }
+.save-progress-card > span:last-child { color: var(--muted); font-size: 12px; line-height: 1.55; }
+.save-progress-spinner { width: 38px; height: 38px; border: 3px solid #dce9df; border-top-color: var(--teal); border-radius: 50%; animation: save-progress-spin .8s linear infinite; }
+@keyframes save-progress-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .save-progress-spinner { animation-duration: 2s; } }
 .form-footer { justify-content: flex-end; }
 .save-controls { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
 .dashboard-empty-state { align-items: flex-start; gap: 8px; padding: 25px; }
@@ -856,6 +895,7 @@ tbody th[scope="row"] { padding: 10px 11px; border-bottom: 1px solid #edf0f3; co
 .profile-password-form .profile-field { max-width: 520px; }
 
 @media (max-width: 700px) {
+  .app-toast { top: max(10px, env(safe-area-inset-top)); right: 10px; left: 10px; max-width: none; padding: 11px 13px; font-size: 12px; }
   .side-nav { display: flex; width: 100%; gap: 5px; overflow-x: auto; padding: 0 0 3px; white-space: nowrap; scrollbar-width: none; }
   .side-nav::-webkit-scrollbar { display: none; }
   .nav-link { flex: 0 0 auto; min-width: max-content; min-height: 38px; padding: 0 10px; white-space: nowrap; }
@@ -888,7 +928,6 @@ tbody th[scope="row"] { padding: 10px 11px; border-bottom: 1px solid #edf0f3; co
   .profile-header { align-items: flex-start; flex-direction: column; }
   .profile-panel { padding: 17px; }
   .profile-form { grid-template-columns: 1fr; }
-  .app-toast { top: max(10px, env(safe-area-inset-top)); right: 10px; left: 10px; max-width: none; padding: 11px 13px; font-size: 12px; }
   .profile-actions { align-items: flex-start; flex-direction: column; }
   .profile-actions .button { width: 100%; }
 }
