@@ -11,7 +11,16 @@ export class DashboardPage extends BasePage {
   }
 
   async open() {
+    if (!this.page.url().endsWith('/dashboard')) await this.page.goto('/dashboard')
     await this.heading.waitFor({ state: 'visible' })
+  }
+
+  async openAnnualAnalysis() {
+    await this.page.getByRole('link', { name: /Phân tích theo năm/ }).click()
+  }
+
+  async openMonthlyForecast() {
+    await this.page.getByRole('link', { name: /Dự báo theo tháng/ }).click()
   }
 
   async exportCsv() {

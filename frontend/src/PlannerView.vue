@@ -2,39 +2,39 @@
   <div class="app-shell" :class="{ 'sidebar-collapsed': isSidebarCollapsed }">
     <button v-if="isDrawerOpen" class="drawer-backdrop" type="button" aria-label="Đóng menu điều hướng" @click="closeDrawer"></button>
     <aside class="sidebar" :class="{ 'drawer-open': isDrawerOpen }" aria-label="Điều hướng chính">
-      <a class="brand" href="#overview" aria-label="Planwise - Tổng quan">
+      <router-link class="brand" to="/dashboard" aria-label="Planwise - Tổng quan" @click="closeDrawer">
         <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
           <rect width="40" height="40" rx="12" fill="currentColor" />
           <path d="M12 29V11h9.2a7 7 0 0 1 0 14H17" fill="none" stroke="#F7F8F2" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
           <path d="m23 25 5 4-5 3" fill="none" stroke="#9DE3C7" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
         <span class="brand-word">plan<span class="brand-light">wise</span></span>
-      </a>
+      </router-link>
       <div class="drawer-mobile-heading">
-        <span>ĐIỀU HƯỚNG</span>
+        <span>TÀI KHOẢN & TIỆN ÍCH</span>
       </div>
       <button type="button" class="drawer-close" aria-label="Đóng menu điều hướng" title="Đóng menu" @click="closeMenu">×</button>
       <p class="nav-caption">KHÔNG GIAN LÀM VIỆC</p>
       <nav class="side-nav" aria-label="Các mục Planwise">
-        <a class="nav-link" :class="{ active: activeSection === 'overview' }" href="#overview" :aria-current="activeSection === 'overview' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">▦</span><span class="nav-label-desktop">Tổng quan</span><span class="nav-label-mobile">Tổng quan</span></a>
-        <a class="nav-link" :class="{ active: activeSection === 'assumptions' }" href="#assumptions" :aria-current="activeSection === 'assumptions' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">⚙</span><span class="nav-label-desktop">Giả định tài chính</span><span class="nav-label-mobile">Giả định</span></a>
-        <a class="nav-link" :class="{ active: activeSection === 'loans' }" href="#loans" :aria-current="activeSection === 'loans' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">⌁</span><span class="nav-label-desktop">Khoản vay</span><span class="nav-label-mobile">Khoản vay</span></a>
-        <a class="nav-link" :class="{ active: activeSection === 'annual-report' }" href="#annual-report" :aria-current="activeSection === 'annual-report' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">▥</span><span class="nav-label-desktop">Tổng hợp theo năm</span><span class="nav-label-mobile">Theo năm</span></a>
-        <a class="nav-link" :class="{ active: activeSection === 'monthly-forecast' }" href="#monthly-forecast" :aria-current="activeSection === 'monthly-forecast' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">▤</span><span class="nav-label-desktop">Dự báo theo tháng</span><span class="nav-label-mobile">Theo tháng</span></a>
+        <router-link class="nav-link" to="/dashboard" :class="{ active: activeSection === 'overview' }" :aria-current="activeSection === 'overview' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">▦</span><span class="nav-label-desktop">Tổng quan</span><span class="nav-label-mobile">Tổng quan</span></router-link>
+        <router-link class="nav-link" to="/plan/assumptions" :class="{ active: activeSection === 'assumptions' }" :aria-current="activeSection === 'assumptions' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">⚙</span><span class="nav-label-desktop">Kế hoạch tài chính</span><span class="nav-label-mobile">Kế hoạch</span></router-link>
+        <router-link class="nav-link" to="/loans" :class="{ active: activeSection === 'loans' }" :aria-current="activeSection === 'loans' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">⌁</span><span class="nav-label-desktop">Khoản vay</span><span class="nav-label-mobile">Khoản vay</span></router-link>
+        <router-link class="nav-link" to="/analytics/annual" :class="{ active: activeSection === 'annual-report' }" :aria-current="activeSection === 'annual-report' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">▥</span><span class="nav-label-desktop">Phân tích theo năm</span><span class="nav-label-mobile">Phân tích</span></router-link>
+        <router-link class="nav-link" to="/forecast/monthly" :class="{ active: activeSection === 'monthly-forecast' }" :aria-current="activeSection === 'monthly-forecast' ? 'page' : undefined" @click="closeDrawer"><span class="nav-icon">▤</span><span class="nav-label-desktop">Dự báo theo tháng</span><span class="nav-label-mobile">Dự báo</span></router-link>
       </nav>
       <div class="drawer-actions" aria-label="Thao tác tài khoản và tiện ích">
         <p class="drawer-actions-caption">TÀI KHOẢN & TIỆN ÍCH</p>
-        <button id="household-settings-button" class="drawer-action" data-action="household" type="button" aria-label="Không gian hộ gia đình" title="Không gian hộ gia đình" @click="$emit('open-household-settings')">Không gian hộ gia đình</button>
-        <button id="profile-button" class="drawer-action" data-action="profile" type="button" aria-label="Hồ sơ cá nhân" title="Hồ sơ cá nhân" @click="$emit('open-profile')">Hồ sơ cá nhân</button>
+        <button id="household-settings-button" class="drawer-action" data-action="household" type="button" aria-label="Không gian hộ gia đình" title="Không gian hộ gia đình" @click="openHouseholdSettings">Không gian hộ gia đình</button>
+        <button id="profile-button" class="drawer-action" data-action="profile" type="button" aria-label="Hồ sơ cá nhân" title="Hồ sơ cá nhân" @click="openProfile">Hồ sơ cá nhân</button>
         <button id="export-button" class="drawer-action" data-action="export" type="button" aria-label="Xuất dữ liệu CSV" :disabled="hasValidationError" @click="exportCsv">Xuất dữ liệu CSV</button>
       </div>
-      <a class="drawer-period" href="#forecastYears" aria-label="Điều chỉnh thời gian dự phóng" @click="closeDrawer">
+      <router-link class="drawer-period" to="/plan/assumptions" aria-label="Điều chỉnh thời gian dự phóng" @click="closeDrawer">
         <span>KỲ MÔ PHỎNG</span>
         <strong>{{ forecastPeriod }}</strong>
         <span class="drawer-period-action">Điều chỉnh thời gian dự phóng <span aria-hidden="true">↗</span></span>
-      </a>
+      </router-link>
       <div class="drawer-logout-area">
-        <button id="logout-button" class="drawer-action" data-action="logout" type="button" aria-label="Đăng xuất" @click="$emit('logout')">Đăng xuất</button>
+        <button id="logout-button" class="drawer-action" data-action="logout" type="button" aria-label="Đăng xuất" @click="logout">Đăng xuất</button>
       </div>
       <div class="sidebar-bottom">
         <span class="local-indicator"><span></span> Dữ liệu lưu trên máy chủ</span>
@@ -46,15 +46,15 @@
       <header class="topbar">
         <button v-if="isSidebarCollapsed" type="button" class="sidebar-reopen-button" aria-label="Mở menu điều hướng" title="Mở menu" @click="openSidebar">☰</button>
         <div class="mobile-topbar-main">
-          <button type="button" class="drawer-open-button" aria-label="Mở menu điều hướng" @click="openDrawer">☰</button>
-          <a class="brand mobile-brand" href="#overview" aria-label="Planwise - Tổng quan">
+          <button type="button" class="drawer-open-button" aria-label="Mở menu tài khoản" @click="openDrawer">☰</button>
+          <router-link class="brand mobile-brand" to="/dashboard" aria-label="Planwise - Tổng quan" @click="closeDrawer">
             <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
               <rect width="40" height="40" rx="12" fill="currentColor" />
               <path d="M12 29V11h9.2a7 7 0 0 1 0 14H17" fill="none" stroke="#F7F8F2" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
               <path d="m23 25 5 4-5 3" fill="none" stroke="#9DE3C7" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
             <span class="brand-word">plan<span class="brand-light">wise</span></span>
-          </a>
+          </router-link>
         </div>
         <div class="topbar-actions">
           <span class="local-badge"><span aria-hidden="true"></span> Dữ liệu lưu trên máy chủ</span>
@@ -72,13 +72,18 @@
       <strong>Chưa thể tải dữ liệu</strong>
       <span>{{ errorMessage }}</span>
     </div>
-    <section id="overview" class="page-heading outlook-hero">
+    <header v-if="activeSection !== 'overview'" class="route-page-heading">
+      <p class="eyebrow">{{ routeHeading.kicker }}</p>
+      <h1>{{ routeHeading.title }}</h1>
+      <p class="subtitle">{{ routeHeading.description }}</p>
+    </header>
+    <section v-if="activeSection === 'overview'" id="overview" class="page-heading outlook-hero">
       <div class="outlook-copy">
         <p class="eyebrow">TRIỂN VỌNG TÀI CHÍNH <span class="outlook-live-dot"></span> KỊCH BẢN ĐANG MÔ PHỎNG</p>
         <h1>Kế hoạch tài chính<br class="mobile-break"> của bạn sẽ đi đến đâu?</h1>
         <p class="subtitle">Bức tranh dự kiến từ {{ forecastPeriod }}, dựa trên các giả định hiện tại.</p>
         <div class="outlook-actions">
-          <a class="button button-primary" href="#assumptions">Điều chỉnh giả định <span aria-hidden="true">↗</span></a>
+          <router-link class="button button-primary" to="/plan/assumptions">Điều chỉnh giả định <span aria-hidden="true">↗</span></router-link>
           <span class="outlook-period">{{ forecastPeriod }}</span>
         </div>
       </div>
@@ -90,19 +95,19 @@
       </div>
     </section>
 
-    <section id="alert-area" aria-live="polite">
+    <section v-if="activeSection === 'overview'" id="alert-area" aria-live="polite">
       <div v-if="alert" class="alert">
         <span class="alert-icon" aria-hidden="true">!</span>
         <span><strong v-if="alert.title">{{ alert.title }}</strong> {{ alert.text }}{{ alert.suffix ? ' ' + alert.suffix : '' }}</span>
       </div>
     </section>
 
-    <section v-if="!hasFinancialInputs" class="sample-empty-banner" aria-labelledby="sample-empty-title">
+    <section v-if="activeSection === 'overview' && !hasFinancialInputs" class="sample-empty-banner" aria-labelledby="sample-empty-title">
       <div><strong id="sample-empty-title">Bắt đầu với một kế hoạch mẫu</strong><p>Các giả định hiện đang trống. Nạp thử thu nhập, chi phí, tiết kiệm và lịch vay minh họa để khám phá biểu đồ và bảng dự báo.</p></div>
       <button class="button button-primary" type="button" @click="loadSampleData">Nạp dữ liệu mẫu</button>
     </section>
 
-    <section class="overview-section" aria-label="Triển vọng tài chính">
+    <section v-if="activeSection === 'overview'" class="overview-section" aria-label="Triển vọng tài chính">
       <template v-if="hasFinancialInputs">
         <div class="section-intro"><div><p class="eyebrow">HÀNH TRÌNH TÀI CHÍNH</p><h2>Hành trình tài chính dự kiến</h2><p class="section-description">Theo dõi quỹ tiết kiệm tăng lên và dư nợ giảm xuống theo thời gian.</p></div><span class="section-meta">Mô phỏng · 2026–{{ forecastEndYear }}</span></div>
         <financial-position :assumptions="dto" :loans="loans" :forecast="forecast" />
@@ -112,22 +117,22 @@
       <div v-else class="empty-state dashboard-empty-state">
         <strong>Bắt đầu từ các giả định tài chính</strong>
         <span>Nhập thu nhập, chi phí hoặc tiết kiệm ban đầu để xem dự báo thay vì các chỉ số 0 ₫.</span>
-        <a class="button button-primary" href="#assumptions">Thiết lập giả định <span aria-hidden="true">↘</span></a>
+        <router-link class="button button-primary" to="/plan/assumptions">Thiết lập giả định <span aria-hidden="true">↘</span></router-link>
       </div>
     </section>
 
-    <section id="assumptions" class="content-section">
+    <section v-if="activeSection === 'assumptions'" id="assumptions" class="content-section">
       <span id="assumption" class="anchor-alias" aria-hidden="true"></span>
       <div class="section-intro"><div><p class="eyebrow">THIẾT LẬP</p><h2>Giả định tài chính</h2><p class="section-description">Cập nhật thu nhập, chi phí và khoản vay để mô phỏng kế hoạch của gia đình.</p></div></div>
       <assumptions-form :dto="dto" :expenses="expenses" :error="errorMessage" :status="saveStatus" @input="onFormInput" @expenses-input="onExpenseInput" @save="saveAndForecast" @reset="resetDefaults" @load-sample="loadSampleData" />
     </section>
 
-    <section id="loans" class="content-section">
+    <section v-if="activeSection === 'loans'" id="loans" class="content-section">
       <div class="section-intro"><div><p class="eyebrow">KHOẢN VAY</p><h2>Lịch trả nợ</h2><p class="section-description">Quản lý từng khoản vay và các kỳ trả linh hoạt; dữ liệu chỉ được cập nhật khi bạn lưu.</p></div></div>
       <loan-schedule-form :loans="loans" :sample-loan-draft="sampleLoanDraft" :status="loanSaveStatus" :error="loanError" @dirty-change="loanDraftDirty = $event" @save="saveLoanSchedule" />
     </section>
 
-    <section id="annual-report" class="content-section">
+    <section v-if="activeSection === 'annual-report'" id="annual-report" class="content-section">
       <div class="section-intro"><div><p class="eyebrow">PHÂN TÍCH DÀI HẠN</p><h2>Dòng tiền theo năm</h2><p class="section-description">So sánh thu nhập và chi phí qua từng năm trong kỳ kế hoạch.</p></div></div>
       <template v-if="forecast">
         <annual-chart :forecast="forecast" />
@@ -135,7 +140,7 @@
       </template>
     </section>
 
-    <section id="monthly-forecast" class="content-section">
+    <section v-if="activeSection === 'monthly-forecast'" id="monthly-forecast" class="content-section">
       <div class="section-intro"><div><p class="eyebrow">CHI TIẾT DỰ BÁO</p><h2>Kế hoạch từng tháng</h2><p class="section-description">Theo dõi các khoản thu, chi, trả nợ và tiết kiệm lũy kế.</p></div></div>
     <monthly-table v-if="forecast" :forecast="forecast" />
     </section>
@@ -146,6 +151,13 @@
         <span>Dữ liệu tài chính được lưu trên máy chủ của Planwise.</span>
       </footer>
     </div>
+    <nav class="mobile-bottom-nav" aria-label="Điều hướng chính trên di động">
+      <router-link class="mobile-nav-link" to="/dashboard" :class="{ active: activeSection === 'overview' }" :aria-current="activeSection === 'overview' ? 'page' : undefined"><span aria-hidden="true">▦</span><small>Tổng quan</small></router-link>
+      <router-link class="mobile-nav-link" to="/plan/assumptions" :class="{ active: activeSection === 'assumptions' }" :aria-current="activeSection === 'assumptions' ? 'page' : undefined"><span aria-hidden="true">⚙</span><small>Kế hoạch</small></router-link>
+      <router-link class="mobile-nav-link" to="/loans" :class="{ active: activeSection === 'loans' }" :aria-current="activeSection === 'loans' ? 'page' : undefined"><span aria-hidden="true">⌁</span><small>Khoản vay</small></router-link>
+      <router-link class="mobile-nav-link" to="/analytics/annual" :class="{ active: activeSection === 'annual-report' }" :aria-current="activeSection === 'annual-report' ? 'page' : undefined"><span aria-hidden="true">▥</span><small>Phân tích</small></router-link>
+      <router-link class="mobile-nav-link" to="/forecast/monthly" :class="{ active: activeSection === 'monthly-forecast' }" :aria-current="activeSection === 'monthly-forecast' ? 'page' : undefined"><span aria-hidden="true">▤</span><small>Dự báo</small></router-link>
+    </nav>
   </div>
 </template>
 
@@ -162,8 +174,11 @@ import AnnualTable from './components/AnnualTable.vue'
 import MonthlyTable from './components/MonthlyTable.vue'
 import { formatCurrency } from './utils/currency.js'
 
-const props = defineProps({ user: { type: Object, default: () => ({ email: "", role: "MEMBER" }) } })
-defineEmits(['logout', 'open-household-settings', 'open-profile'])
+const props = defineProps({
+  user: { type: Object, default: () => ({ email: "", role: "MEMBER" }) },
+  section: { type: String, default: 'overview' },
+})
+const emit = defineEmits(['logout', 'open-household-settings', 'open-profile'])
 
 const dto = reactive({
   incomeChanges: [{ effectiveMonth: '2026-11', amount: 0 }],
@@ -186,17 +201,23 @@ const sampleLoanDraft = ref(null)
 const savedAssumptionsSnapshot = ref(null)
 const isLoading = ref(true)
 const provisional = ref(false)
-const activeSection = ref('overview')
+const activeSection = computed(() => props.section || 'overview')
 const isDrawerOpen = ref(false)
 const isSidebarCollapsed = ref(false)
 const sectionLabels = {
   overview: 'Tổng quan',
-  assumptions: 'Giả định tài chính',
+  assumptions: 'Kế hoạch tài chính',
   loans: 'Khoản vay',
-  'annual-report': 'Tổng hợp theo năm',
+  'annual-report': 'Phân tích theo năm',
   'monthly-forecast': 'Dự báo theo tháng',
 }
 const activeSectionLabel = computed(() => sectionLabels[activeSection.value] || sectionLabels.overview)
+const routeHeading = computed(() => ({
+  assumptions: { kicker: 'KẾ HOẠCH TÀI CHÍNH', title: 'Thiết lập kế hoạch', description: 'Điều chỉnh thu nhập, chi phí và thời gian dự phóng cho kế hoạch của bạn.' },
+  loans: { kicker: 'QUẢN LÝ NGHĨA VỤ', title: 'Khoản vay', description: 'Theo dõi dư nợ và lịch thanh toán của từng khoản vay.' },
+  'annual-report': { kicker: 'PHÂN TÍCH TÀI CHÍNH', title: 'Bức tranh theo năm', description: 'Đánh giá thu nhập, chi phí và dòng tiền qua từng năm.' },
+  'monthly-forecast': { kicker: 'DỰ BÁO TÀI CHÍNH', title: 'Kế hoạch từng tháng', description: 'Theo dõi chi tiết dòng tiền và số dư dự kiến theo từng tháng.' },
+}[activeSection.value] || { kicker: 'PLANWISE', title: activeSectionLabel.value, description: '' }))
 const forecastPeriod = computed(() => {
   const months = forecast.value?.months || []
   if (!months.length) return 'Chưa có dữ liệu dự báo'
@@ -220,9 +241,20 @@ const hasFinancialInputs = computed(() =>
 const assumptionsDirty = computed(() => savedAssumptionsSnapshot.value !== null && JSON.stringify(snapshot()) !== savedAssumptionsSnapshot.value)
 const hasUnsavedChanges = computed(() => assumptionsDirty.value || loanDraftDirty.value)
 
-function syncActiveSection() {
-  const section = window.location.hash.slice(1)
-  activeSection.value = sectionLabels[section] ? section : 'overview'
+function confirmLeavingWorkspace() {
+  return !hasUnsavedChanges.value || window.confirm('Bạn có thay đổi chưa lưu. Nếu rời không gian kế hoạch, các thay đổi này sẽ không được giữ. Tiếp tục?')
+}
+
+function openProfile() {
+  if (confirmLeavingWorkspace()) emit('open-profile')
+}
+
+function openHouseholdSettings() {
+  if (confirmLeavingWorkspace()) emit('open-household-settings')
+}
+
+function logout() {
+  if (confirmLeavingWorkspace()) emit('logout')
 }
 
 function openDrawer() {
@@ -251,16 +283,6 @@ function onDrawerKeydown(event) {
   if (event.key === 'Escape' && (isDrawerOpen.value || (window.innerWidth > 767 && !isSidebarCollapsed.value))) closeMenu()
 }
 
-function updateActiveSectionFromScroll() {
-  const sections = Object.keys(sectionLabels)
-  let current = 'overview'
-  for (const section of sections) {
-    const element = document.getElementById(section)
-    if (element && element.getBoundingClientRect().top <= 150) current = section
-  }
-  activeSection.value = current
-}
-
 let previewTimer = null
 let latestRequest = 0
 
@@ -278,9 +300,6 @@ const alert = computed(() => {
 })
 
 onMounted(async () => {
-  syncActiveSection()
-  window.addEventListener('hashchange', syncActiveSection)
-  window.addEventListener('scroll', updateActiveSectionFromScroll, { passive: true })
   window.addEventListener('keydown', onDrawerKeydown)
   window.addEventListener('beforeunload', onBeforeUnload)
   try {
@@ -300,8 +319,6 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   clearTimeout(previewTimer)
-  window.removeEventListener('hashchange', syncActiveSection)
-  window.removeEventListener('scroll', updateActiveSectionFromScroll)
   window.removeEventListener('keydown', onDrawerKeydown)
   window.removeEventListener('beforeunload', onBeforeUnload)
 })

@@ -23,10 +23,15 @@ export const test = base.extend({
     await expect(page.getByRole('button', { name: 'Đăng xuất' })).toBeVisible()
     await expect(page.getByRole('heading', { name: /Kế hoạch tài chính/ })).toBeVisible()
     await expect(page.locator('#export-button')).toBeVisible()
+    await page.locator('.side-nav .nav-link[href="/plan/assumptions"]').click()
+    await expect(page).toHaveURL(/\/plan\/assumptions$/)
     await expect(page.locator('#save-status')).toHaveText('Đã lưu trên máy chủ')
+    await page.getByRole('link', { name: /Phân tích theo năm/ }).click()
     await expect(page.locator('#annual-chart .chart-bar')).toHaveCount(5)
     await expect(page.locator('#annual-table tbody tr')).toHaveCount(5)
+    await page.getByRole('link', { name: /Dự báo theo tháng/ }).click()
     await expect(page.locator('#monthly-table tbody tr')).toHaveCount(50)
+    await page.locator('.side-nav .nav-link[href="/dashboard"]').click()
 
     const initialProfile = await page.evaluate(async () => {
       const [assumptions, loans] = await Promise.all([
@@ -56,7 +61,9 @@ export const test = base.extend({
     const reloadSessionStatus = await page.evaluate(async () => (await fetch('/api/auth/me')).status)
     expect(reloadSessionStatus, 'Session cookie must survive a full browser reload').toBe(200)
     await expect(page.getByRole('button', { name: 'Đăng xuất' })).toBeVisible()
+    await page.locator('.side-nav .nav-link[href="/plan/assumptions"]').click()
     await expect(page.locator('#save-status')).toHaveText('Đã lưu trên máy chủ')
+    await page.locator('.side-nav .nav-link[href="/dashboard"]').click()
 
     await use(page)
   },

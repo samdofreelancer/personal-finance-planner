@@ -15,7 +15,7 @@ test('owner invites a separate member account into the shared household', async 
   try {
     const memberPage = await memberContext.newPage()
     await memberPage.goto(invitationUrl)
-    await expect(memberPage.getByRole('heading', { name: 'Tham gia household' })).toBeVisible()
+    await expect(memberPage.getByRole('heading', { name: 'Tham gia hộ gia đình' })).toBeVisible()
     await memberPage.getByLabel('Email').fill(memberEmail)
     await memberPage.getByLabel('Mật khẩu', { exact: true }).fill('e2e-member-password-2026')
     await memberPage.getByLabel('Xác nhận mật khẩu').fill('e2e-member-password-2026')

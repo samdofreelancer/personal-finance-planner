@@ -37,11 +37,18 @@ const ProfileViewStub = defineComponent({
   template: '<div data-testid="profile-view">Profile</div>',
 })
 
+const RouterViewStub = defineComponent({
+  name: 'RouterView',
+  setup(_, { slots }) {
+    return () => slots.default?.({ Component: PlannerViewStub, route: { meta: { section: 'overview' } } })
+  },
+})
+
 const wrappers = []
 
 function mountApp() {
   const wrapper = mount(App, {
-    global: { stubs: { AuthView: AuthViewStub, PlannerView: PlannerViewStub, HouseholdSettings: HouseholdSettingsStub, ProfileView: ProfileViewStub } },
+    global: { stubs: { RouterView: RouterViewStub, AuthView: AuthViewStub, PlannerView: PlannerViewStub, HouseholdSettings: HouseholdSettingsStub, ProfileView: ProfileViewStub } },
   })
   wrappers.push(wrapper)
   return wrapper

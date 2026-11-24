@@ -20,13 +20,16 @@
     :user="user"
     @close="showProfile = false"
   />
-  <PlannerView
-    v-else
-    :user="user"
-    @logout="handleLogout"
-    @open-household-settings="showHouseholdSettings = true"
-    @open-profile="showProfile = true"
-  />
+  <RouterView v-else v-slot="{ Component, route }">
+    <component
+      :is="Component"
+      :user="user"
+      :section="route.meta.section || 'overview'"
+      @logout="handleLogout"
+      @open-household-settings="showHouseholdSettings = true"
+      @open-profile="showProfile = true"
+    />
+  </RouterView>
 </template>
 
 <script setup>
@@ -34,7 +37,6 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 import AuthView from './components/AuthView.vue'
 import HouseholdSettings from './components/HouseholdSettings.vue'
 import ProfileView from './components/ProfileView.vue'
-import PlannerView from './PlannerView.vue'
 import { getCurrentUser, logout } from './services/auth.js'
 
 const user = ref(null)

@@ -10,7 +10,8 @@
     "test": "vitest run --coverage && node scripts/normalize-lcov.mjs"
   },
   "dependencies": {
-    "vue": "^3.4.0"
+    "vue": "^3.4.0",
+    "vue-router": "^4.6.5"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.11",

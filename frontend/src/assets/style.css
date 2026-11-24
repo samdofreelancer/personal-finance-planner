@@ -243,6 +243,10 @@ tbody tr:hover { background: #fafbfd; }
 .assumptions-panel { margin-bottom: 0; }
 .content-section > .panel { margin-bottom: 14px; }
 .page-footer { margin-top: 34px; padding: 18px 2px 24px; border-top: 1px solid #e6ebf0; }
+.route-page-heading { margin: 0 0 25px; padding: 4px 1px 19px; border-bottom: 1px solid #e6ebdf; }
+.route-page-heading .eyebrow { margin-bottom: 6px; color: #39856c; }
+.route-page-heading h1 { font-size: clamp(27px, 3vw, 35px); }
+.route-page-heading .subtitle { margin-top: 8px; }
 
 .position-panel { margin-top: 18px; padding: 23px; border: 1px solid var(--line); border-radius: 15px; background: var(--surface); box-shadow: 0 4px 18px #273d2d08; }
 .position-heading { margin-bottom: 16px; }
@@ -354,6 +358,8 @@ tbody tr:hover { background: #fafbfd; }
 }
 @media (max-width: 700px) {
   .page-heading.outlook-hero { display: block; min-height: 0; padding: 21px 17px; }
+  .route-page-heading { margin-bottom: 19px; padding-bottom: 15px; }
+  .route-page-heading h1 { font-size: 27px; }
   .outlook-hero h1 { font-size: 28px; }
   .outlook-hero .subtitle { font-size: 12px; }
   .outlook-actions { align-items: flex-start; flex-wrap: wrap; gap: 11px; margin-top: 16px; }
@@ -917,6 +923,46 @@ tbody th[scope="row"] { padding: 10px 11px; border-bottom: 1px solid #edf0f3; co
   .topbar-actions .button { padding-right: 6px; padding-left: 6px; font-size: 9px; }
 }
 
+/* Mobile uses a persistent five-destination tab bar; the drawer is reserved for account utilities. */
+.mobile-bottom-nav { display: none; }
+@media (max-width: 767px) {
+  .sidebar .side-nav { display: none; }
+  .sidebar .nav-caption { display: none; }
+  .drawer-period { display: none; }
+  .drawer-mobile-heading { margin-top: 28px; }
+  .workspace { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
+  .page { padding-bottom: 28px; }
+  .mobile-bottom-nav {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 30;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    min-height: calc(64px + env(safe-area-inset-bottom));
+    padding: 5px 4px calc(5px + env(safe-area-inset-bottom));
+    border-top: 1px solid #e4eae1;
+    background: rgb(255 254 250 / 97%);
+    box-shadow: 0 -5px 20px rgb(31 54 43 / 5%);
+    backdrop-filter: blur(14px);
+  }
+  .mobile-nav-link {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border-radius: 9px;
+    color: #65766a;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-nav-link > span { font-size: 19px; line-height: 1.15; }
+  .mobile-nav-link small { max-width: 100%; overflow: hidden; font-size: 9px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+  .mobile-nav-link.active { color: #1d5948; background: #edf5ed; }
+  .mobile-nav-link:focus-visible { outline: 2px solid #6d9d80; outline-offset: -2px; }
+}
+
 /* Reassert drawer rules after legacy mobile navigation overrides above. */
 @media (max-width: 767px) {
   .sidebar {
@@ -956,4 +1002,11 @@ tbody th[scope="row"] { padding: 10px 11px; border-bottom: 1px solid #edf0f3; co
   .chart-container { min-height: 0; padding-top: 12px; }
   .chart-footnote { margin: 7px 13px 0; font-size: 11px; }
   .table-scroll { scrollbar-width: thin; }
+}
+
+/* Final mobile information architecture: primary destinations stay in the tab bar. */
+@media (max-width: 767px) {
+  .sidebar .side-nav,
+  .sidebar .nav-caption,
+  .drawer-period { display: none; }
 }

@@ -17,6 +17,7 @@ test('creates and persists a user-defined expense schedule across reload', async
 
   await expect(assumptionsPage.saveStatus).toHaveText('Đã lưu trên máy chủ')
   await expect(assumptionsPage.expenseNameInput).toHaveValue('E2E - Học phí')
+  await assumptionsPage.openForecast()
   await expect(assumptionsPage.monthlyTable).toContainText('E2E - Học phí')
   await expect(assumptionsPage.monthlyRow('thg 11 2026')).toContainText('1.500.000')
   await expect(assumptionsPage.monthlyRow('thg 1 2027')).toContainText('2.000.000')

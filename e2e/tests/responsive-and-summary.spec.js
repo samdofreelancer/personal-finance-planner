@@ -1,9 +1,10 @@
 import { test, expect } from '../fixtures/test.js'
 
-test('uses single-purpose rows in the mobile drawer and keeps the header uncluttered', async ({ dashboardPage }) => {
+test('uses persistent mobile navigation and keeps the header uncluttered', async ({ dashboardPage }) => {
   const { page } = dashboardPage
   await page.setViewportSize({ width: 390, height: 844 })
   await dashboardPage.open()
+  await page.locator('.mobile-bottom-nav a[href="/analytics/annual"]').click()
   await expect(page.locator('#annual-chart svg')).toHaveAttribute('viewBox', /^0 0 420 /)
 
   const layout = await page.evaluate(() => {
@@ -20,10 +21,13 @@ test('uses single-purpose rows in the mobile drawer and keeps the header unclutt
   expect(layout.householdTitle).toBe('Không gian hộ gia đình')
   expect(layout.topbarActionsDisplay).toBe('none')
   expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth)
-  await expect(page.getByRole('button', { name: 'Mở menu điều hướng' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Mở menu tài khoản' })).toBeVisible()
+  await expect(page.locator('.mobile-bottom-nav')).toBeVisible()
+  await expect(page.locator('.mobile-bottom-nav .mobile-nav-link')).toHaveCount(5)
   await expect(page.locator('.mobile-brand')).toContainText('planwise')
   await expect(page.locator('.breadcrumb strong')).toBeVisible()
   await expect(page.locator('#annual-table thead th').first()).toHaveCSS('position', 'sticky')
+  await page.locator('.mobile-bottom-nav a[href="/forecast/monthly"]').click()
   await expect(page.locator('#monthly-table thead th').first()).toHaveCSS('position', 'sticky')
   await expect(page.locator('#monthly-table tbody th[scope="row"]').first()).toHaveCSS('position', 'sticky')
   await expect(page.locator('#monthly-table tbody td:last-child').first()).toHaveCSS('position', 'sticky')
@@ -39,7 +43,7 @@ test('uses single-purpose rows in the mobile drawer and keeps the header unclutt
     scrollWidth: element.scrollWidth,
   })))
   expect(mobileTables.some((table) => table.scrollWidth > table.clientWidth)).toBe(true)
-  const stickyColumns = await page.evaluate(() => ['#annual-table', '#monthly-table'].map((selector) => {
+  const stickyColumns = await page.evaluate(() => ['#monthly-table'].map((selector) => {
     const table = document.querySelector(selector)
     const scroller = table.closest('.table-scroll')
     scroller.scrollLeft = 180
@@ -63,13 +67,10 @@ test('uses single-purpose rows in the mobile drawer and keeps the header unclutt
   expect(mobileHeader.height).toBeLessThan(100)
   await expect(page.locator('.sidebar')).toBeHidden()
 
-  await page.getByRole('button', { name: 'Mở menu điều hướng' }).click()
+  await page.getByRole('button', { name: 'Mở menu tài khoản' }).click()
   await expect(page.locator('.sidebar')).toBeVisible()
-  await expect(page.locator('.sidebar .side-nav')).toHaveCSS('display', 'grid')
-  await expect(page.locator('.sidebar .nav-link')).toHaveCount(5)
-  await expect(page.locator('.sidebar .nav-link').nth(1)).toContainText('Giả định tài chính')
-  const mobileNavigationRows = await page.locator('.sidebar .nav-link').evaluateAll((links) => links.map((link) => link.getBoundingClientRect().top))
-  expect(mobileNavigationRows.every((top, index) => index === 0 || top > mobileNavigationRows[index - 1])).toBe(true)
+  await expect(page.locator('.sidebar .side-nav')).toBeHidden()
+  await expect(page.locator('.mobile-bottom-nav .mobile-nav-link').nth(1)).toContainText('Kế hoạch')
   await expect(page.locator('.drawer-actions .drawer-action')).toHaveCount(3)
   const drawerActionRows = await page.locator('.drawer-actions .drawer-action').evaluateAll((buttons) => buttons.map((button) => ({
     height: button.getBoundingClientRect().height,
@@ -80,24 +81,17 @@ test('uses single-purpose rows in the mobile drawer and keeps the header unclutt
   expect(drawerActionRows.every((button) => button.height >= 48 && button.width > 200 && button.whiteSpace === 'nowrap' && button.display === 'flex')).toBe(true)
   await expect(page.locator('.drawer-mobile-heading')).toHaveCSS('display', 'flex')
   await expect(page.locator('.drawer-close')).toBeVisible()
-  await expect(page.locator('.drawer-period strong')).toContainText('11/2026')
-  await page.locator('.drawer-period').click()
-  await expect(page).toHaveURL(/#forecastYears$/)
-  await expect(page.locator('#forecastYears')).toBeInViewport()
+  await page.locator('.drawer-close').click()
+  await page.locator('.mobile-bottom-nav a[href="/plan/assumptions"]').click()
+  await expect(page).toHaveURL(/\/plan\/assumptions$/)
+  await expect(page.locator('#forecastYears')).toBeVisible()
   await expect(page.locator('.sidebar')).toBeHidden()
 
-  await page.getByRole('button', { name: 'Mở menu điều hướng' }).click()
+  await page.getByRole('button', { name: 'Mở menu tài khoản' }).click()
   await page.locator('.drawer-backdrop').click({ position: { x: 380, y: 400 } })
   await expect(page.locator('.sidebar')).toBeHidden()
 
-  await page.getByRole('button', { name: 'Mở menu điều hướng' }).click()
-  await page.locator('.sidebar .nav-link[href="#assumptions"]').click()
-  await expect(page.locator('.sidebar')).toBeHidden()
-  await expect(page).toHaveURL(/#assumptions$/)
-  await page.getByRole('button', { name: 'Mở menu điều hướng' }).click()
-  await expect(page.locator('.sidebar .nav-link[href="#assumptions"]')).toHaveClass(/active/)
-  await page.locator('.sidebar .drawer-close').click()
-  await expect(page.locator('.sidebar')).toBeHidden()
+  await expect(page.locator('.mobile-bottom-nav a[href="/plan/assumptions"]')).toHaveClass(/active/)
 
   await page.setViewportSize({ width: 320, height: 740 })
   await expect(page.locator('.topbar-actions')).toBeHidden()
@@ -115,7 +109,8 @@ test('uses single-purpose rows in the mobile drawer and keeps the header unclutt
 
   await page.setViewportSize({ width: 1280, height: 900 })
   await expect(page.locator('.sidebar')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Mở menu điều hướng' })).toBeHidden()
+  await expect(page.getByRole('button', { name: 'Mở menu tài khoản' })).toBeHidden()
+  await expect(page.locator('.mobile-bottom-nav')).toBeHidden()
   await expect(page.locator('.topbar-actions .button')).toHaveCount(0)
   await expect(page.locator('.sidebar .drawer-actions')).toBeVisible()
   const desktopActionRows = await page.locator('.drawer-actions .drawer-action').evaluateAll((buttons) => buttons.map((button) => ({
@@ -129,6 +124,7 @@ test('uses single-purpose rows in the mobile drawer and keeps the header unclutt
   const desktopLogout = page.locator('.drawer-logout-area .drawer-action')
   await expect(desktopLogout).toBeVisible()
   expect(await desktopLogout.evaluate((button) => button.getBoundingClientRect().top)).toBeGreaterThan(desktopActionRows.at(-1).top)
+  await page.goto('/forecast/monthly')
   await expect(page.locator('#monthly-table tfoot tr')).toContainText('Tổng cộng kỳ')
   await expect(page.locator('#monthly-table tfoot tr th')).toHaveCSS('font-weight', '800')
   await expect(page.locator('#monthly-table thead th').first()).toHaveCSS('position', 'sticky')
@@ -140,7 +136,7 @@ test('uses single-purpose rows in the mobile drawer and keeps the header unclutt
   expect(desktopLayout.width).toBeLessThanOrEqual(desktopLayout.viewport)
   expect(desktopLayout.topbarHeight).toBeLessThanOrEqual(80)
 
-  await page.goto('/#assumption')
+  await page.goto('/plan/assumptions')
   await expect(page.locator('#assumptions-form')).toBeVisible()
   await expect(page.locator('#save-status')).toHaveText('Đã lưu trên máy chủ')
 })
@@ -158,6 +154,7 @@ test('loads sample assumptions into the preview without overwriting server data'
   await expect(page.getByLabel('Tiền tiết kiệm ban đầu')).toHaveValue('100.000.000')
   await expect(page.getByLabel('Số tiền khoản Chi phí gia đình, mốc 1')).toHaveValue('15.000.000')
   await expect(assumptionsPage.saveStatus).toContainText('Đã cập nhật mô phỏng · Chưa lưu')
+  await page.getByRole('link', { name: /Khoản vay/ }).click()
   await expect(page.locator('#loans input[id^="loan-name-"]').last()).toHaveValue('Khoản vay minh họa')
   await expect(page.locator('#loans')).toContainText('Lịch trả đang chỉnh sửa chưa được tính vào dự báo')
 

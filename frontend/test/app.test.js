@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import { defineComponent, h } from 'vue'
 import PlannerView from '../src/PlannerView.vue'
 import AssumptionsForm from '../src/components/AssumptionsForm.vue'
 import LoanScheduleForm from '../src/components/LoanScheduleForm.vue'
@@ -22,6 +23,20 @@ vi.mock('../src/services/api.js', () => ({
   getForecast: vi.fn(),
   exportCsv: vi.fn(),
 }))
+
+const RouterLinkStub = defineComponent({
+  props: { to: { type: String, required: true } },
+  setup(props, { slots }) {
+    return () => h('a', {
+      href: props.to,
+      onClick: (event) => event.preventDefault(),
+    }, slots.default?.())
+  },
+})
+
+function mountPlanner(section = 'overview') {
+  return mount(PlannerView, { props: { section }, global: { stubs: { RouterLink: RouterLinkStub } } })
+}
 
 function validAssumptions() {
   return {
@@ -59,11 +74,11 @@ function forecastResult({ provisional = false, include2030 = true } = {}) {
   }
 }
 
-async function mountLoadedApp() {
+async function mountLoadedApp(section = 'overview') {
   getAssumptions.mockResolvedValue(validAssumptions())
   getLoans.mockResolvedValue([])
   getForecast.mockResolvedValue(forecastResult())
-  const wrapper = mount(PlannerView)
+  const wrapper = mountPlanner(section)
   await flushPromises()
   return wrapper
 }
@@ -82,13 +97,27 @@ beforeEach(() => {
 })
 
 describe('PlannerView', () => {
+  it('renders one functional page at a time and exposes five mobile destinations', async () => {
+    const wrapper = await mountLoadedApp('loans')
+    expect(wrapper.find('#loans').exists()).toBe(true)
+    expect(wrapper.find('#assumptions').exists()).toBe(false)
+    expect(wrapper.find('#overview').exists()).toBe(false)
+    expect(wrapper.get('.breadcrumb strong').text()).toBe('Khoản vay')
+    expect(wrapper.findAll('.mobile-bottom-nav .mobile-nav-link')).toHaveLength(5)
+
+    await wrapper.setProps({ section: 'assumptions' })
+    expect(wrapper.find('#loans').exists()).toBe(false)
+    expect(wrapper.find('#assumptions').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
   it('loads assumptions and forecast, then displays calculated metrics', async () => {
     const wrapper = await mountLoadedApp()
     expect(getAssumptions).toHaveBeenCalledOnce()
     expect(getLoans).toHaveBeenCalledOnce()
     expect(getForecast).toHaveBeenCalledOnce()
-    expect(wrapper.text()).toContain('Đã lưu trên máy chủ')
-    expect(wrapper.get('.nav-link[href="#overview"]').attributes('aria-current')).toBe('page')
+    expect(wrapper.text()).toContain('Dữ liệu lưu trên máy chủ')
+    expect(wrapper.get('.nav-link[href="/dashboard"]').attributes('aria-current')).toBe('page')
     expect(wrapper.text()).toContain('12/2030 — 12/2030')
     expect(wrapper.text()).toContain('Kế hoạch cá nhân · 2030')
     expect(wrapper.get('#metric-net').text()).toContain('20.000.000')
@@ -120,14 +149,14 @@ describe('PlannerView', () => {
     await wrapper.get('.drawer-open-button').trigger('click')
     expect(wrapper.get('.sidebar').classes()).toContain('drawer-open')
 
-    await wrapper.get('.nav-link[href="#loans"]').trigger('click')
+    await wrapper.get('.nav-link[href="/loans"]').trigger('click')
     expect(wrapper.get('.sidebar').classes()).not.toContain('drawer-open')
     expect(wrapper.get('.app-shell').classes()).not.toContain('sidebar-collapsed')
   })
 
   it('shows an actionable error when initial assumptions cannot be loaded', async () => {
     getAssumptions.mockRejectedValue(new Error('API offline'))
-    const wrapper = mount(PlannerView)
+    const wrapper = mountPlanner('assumptions')
     await flushPromises()
     expect(wrapper.text()).toContain('API offline')
     expect(wrapper.text()).toContain('Lỗi kết nối máy chủ')
@@ -139,12 +168,12 @@ describe('PlannerView', () => {
     data.incomeChanges.push({ effectiveMonth: '2027-04', amount: 50000000 })
     getAssumptions.mockResolvedValue(data)
     getForecast.mockResolvedValue(forecastResult())
-    const wrapper = mount(PlannerView)
+    const wrapper = mountPlanner('assumptions')
     await flushPromises()
 
     expect(wrapper.find('#alert-area .alert').exists()).toBe(false)
     expect(wrapper.get('input[aria-label="Số tiền thu nhập, mốc 2"]').element.value).toBe('50.000.000')
-    expect(wrapper.get('#metric-net-foot').text()).not.toContain('Tạm tính')
+    expect(wrapper.get('#assumptions').text()).toContain('Giả định của bạn')
   })
 
   it('does not use the retired payoff-interest field to alter the schedule-driven forecast', async () => {
@@ -152,23 +181,22 @@ describe('PlannerView', () => {
     getAssumptions.mockResolvedValue(data)
     getForecast.mockResolvedValue(forecastResult())
 
-    const wrapper = mount(PlannerView)
+    const wrapper = mountPlanner()
     await flushPromises()
 
     expect(wrapper.find('#alert-area .alert').exists()).toBe(false)
-    expect(wrapper.get('#metric-net-foot').text()).not.toContain('Tạm tính')
   })
 
   it('still surfaces provisional status returned by the forecast engine', async () => {
     getAssumptions.mockResolvedValue(validAssumptions())
     getForecast.mockResolvedValue(forecastResult({ provisional: true }))
-    const wrapper = mount(PlannerView)
+    const wrapper = mountPlanner()
     await flushPromises()
     expect(wrapper.find('#alert-area .alert').text()).toContain('Một hoặc nhiều kết quả đang là tạm tính')
   })
 
   it('rejects invalid saves locally and persists valid saves before refreshing forecast', async () => {
-    const wrapper = await mountLoadedApp()
+    const wrapper = await mountLoadedApp('assumptions')
     const form = wrapper.findComponent(AssumptionsForm)
     form.vm.$emit('save', { ...validAssumptions(), incomeChanges: [{ effectiveMonth: '2026-11', amount: -1 }] })
     await flushPromises()
@@ -183,7 +211,7 @@ describe('PlannerView', () => {
   })
 
   it('exports CSV and handles export errors', async () => {
-    const wrapper = await mountLoadedApp()
+    const wrapper = await mountLoadedApp('assumptions')
     await wrapper.get('#export-button').trigger('click')
     expect(exportCsv).toHaveBeenCalledOnce()
 
@@ -194,14 +222,14 @@ describe('PlannerView', () => {
   })
 
   it('exposes a separate personal profile action in the account drawer', async () => {
-    const wrapper = await mountLoadedApp()
+    const wrapper = await mountLoadedApp('assumptions')
     expect(wrapper.get('#profile-button').text()).toBe('Hồ sơ cá nhân')
     await wrapper.get('#profile-button').trigger('click')
     expect(wrapper.emitted('open-profile')).toHaveLength(1)
   })
 
   it('debounces forecast previews without persisting until the user explicitly saves', async () => {
-    const wrapper = await mountLoadedApp()
+    const wrapper = await mountLoadedApp('assumptions')
     vi.useFakeTimers()
     const form = wrapper.findComponent(AssumptionsForm)
     form.vm.$emit('input', validAssumptions())
@@ -218,7 +246,7 @@ describe('PlannerView', () => {
   })
 
   it('loads sample assumptions only after confirmation and leaves them unsaved', async () => {
-    const wrapper = await mountLoadedApp()
+    const wrapper = await mountLoadedApp('assumptions')
     window.confirm = vi.fn().mockReturnValue(true)
     vi.useFakeTimers()
     wrapper.findComponent(AssumptionsForm).vm.$emit('load-sample')
@@ -232,11 +260,13 @@ describe('PlannerView', () => {
     expect(wrapper.get('input[aria-label="Số tiền khoản Chi phí gia đình, mốc 1"]').element.value).toBe('15.000.000')
     expect(saveAssumptions).not.toHaveBeenCalled()
     expect(wrapper.text()).toContain('Đã cập nhật mô phỏng · Chưa lưu')
-    const loanForm = wrapper.findComponent(LoanScheduleForm)
-    expect(loanForm.props('sampleLoanDraft')).toMatchObject({ name: 'Khoản vay minh họa' })
-    expect(loanForm.find('input[id^="loan-name-"]').element.value).toBe('Khoản vay minh họa')
-    expect(loanForm.findAll('input[id^="repayment-principal-"]')).toHaveLength(2)
-    expect(loanForm.text()).toContain('Lịch trả đang chỉnh sửa chưa được tính vào dự báo')
+    await wrapper.setProps({ section: 'loans' })
+    await flushPromises()
+    const visibleLoanForm = wrapper.findComponent(LoanScheduleForm)
+    expect(visibleLoanForm.props('sampleLoanDraft')).toMatchObject({ name: 'Khoản vay minh họa' })
+    expect(visibleLoanForm.find('input[id^="loan-name-"]').element.value).toBe('Khoản vay minh họa')
+    expect(visibleLoanForm.findAll('input[id^="repayment-principal-"]')).toHaveLength(2)
+    expect(visibleLoanForm.text()).toContain('Lịch trả đang chỉnh sửa chưa được tính vào dự báo')
     expect(saveLoans).not.toHaveBeenCalled()
     vi.useRealTimers()
   })
@@ -247,7 +277,7 @@ describe('PlannerView', () => {
       incomeChanges: [{ effectiveMonth: '2026-11', amount: 0 }], expenses: [],
     })
     getForecast.mockResolvedValue({ annual: [{ year: 2026, salary: 0, expenses: 0, netCashFlow: 0, endingSavings: 0 }], months: [] })
-    const wrapper = mount(PlannerView)
+    const wrapper = mountPlanner()
     await flushPromises()
     expect(wrapper.find('.dashboard-empty-state').text()).toContain('Bắt đầu từ các giả định tài chính')
     expect(wrapper.find('.sample-empty-banner').exists()).toBe(true)
@@ -255,7 +285,7 @@ describe('PlannerView', () => {
   })
 
   it('warns before leaving when assumptions have unsaved edits', async () => {
-    const wrapper = await mountLoadedApp()
+    const wrapper = await mountLoadedApp('assumptions')
     wrapper.findComponent(AssumptionsForm).vm.$emit('input', { ...validAssumptions(), startingSavings: 31000000 })
     await flushPromises()
     expect(wrapper.text()).toContain('Đang cập nhật mô phỏng · Chưa lưu')
@@ -266,7 +296,7 @@ describe('PlannerView', () => {
   })
 
   it('keeps preview failures quiet and surfaces an explicit save failure', async () => {
-    const wrapper = await mountLoadedApp()
+    const wrapper = await mountLoadedApp('assumptions')
     vi.useFakeTimers()
     getForecast.mockRejectedValueOnce(new Error('Preview unavailable'))
     saveAssumptions.mockRejectedValueOnce(new Error('Save unavailable'))
@@ -282,7 +312,7 @@ describe('PlannerView', () => {
   })
 
   it('resets only after confirmation and reports a reset failure', async () => {
-    const wrapper = await mountLoadedApp()
+    const wrapper = await mountLoadedApp('assumptions')
     vi.stubGlobal('confirm', vi.fn().mockReturnValue(false))
     await wrapper.findComponent(AssumptionsForm).vm.$emit('reset')
     await flushPromises()
@@ -298,7 +328,7 @@ describe('PlannerView', () => {
   })
 
   it('restores defaults after confirmation and refreshes the forecast', async () => {
-    const wrapper = await mountLoadedApp()
+    const wrapper = await mountLoadedApp('assumptions')
     window.confirm = vi.fn().mockReturnValue(true)
     await wrapper.findComponent(AssumptionsForm).vm.$emit('reset')
     await flushPromises()
@@ -309,7 +339,7 @@ describe('PlannerView', () => {
   })
 
   it('persists edited loan schedules and refreshes the forecast', async () => {
-    const wrapper = await mountLoadedApp()
+    const wrapper = await mountLoadedApp('loans')
     const schedule = wrapper.findComponent(LoanScheduleForm)
     const updated = [{ id: null, name: 'Vay cá nhân', openingPrincipal: 5000000,
       repayments: [{ id: null, dueDate: '2026-12-15', principalAmount: 1000000, interestAmount: 50000 }] }]
@@ -323,7 +353,7 @@ describe('PlannerView', () => {
 
   it('handles a forecast without a 2030 annual row', async () => {
     getForecast.mockResolvedValue(forecastResult({ include2030: false }))
-    const wrapper = mount(PlannerView)
+    const wrapper = mountPlanner()
     await flushPromises()
     expect(wrapper.get('#metric-net').text()).toContain('0 ₫')
     expect(wrapper.get('#metric-income').text()).toContain('0 ₫')

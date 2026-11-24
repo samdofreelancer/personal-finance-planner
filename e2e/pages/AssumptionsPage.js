@@ -8,10 +8,19 @@ export class AssumptionsPage extends BasePage {
   }
 
   async open() {
-    const drawerButton = this.page.getByRole('button', { name: 'Mở menu điều hướng' })
-    if (await drawerButton.isVisible()) await drawerButton.click()
-    await this.page.getByRole('link', { name: /Giả định/ }).click()
+    await this.navigateTo('/plan/assumptions')
     await this.saveStatus.waitFor({ state: 'visible' })
+  }
+
+  async openForecast() {
+    await this.navigateTo('/forecast/monthly')
+    await this.monthlyTable.waitFor({ state: 'visible' })
+  }
+
+  async navigateTo(path) {
+    const mobileLink = this.page.locator(`.mobile-bottom-nav a[href="${path}"]`)
+    if (await mobileLink.isVisible()) await mobileLink.click()
+    else await this.page.locator(`.side-nav a[href="${path}"]`).click()
   }
 
   async addExpenseSchedule({ name, initialMonth, initialAmount, nextMonth, nextAmount }) {
